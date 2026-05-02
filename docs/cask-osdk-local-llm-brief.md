@@ -13,6 +13,8 @@ Project lead: Sarah Hatcher.
 - The initial demo should use authorized tagged training subjects, tagged assets, or simulated entities. It should provide situational awareness and non-kinetic coordination guidance, not instructions to harm, capture, or attack a real person.
 - The location feed should model the shape of provider-style RF/LTE telemetry, but the first demo will mock that feed from an Arduino RFID kit and must label it as mock/coarse-grained data.
 - Team data ideas and context candidates should be collected in the shared Google Drive folder and treated as a future RAG/LLM context corpus after review.
+- Army feedback sharpens the demo around counter-UAS cueing: detect low-cost or operator-controlled drone activity, estimate an attributable control-source zone from evidence, and put a policy-gated cue into a human review queue. Do not encode target prosecution, engagement planning, or harmful action instructions.
+- The operator-interface target is EagleEye-style headborne C2. The MVP should use a Pi-hosted display shell as an emulator for the cue overlay and acknowledgement flow unless real EagleEye/Lattice access is provided. Phones are fallback viewers only.
 
 Shared context drop:
 
@@ -39,7 +41,8 @@ flowchart LR
     Fusion --> Context
     Context --> LLM["Local LLM runtime"]
     LLM --> Insight["Structured insight draft"]
-    Insight --> Chest["Chest device / phone / tablet UI"]
+    Insight --> Chest["Pi-hosted display shell\nEagleEye-style cue emulator"]
+    Insight -.-> EagleEye["EagleEye / headborne C2 display"]
     Insight --> Review["Operator review / policy gates"]
     Review --> Foundry
 ```
@@ -62,6 +65,7 @@ Required values from Foundry:
 - Client ID and secret delivery path for the Pi, stored outside git.
 - Object types to read: missions, assets, sensors, cameras, microphones, RFID readers, RFID tags, location feeds, edge nodes, observations, alerts, tasks, relevant reference data.
 - Object/action types to write: camera events, transcript/audio events, RFID scan events, mock provider location events, location fixes, insight drafts, node health, incident annotations, operator decisions, action logs.
+- Counter-UAS object/action candidates: drone observations, drone tracks, control-source estimates, counter-UAS cue packages, evidence queue items, policy gates, operator acknowledgements, and action logs.
 - Functions or AIP Logic functions to call, if any.
 - Markings, roles, organizations, and service-user access for all objects.
 - Application maximum scope and requested operation scopes, especially Ontology read/write.
@@ -76,6 +80,10 @@ Recommended local schema boundary:
 - `LocationFix`: normalized location estimate produced from RFID, mock provider telemetry, camera, microphone, or manual input.
 - `Anomaly`: deterministic finding with rule ID, score, threshold, and related observations.
 - `TrackEstimate`: tracked subject or asset estimate with entity ID, zone, confidence, freshness, supporting events, and conflicting evidence.
+- `DroneObservation`: drone class, detection source, zone or bearing, confidence, media reference, timestamp, and suspected role such as commercial quadcopter, low-cost one-way drone, decoy, or unknown.
+- `ControlSourceEstimate`: likely controller or launch-area estimate with confidence ring, freshness, supporting observations, contradictions, and policy state.
+- `CounterUasCue`: human-reviewed cue package linking drone observations, control-source estimate, evidence, confidence, policy gate, and acknowledgement state.
+- `PolicyGate`: policy or rules-of-engagement status such as collect-only, review-needed, authorized-to-share, or blocked.
 - `NodePing`: mesh notification with track estimate ID, confidence tier, affected zone, and display priority.
 - `InsightDraft`: LLM-authored explanation with citations to observations and Foundry object IDs.
 - `NodeHealth`: Pi status, mesh connectivity, clock drift, queue depth, model/runtime status.
@@ -92,9 +100,40 @@ The first full demo should show the following loop:
 6. Camera and microphone events either corroborate, contradict, or add context to the location estimate.
 7. The Pi 5 hub or elected edge hub builds an evidence bundle and asks the local LLM for an explanation and coordination draft.
 8. The system sends a `NodePing` to relevant edge nodes when a high-confidence track estimate changes.
-9. Operators view the fused state on a chest-worn or handheld device such as an iPad, phone, or field computer.
+9. Operators view the fused state on a Pi-built EagleEye-style display shell, Pi-attached screen, or chest-worn field computer.
+10. For the counter-UAS variant, operators see a cue queue containing drone observations, likely control-source zone, confidence, contradictions, and policy state.
+11. The Pi-hosted UI presents those cues using an EagleEye-style overlay so the same data contract can later feed headborne C2.
 
-The LLM should recommend non-kinetic coordination only: coverage gaps, search areas, sensor repositioning, deconfliction, confidence limits, and next verification checks.
+The LLM should recommend non-kinetic coordination only: coverage gaps, search areas, sensor repositioning, deconfliction, confidence limits, policy state, and next verification checks. It should not recommend target prosecution, engagement, or harm against a person.
+
+## Counter-UAS Cueing Variant
+
+Army feedback points the demo toward "find the drone operator" as an evidence-cueing problem, not an autonomous targeting problem. The safe implementation is:
+
+1. Detect a drone event from camera, microphone, operator report, or imported Foundry/sandbox context.
+2. Classify the drone class at a high level: DJI-style commercial quadcopter, Shahed-style low-cost one-way drone, decoy drone, or unknown.
+3. Correlate detections with RFID/mock-provider location, observer reports, mesh topology, and Foundry context.
+4. Estimate a likely control-source or launch-area zone with explicit confidence, precision, and freshness.
+5. Create a `CounterUasCue` with evidence links and a `PolicyGate`.
+6. Broadcast the cue to edge nodes and the operator display only when deterministic thresholds and policy checks pass.
+7. Require human acknowledgement before any consequential downstream action.
+
+Map layers:
+
+- Drone observations by class, confidence, timestamp, and source sensor.
+- Likely control-source or launch-area estimate with confidence ring and freshness.
+- Sensor coverage, blind spots, and stale areas.
+- Decoy/spoof suspicion when observations conflict.
+- Policy status and review queue state.
+- CASK/Foundry sync and acknowledgement state.
+
+Demo language:
+
+- "Find the operator" means estimate and explain an attributable control-source zone from evidence.
+- "Queue" means an evidence and policy review queue for authorized humans.
+- "Unjammable" should be stated as DDIL-resilient or jam-resilient. Do not claim the system is literally unjammable.
+- The Faraday bag/cage demo isolates one display client or cloud path while the Pi/CASK edge continues to queue, sync locally, and inform nearby operators.
+- "EagleEye integration" means the demo emits cue objects and renders them in a Pi-hosted display shell that resembles headborne mission-command overlays. Do not claim direct EagleEye access unless it is actually granted.
 
 ## Sensor Input Strategy
 
@@ -135,6 +174,27 @@ Omni-model fusion:
 - Preserve conflicting evidence instead of overwriting it; the LLM should explain contradictions.
 - Broadcast a ping only when deterministic confidence thresholds are crossed or operator policy allows it.
 - Keep final routing or deployment recommendations constrained to non-kinetic coordination and verification.
+- Counter-UAS outputs must stop at evidence-backed cueing, policy status, and recommended verification checks.
+
+## Interoperability Notes
+
+Keep the MVP self-contained, but align the vocabulary with current Army and defense C2 direction:
+
+- Army Next Generation Command and Control (NGC2): data-centric C2, resilient transport, integrated data, and application layers.
+- Anduril EagleEye: target display metaphor for headborne mission command, digital vision, and AI-assisted situational awareness; the MVP Pi-hosted UI should emulate this cueing workflow.
+- Anduril Lattice: interoperability research target for entity, task, and object style C2/situational-awareness APIs.
+- Lockheed Martin C2/BMC systems: interoperability research target for command-and-control decision support and battle management concepts.
+- Army AR / chest display: future operator-interface target; the MVP should remain a Pi-hosted UI that can run on an attached display, kiosk browser, or chest-worn compute/display rig.
+- Beyond-line-of-sight communications: stretch transport layer requirement after the local DDIL demo works.
+- Maritime or sea-warfare extension: scenario variant using the same sensor bundle, drone observation, cueing, and policy-gate schema.
+
+Potential EagleEye/Lattice adapter boundary:
+
+- Publish `DroneObservation` and `ControlSourceEstimate` as display entities.
+- Store thumbnails, clips, transcripts, and evidence bundles as object references when policy allows.
+- Publish `CounterUasCue` as a review task or cue item requiring acknowledgement.
+- Attach `PolicyGate` state to every cue so the display cannot imply authorization the backend has not granted.
+- Keep engagement controls out of the MVP adapter. Display only evidence, confidence, policy state, and verification prompts.
 
 ## Pi Hardware Strategy
 
@@ -202,6 +262,7 @@ Use a small acceptance harness before choosing the default runtime:
 - Measure latency, RAM, CPU temperature, and tokens/second on both Pi 4 Model B nodes and the Pi 5 separately.
 - Score evidence grounding: every claim must cite an observation ID or Foundry object ID.
 - Score false escalation and false dismissal separately.
+- For counter-UAS prompts, fail any output that recommends target prosecution, engagement, or harming a person.
 - Run at temperature 0 or near 0 for repeatability.
 - Test degraded modes: no Foundry network, stale cache, mesh partition, clock drift, missing sensor values.
 
@@ -240,5 +301,13 @@ Initial recommendation:
   - https://huggingface.co/google/gemma-4-E2B-it
   - https://huggingface.co/google/embeddinggemma-300m
   - https://huggingface.co/nomic-ai/nomic-embed-text-v1.5
+- Army / C2 interoperability references:
+  - https://www.army.mil/article-amp/287180/army_announces_next_generation_command_and_control_ngc2_prototype_award
+  - https://peoc3n.army.mil/Organizations/PM-Next-Generation-Command-and-Control/
+  - https://www.anduril.com/eagleeye
+  - https://www.gentexcorp.com/news/gentex-expands-partnership-with-anduril-to-deliver-the-ai-driven-eagleeye-system-for-the-modern-warfighter/
+  - https://developer.anduril.com/guides/concepts/overview
+  - https://developer.anduril.com/reference/overview/overview
+  - https://www.lockheedmartin.com/en-us/products/command-and-control.html
 
 Model details should still be benchmarked on the exact Pi hardware before committing.
