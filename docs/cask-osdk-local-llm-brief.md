@@ -11,6 +11,7 @@ Project lead: Sarah Hatcher.
 - No Chinese-origin model families should be used. Excluded examples: Qwen, DeepSeek, Yi, MiniCPM, Baichuan, ChatGLM, InternLM.
 - The local LLM is advisory. It should produce structured insight drafts with evidence, confidence, and limitations; it should not be the only control path for mission-critical decisions.
 - The initial demo should use authorized tagged training subjects, tagged assets, or simulated entities. It should provide situational awareness and non-kinetic coordination guidance, not instructions to harm, capture, or attack a real person.
+- The location feed should model the shape of provider-style RF/LTE telemetry, but the first demo will mock that feed from an Arduino RFID kit and must label it as mock/coarse-grained data.
 
 ## Architecture Shape
 
@@ -21,7 +22,9 @@ flowchart LR
     Camera["Camera"] --> Pi4
     Mic["Microphone"] --> Pi4
     RFID["RFID reader"] --> Pi4
+    RFID --> MockLoc["Mock provider-style location event"]
     Pi4["Pi 4B sensor nodes"] --> Mesh["Edge node mesh"]
+    MockLoc --> Mesh
     Pi5["Pi 5 hub nodes"] --> Mesh
     Mesh --> Fusion["Sensor fusion and anomaly logic"]
     Cache --> Context["RAG/context builder"]
@@ -49,8 +52,8 @@ Required values from Foundry:
 - Generated OSDK package name and package index URL.
 - Application type and OAuth grant path for the edge service.
 - Client ID and secret delivery path for the Pi, stored outside git.
-- Object types to read: missions, assets, sensors, cameras, microphones, RFID readers, RFID tags, edge nodes, observations, alerts, tasks, relevant reference data.
-- Object/action types to write: camera events, transcript/audio events, RFID scan events, insight drafts, node health, incident annotations, operator decisions, action logs.
+- Object types to read: missions, assets, sensors, cameras, microphones, RFID readers, RFID tags, location feeds, edge nodes, observations, alerts, tasks, relevant reference data.
+- Object/action types to write: camera events, transcript/audio events, RFID scan events, mock provider location events, location fixes, insight drafts, node health, incident annotations, operator decisions, action logs.
 - Functions or AIP Logic functions to call, if any.
 - Markings, roles, organizations, and service-user access for all objects.
 - Application maximum scope and requested operation scopes, especially Ontology read/write.
@@ -61,6 +64,8 @@ Recommended local schema boundary:
 - `CameraEvent`: frame-derived observation with camera ID, detected class, bounding region, confidence, frame time, optional thumbnail reference, and retention policy.
 - `AudioEvent`: microphone-derived observation with VAD window, transcript text, ASR confidence, detected keywords/classes, and optional redacted audio reference.
 - `RfidEvent`: reader-derived observation with reader ID, tag ID, antenna/zone, RSSI if available, read count, timestamp, and matched Foundry asset/person reference.
+- `MockProviderLocationEvent`: Arduino RFID-derived event shaped like future RF/LTE provider telemetry, with provider/source, mock flag, zone or coordinate, precision radius, confidence, freshness, and raw reader evidence.
+- `LocationFix`: normalized location estimate produced from RFID, mock provider telemetry, camera, microphone, or manual input.
 - `Anomaly`: deterministic finding with rule ID, score, threshold, and related observations.
 - `TrackEstimate`: tracked subject or asset estimate with entity ID, zone, confidence, freshness, supporting events, and conflicting evidence.
 - `NodePing`: mesh notification with track estimate ID, confidence tier, affected zone, and display priority.
@@ -73,12 +78,13 @@ The first full demo should show the following loop:
 
 1. Operators use Pi-backed edge nodes with RFID readers, cameras, and microphones.
 2. Each node processes local inputs into compact `CameraEvent`, `AudioEvent`, and `RfidEvent` records.
-3. Nodes exchange event summaries across the mesh, with store-and-forward behavior when connectivity is degraded.
-4. RFID reads ground the location estimate for an authorized tagged training subject or tagged asset.
-5. Camera and microphone events either corroborate, contradict, or add context to the RFID-derived estimate.
-6. The Pi 5 hub or elected edge hub builds an evidence bundle and asks the local LLM for an explanation and coordination draft.
-7. The system sends a `NodePing` to relevant edge nodes when a high-confidence track estimate changes.
-8. Operators view the fused state on a chest-worn or handheld device such as an iPad, phone, or field computer.
+3. Arduino RFID reads also generate `MockProviderLocationEvent` records so the pipeline matches the structure of future RF/LTE provider location data.
+4. Nodes exchange event summaries across the mesh, with store-and-forward behavior when connectivity is degraded.
+5. RFID and mock provider-style location events ground the location estimate for an authorized tagged training subject or tagged asset.
+6. Camera and microphone events either corroborate, contradict, or add context to the location estimate.
+7. The Pi 5 hub or elected edge hub builds an evidence bundle and asks the local LLM for an explanation and coordination draft.
+8. The system sends a `NodePing` to relevant edge nodes when a high-confidence track estimate changes.
+9. Operators view the fused state on a chest-worn or handheld device such as an iPad, phone, or field computer.
 
 The LLM should recommend non-kinetic coordination only: coverage gaps, search areas, sensor repositioning, deconfliction, confidence limits, and next verification checks.
 
@@ -102,13 +108,22 @@ RFID readers:
 
 - Treat RFID as the most deterministic identity/presence signal.
 - Normalize reads into `RfidEvent` records and join them against Foundry asset/person/tag objects.
+- Emit `MockProviderLocationEvent` records from Arduino RFID reads to simulate the structure of future provider-style RF/LTE telemetry.
+- Mark Arduino-derived location as mock and coarse; do not present it as carrier-grade location.
 - Use RFID to ground camera/audio ambiguity, for example "asset likely present in zone" rather than relying on vision alone.
 - Track reader health, duplicate reads, missed-read windows, and tag-reader topology as separate operational signals.
+
+Provider-style location telemetry:
+
+- Normalize all location feeds into `LocationFix` records.
+- Required fields: `sourceType`, `sourceId`, `entityId`, `zoneId` or coordinates, `precisionRadiusMeters`, `confidence`, `observedAt`, `expiresAt`, `isMock`, and supporting evidence IDs.
+- For the Arduino RFID demo, `sourceType` should be `mock_provider_rfid` and `isMock` must be true.
+- CASK and the LLM should reason from precision and confidence, not from a false assumption of exact location.
 
 Omni-model fusion:
 
 - Build a typed evidence bundle per tracked subject or asset rather than prompting over raw streams.
-- Maintain confidence and freshness separately for RFID, camera, microphone, Foundry context, and mesh health.
+- Maintain confidence and freshness separately for RFID, mock provider-style location, camera, microphone, Foundry context, and mesh health.
 - Preserve conflicting evidence instead of overwriting it; the LLM should explain contradictions.
 - Broadcast a ping only when deterministic confidence thresholds are crossed or operator policy allows it.
 - Keep final routing or deployment recommendations constrained to non-kinetic coordination and verification.

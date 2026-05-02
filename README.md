@@ -22,9 +22,12 @@ Build a local CASK edge layer that can:
 
 The demo is an edge-node mesh for a controlled training environment. A group of operators carry or use Pi-backed nodes with RFID readers plus camera and microphone inputs. Those nodes share structured observations with each other, use RFID reads to estimate the location of a tagged training subject or tagged asset, and surface a shared operating picture on a chest-worn or handheld device such as an iPad, phone, or similar field computer.
 
+The real-world pattern being mocked is provider-style RF/LTE location telemetry: an external network can report a location estimate for a device or tag. For this demo, we do not have carrier-grade granularity. We will use an Arduino RFID kit to generate structurally similar location events, then mark them with explicit source, precision, confidence, and mock status fields.
+
 The CASK-backed omni-model should fuse the sensor streams into a local, evidence-grounded view:
 
 - RFID provides the primary identity/presence signal.
+- Mock provider-style location events provide the LTE/RF location shape we expect CASK to consume later.
 - Camera events provide visual confirmation, movement, zone, and scene context.
 - Microphone events provide transcripts, acoustic events, and local context.
 - Foundry/OSDK provides governed mission context, asset/person/tag mappings, permissions, and writeback.
@@ -48,7 +51,9 @@ flowchart LR
     Camera["Camera"] --> Pi["Pi edge nodes"]
     Mic["Microphone"] --> Pi
     RFID["RFID readers"] --> Pi
+    RFID --> MockLoc["Mock provider location events"]
     Pi --> Mesh["Edge node mesh"]
+    MockLoc --> Mesh
     Mesh --> Fusion["Sensor fusion and anomaly logic"]
     Cache --> Context["RAG/context builder"]
     Fusion --> Context
@@ -67,8 +72,8 @@ Decide or gather:
 - Foundry stack URL, Ontology RID, generated OSDK package name, and package index URL.
 - Developer Console app shape for `cask-edge-service`.
 - OAuth grant path and service-user permissions.
-- Object types for missions, assets, sensors, cameras, microphones, RFID readers, RFID tags, edge nodes, observations, alerts, and tasks.
-- Actions/writeback targets for camera events, audio events, RFID events, insight drafts, node health, incident annotations, operator decisions, and action logs.
+- Object types for missions, assets, sensors, cameras, microphones, RFID readers, RFID tags, location feeds, edge nodes, observations, alerts, and tasks.
+- Actions/writeback targets for camera events, audio events, RFID events, mock provider location events, insight drafts, node health, incident annotations, operator decisions, and action logs.
 
 ### Edge Mesh
 
@@ -88,6 +93,8 @@ Initial event contracts:
 - `CameraEvent`: camera ID, detection class, bounding region, confidence, frame time, optional thumbnail reference, retention policy.
 - `AudioEvent`: microphone ID, VAD window, transcript, ASR confidence, keyword/acoustic class, optional redacted audio reference.
 - `RfidEvent`: reader ID, tag ID, antenna/zone, RSSI if available, read count, timestamp, matched Foundry reference.
+- `MockProviderLocationEvent`: simulated LTE/RF-provider-style location fix generated from the Arduino RFID kit, with source type, mock flag, zone/coordinate, precision radius, confidence, and freshness.
+- `LocationFix`: normalized location estimate from RFID, mock provider telemetry, camera, microphone, or manual input.
 - `Anomaly`: deterministic rule ID, threshold, score, related observations.
 - `InsightDraft`: LLM explanation, evidence references, confidence, limitations, recommended next check.
 - `TrackEstimate`: tracked subject/asset ID, last known zone, confidence, supporting RFID/camera/audio events, freshness, and conflict markers.
@@ -99,6 +106,8 @@ Processing granularity:
 - Camera frames should become detections, thumbnails, or short clips only when policy allows.
 - Microphone streams should become voice-activity windows, transcripts, and acoustic labels.
 - RFID reads should be deduplicated, timestamped, and joined to known tags.
+- Arduino RFID reads should also emit mock provider-style location events so downstream CASK logic can be built against the shape of future LTE/RF location telemetry.
+- All location estimates must carry `source`, `precision`, `confidence`, `freshness`, and `isMock` fields.
 - The hub should reconcile conflicting observations and produce track estimates with freshness and confidence.
 - The LLM should consume the compact evidence bundle, not continuous raw sensor streams.
 
