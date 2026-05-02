@@ -7,11 +7,18 @@ Project lead: Sarah Hatcher.
 ## Working Assumptions
 
 - CASK means Palantir's CASK capability, with Foundry as the governed source of mission data.
-- Raspberry Pi hardware includes Pi 4B nodes and Pi 5 nodes.
+- Raspberry Pi hardware includes two Raspberry Pi 4 Model B edge nodes and one Raspberry Pi 5 hub candidate.
 - No Chinese-origin model families should be used. Excluded examples: Qwen, DeepSeek, Yi, MiniCPM, Baichuan, ChatGLM, InternLM.
 - The local LLM is advisory. It should produce structured insight drafts with evidence, confidence, and limitations; it should not be the only control path for mission-critical decisions.
 - The initial demo should use authorized tagged training subjects, tagged assets, or simulated entities. It should provide situational awareness and non-kinetic coordination guidance, not instructions to harm, capture, or attack a real person.
 - The location feed should model the shape of provider-style RF/LTE telemetry, but the first demo will mock that feed from an Arduino RFID kit and must label it as mock/coarse-grained data.
+- Team data ideas and context candidates should be collected in the shared Google Drive folder and treated as a future RAG/LLM context corpus after review.
+
+Shared context drop:
+
+- National Security Hackathon - Altiair shared Google Drive: https://drive.google.com/drive/folders/1hRTFxmv2g1PxKLg1U8fvUuWTxWWHIGql?usp=sharing
+
+Do not place credentials, private Foundry URLs, client secrets, uncontrolled raw media, or sensitive personal data in the shared Drive.
 
 ## Architecture Shape
 
@@ -19,13 +26,14 @@ Project lead: Sarah Hatcher.
 flowchart LR
     Foundry["Foundry Ontology / OSDK"] --> Sync["CASK sync service"]
     Sync --> Cache["Local governed cache"]
-    Camera["Camera"] --> Pi4
+    Drive["Shared Drive context corpus"] --> Context
+    Camera["Camera"] --> Pi4["2x Pi 4 Model B edge nodes"]
     Mic["Microphone"] --> Pi4
     RFID["RFID reader"] --> Pi4
     RFID --> MockLoc["Mock provider-style location event"]
-    Pi4["Pi 4B sensor nodes"] --> Mesh["Edge node mesh"]
+    Pi4 --> Mesh["Edge node mesh"]
     MockLoc --> Mesh
-    Pi5["Pi 5 hub nodes"] --> Mesh
+    Pi5["1x Pi 5 hub candidate"] --> Mesh
     Mesh --> Fusion["Sensor fusion and anomaly logic"]
     Cache --> Context["RAG/context builder"]
     Fusion --> Context
@@ -132,16 +140,29 @@ Omni-model fusion:
 
 Pi 4B:
 
-- Treat as sensor and preprocessing nodes first.
+- Treat the two Pi 4 Model B devices as sensor and preprocessing nodes first.
 - Run telemetry validation, compression, batching, and small deterministic models.
 - Only run a tiny LLM if the device is an 8 GB Pi 4B and latency is not mission-critical.
 
 Pi 5:
 
-- Treat as the CASK edge hub.
+- Treat the single Pi 5 as the CASK edge hub candidate.
 - Run the local cache, retrieval, insight generation, and writeback queue.
 - Prefer quantized models through `llama.cpp` or Ollama-style local APIs.
 - If using Raspberry Pi AI HAT+ 2, evaluate the Hailo Ollama server model list and keep only non-Chinese-origin options.
+
+## Shared Drive Context Intake
+
+Use the shared Google Drive as a team drop for data ideas, mock fixtures, sensor notes, diagrams, evaluation prompts, and context documents. For anything intended to become LLM context, include:
+
+- Title and owner.
+- Source type: mock data, sensor note, Foundry idea, architecture note, evaluation prompt, UI idea, or policy constraint.
+- Whether the content is real, synthetic, mocked, or speculative.
+- Sensitivity and retention expectation.
+- Related sensor/event types, if known.
+- Short summary of how it should affect the CASK demo.
+
+The future ingestion path should convert cleared Drive content into attributed chunks and embeddings, then expose them to the LLM as cited context alongside Foundry objects and sensor-derived events.
 
 ## Non-Chinese Local LLM Shortlist
 
@@ -175,9 +196,10 @@ Avoid for this project:
 Use a small acceptance harness before choosing the default runtime:
 
 - 25 to 50 mission-style prompts built from synthetic or cleared sensor snapshots.
+- Shared Drive context retrieval tests using cleared team-contributed notes and mock fixtures.
 - Require structured JSON output for every insight.
 - Validate every output against a schema.
-- Measure latency, RAM, CPU temperature, and tokens/second on Pi 4B and Pi 5 separately.
+- Measure latency, RAM, CPU temperature, and tokens/second on both Pi 4 Model B nodes and the Pi 5 separately.
 - Score evidence grounding: every claim must cite an observation ID or Foundry object ID.
 - Score false escalation and false dismissal separately.
 - Run at temperature 0 or near 0 for repeatability.

@@ -8,6 +8,12 @@ The current decision brief is here:
 
 - [CASK OSDK and Local LLM Brief](docs/cask-osdk-local-llm-brief.md)
 
+Shared data ideas and LLM context drop:
+
+- [National Security Hackathon - Altiair shared Google Drive](https://drive.google.com/drive/folders/1hRTFxmv2g1PxKLg1U8fvUuWTxWWHIGql?usp=sharing)
+
+Use the Drive for team data ideas, mock fixtures, diagrams, sensor notes, evaluation prompts, and context documents we may later ingest into a local RAG/LLM context pipeline. Do not upload credentials, private Foundry URLs, client secrets, uncontrolled raw media, or sensitive personal data.
+
 ## Goal
 
 Build a local CASK edge layer that can:
@@ -17,6 +23,15 @@ Build a local CASK edge layer that can:
 - Fuse deterministic sensor events before invoking any LLM.
 - Use a local non-Chinese model family to draft structured insights with citations.
 - Write approved events, insight drafts, node health, and operator decisions back to Foundry.
+
+## Hardware Inventory
+
+Current demo hardware:
+
+- 2x Raspberry Pi 4 Model B edge nodes.
+- 1x Raspberry Pi 5 hub candidate.
+- Arduino RFID kit for mocked provider-style location telemetry.
+- Camera, microphone, and RFID input streams.
 
 ## Demo Scenario
 
@@ -48,12 +63,13 @@ This repo should not encode instructions for harming, capturing, or attacking a 
 flowchart LR
     Foundry["Foundry Ontology / OSDK"] --> Sync["CASK sync service"]
     Sync --> Cache["Local governed cache"]
-    Camera["Camera"] --> Pi["Pi edge nodes"]
-    Mic["Microphone"] --> Pi
-    RFID["RFID readers"] --> Pi
+    Camera["Camera"] --> Pi4["2x Pi 4 Model B edge nodes"]
+    Mic["Microphone"] --> Pi4
+    RFID["RFID readers"] --> Pi4
     RFID --> MockLoc["Mock provider location events"]
-    Pi --> Mesh["Edge node mesh"]
+    Pi4 --> Mesh["Edge node mesh"]
     MockLoc --> Mesh
+    Pi5["1x Pi 5 hub candidate"] --> Mesh
     Mesh --> Fusion["Sensor fusion and anomaly logic"]
     Cache --> Context["RAG/context builder"]
     Fusion --> Context
@@ -79,7 +95,7 @@ Decide or gather:
 
 Decide:
 
-- Pi 4B responsibilities versus Pi 5 hub responsibilities.
+- Two Pi 4 Model B edge-node responsibilities versus the Pi 5 hub responsibilities.
 - Mesh transport and offline queue behavior.
 - Clock sync, node identity, node health, and retry semantics.
 - Local cache format and retention policy.
@@ -111,6 +127,19 @@ Processing granularity:
 - The hub should reconcile conflicting observations and produce track estimates with freshness and confidence.
 - The LLM should consume the compact evidence bundle, not continuous raw sensor streams.
 
+### Shared Context / Drive Intake
+
+The shared Google Drive is the working drop for everyone’s data ideas. For anything intended to become LLM context, include enough metadata for later ingestion:
+
+- Title and owner.
+- Source type: mock data, sensor note, Foundry idea, architecture note, evaluation prompt, UI idea, or policy constraint.
+- Whether the content is real, synthetic, mocked, or speculative.
+- Sensitivity and retention expectation.
+- Related sensor/event types, if known.
+- Short summary of how it should affect the CASK demo.
+
+The RAG ingestion path should only consume cleared material and should preserve source attribution so generated insight drafts can cite the relevant Drive document, Foundry object, or sensor event.
+
 ### Local Models
 
 Current shortlist:
@@ -131,6 +160,7 @@ Use pull requests to update these sections as people bring ideas:
 - Proposed mesh transport:
 - Proposed model/runtime stack:
 - Proposed retention and security policy:
+- Proposed shared Drive context corpus:
 - Proposed evaluation prompts and metrics:
 
 Each proposal should include:
@@ -147,5 +177,6 @@ Each proposal should include:
 2. Create or identify the `cask-edge-service` Developer Console application.
 3. Export the first OSDK package for the minimum object/action set.
 4. Build a synthetic sensor-event fixture for camera, microphone, and RFID.
-5. Benchmark the first local model pair on actual Pi 4B and Pi 5 hardware.
-6. Define the first structured `InsightDraft` JSON schema and acceptance tests.
+5. Seed the shared Drive with team data ideas and context candidates using the intake convention above.
+6. Benchmark the first local model pair on the two Pi 4 Model B nodes and one Pi 5.
+7. Define the first structured `InsightDraft` JSON schema and acceptance tests.
