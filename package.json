@@ -1,0 +1,24 @@
+{
+  "name": "altiair-cask-edge",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "description": "Local CASK edge integration scaffold for Foundry OSDK, Pi sensor bundles, and local LLM insight drafts.",
+  "engines": {
+    "node": ">=18"
+  },
+  "scripts": {
+    "build": "tsc --noEmit",
+    "smoke:mock": "tsx src/scripts/smoke.ts",
+    "smoke:foundry": "FOUNDRY_MODE=osdk tsx src/scripts/smoke.ts --foundry"
+  },
+  "dependencies": {
+    "@osdk/client": "^2.13.0",
+    "@osdk/oauth": "^1.9.0"
+  },
+  "devDependencies": {
+    "@types/node": "^22.15.3",
+    "tsx": "^4.19.4",
+    "typescript": "^5.8.3"
+  }
+}

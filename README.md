@@ -27,6 +27,7 @@ Canonical decisions:
 The deeper decision brief is here:
 
 - [CASK OSDK and Local LLM Brief](docs/cask-osdk-local-llm-brief.md)
+- [CASK Edge Implementation](docs/cask-implementation.md)
 
 Shared data ideas and LLM context drop:
 
@@ -45,6 +46,26 @@ Build a local CASK edge layer that can:
 - Use non-Chinese local model families for structured insight drafts, control-plane filtering, and retrieval.
 - Surface a Pi-hosted EagleEye-style cue overlay with evidence, confidence, uncertainty, and policy state.
 - Write approved events, insight drafts, node health, cue acknowledgements, and operator decisions back to Foundry.
+
+## Current Implementation Status
+
+The repo now includes a runnable TypeScript integration scaffold for the Foundry/CASK and local LLM path:
+
+- `src/cask/types.ts`: mission-critical CASK event schema for sensor observations, location fixes, node health, insight drafts, and policy-gated `CounterUasCue` records.
+- `src/foundry/uploader.ts`: Foundry uploader with mock mode and OSDK mode.
+- `src/foundry/osdkClient.ts`: OSDK client creation through `@osdk/client` and confidential OAuth through `@osdk/oauth`.
+- `src/llm/localInsight.ts`: local LLM adapter with mock mode and Ollama-compatible mode.
+- `src/scripts/smoke.ts`: end-to-end smoke path that builds a sample Pi bundle, drafts an insight, and queues/uploads it.
+
+Run locally without Foundry secrets:
+
+```bash
+npm install
+npm run build
+npm run smoke:mock
+```
+
+To switch from mock Foundry to real OSDK writeback, create or obtain a Developer Console backend-service application with a generated NPM OSDK package, configure the local `.npmrc`, install the generated package, and export the values described in `.env.example`. Do not commit real Foundry URLs, registry URLs, package tokens, client secrets, private RIDs, or other access details.
 
 ## Demo Scenario
 

@@ -1,0 +1,6 @@
+# Configure this locally after creating the Developer Console application.
+# Never commit an auth token.
+#
+# Palantir docs expect values from the Developer Console application Overview / Getting Started page:
+# //<REGISTRY-URL-FROM-OVERVIEW-PAGE>:_authToken=${FOUNDRY_TOKEN}
+# <PACKAGE-NAME>:registry=https://<REGISTRY-URL-FROM-OVERVIEW-PAGE>
