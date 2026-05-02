@@ -2,12 +2,15 @@
 
 Date: 2026-05-02
 
+Project lead: Sarah Hatcher.
+
 ## Working Assumptions
 
 - CASK means Palantir's CASK capability, with Foundry as the governed source of mission data.
 - Raspberry Pi hardware includes Pi 4B nodes and Pi 5 nodes.
 - No Chinese-origin model families should be used. Excluded examples: Qwen, DeepSeek, Yi, MiniCPM, Baichuan, ChatGLM, InternLM.
 - The local LLM is advisory. It should produce structured insight drafts with evidence, confidence, and limitations; it should not be the only control path for mission-critical decisions.
+- The initial demo should use authorized tagged training subjects, tagged assets, or simulated entities. It should provide situational awareness and non-kinetic coordination guidance, not instructions to harm, capture, or attack a real person.
 
 ## Architecture Shape
 
@@ -15,6 +18,9 @@ Date: 2026-05-02
 flowchart LR
     Foundry["Foundry Ontology / OSDK"] --> Sync["CASK sync service"]
     Sync --> Cache["Local governed cache"]
+    Camera["Camera"] --> Pi4
+    Mic["Microphone"] --> Pi4
+    RFID["RFID reader"] --> Pi4
     Pi4["Pi 4B sensor nodes"] --> Mesh["Edge node mesh"]
     Pi5["Pi 5 hub nodes"] --> Mesh
     Mesh --> Fusion["Sensor fusion and anomaly logic"]
@@ -22,6 +28,7 @@ flowchart LR
     Fusion --> Context
     Context --> LLM["Local LLM runtime"]
     LLM --> Insight["Structured insight draft"]
+    Insight --> Chest["Chest device / phone / tablet UI"]
     Insight --> Review["Operator review / policy gates"]
     Review --> Foundry
 ```
@@ -55,8 +62,25 @@ Recommended local schema boundary:
 - `AudioEvent`: microphone-derived observation with VAD window, transcript text, ASR confidence, detected keywords/classes, and optional redacted audio reference.
 - `RfidEvent`: reader-derived observation with reader ID, tag ID, antenna/zone, RSSI if available, read count, timestamp, and matched Foundry asset/person reference.
 - `Anomaly`: deterministic finding with rule ID, score, threshold, and related observations.
+- `TrackEstimate`: tracked subject or asset estimate with entity ID, zone, confidence, freshness, supporting events, and conflicting evidence.
+- `NodePing`: mesh notification with track estimate ID, confidence tier, affected zone, and display priority.
 - `InsightDraft`: LLM-authored explanation with citations to observations and Foundry object IDs.
 - `NodeHealth`: Pi status, mesh connectivity, clock drift, queue depth, model/runtime status.
+
+## Demo Flow
+
+The first full demo should show the following loop:
+
+1. Operators use Pi-backed edge nodes with RFID readers, cameras, and microphones.
+2. Each node processes local inputs into compact `CameraEvent`, `AudioEvent`, and `RfidEvent` records.
+3. Nodes exchange event summaries across the mesh, with store-and-forward behavior when connectivity is degraded.
+4. RFID reads ground the location estimate for an authorized tagged training subject or tagged asset.
+5. Camera and microphone events either corroborate, contradict, or add context to the RFID-derived estimate.
+6. The Pi 5 hub or elected edge hub builds an evidence bundle and asks the local LLM for an explanation and coordination draft.
+7. The system sends a `NodePing` to relevant edge nodes when a high-confidence track estimate changes.
+8. Operators view the fused state on a chest-worn or handheld device such as an iPad, phone, or field computer.
+
+The LLM should recommend non-kinetic coordination only: coverage gaps, search areas, sensor repositioning, deconfliction, confidence limits, and next verification checks.
 
 ## Sensor Input Strategy
 
@@ -80,6 +104,14 @@ RFID readers:
 - Normalize reads into `RfidEvent` records and join them against Foundry asset/person/tag objects.
 - Use RFID to ground camera/audio ambiguity, for example "asset likely present in zone" rather than relying on vision alone.
 - Track reader health, duplicate reads, missed-read windows, and tag-reader topology as separate operational signals.
+
+Omni-model fusion:
+
+- Build a typed evidence bundle per tracked subject or asset rather than prompting over raw streams.
+- Maintain confidence and freshness separately for RFID, camera, microphone, Foundry context, and mesh health.
+- Preserve conflicting evidence instead of overwriting it; the LLM should explain contradictions.
+- Broadcast a ping only when deterministic confidence thresholds are crossed or operator policy allows it.
+- Keep final routing or deployment recommendations constrained to non-kinetic coordination and verification.
 
 ## Pi Hardware Strategy
 

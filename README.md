@@ -2,6 +2,8 @@
 
 Planning and implementation repo for a Palantir CASK edge system that uses Foundry OSDK data, Raspberry Pi sensor nodes, and a local LLM to produce mission-critical insight drafts.
 
+Project lead: Sarah Hatcher.
+
 The current decision brief is here:
 
 - [CASK OSDK and Local LLM Brief](docs/cask-osdk-local-llm-brief.md)
@@ -15,6 +17,20 @@ Build a local CASK edge layer that can:
 - Fuse deterministic sensor events before invoking any LLM.
 - Use a local non-Chinese model family to draft structured insights with citations.
 - Write approved events, insight drafts, node health, and operator decisions back to Foundry.
+
+## Demo Scenario
+
+The demo is an edge-node mesh for a controlled training environment. A group of operators carry or use Pi-backed nodes with RFID readers plus camera and microphone inputs. Those nodes share structured observations with each other, use RFID reads to estimate the location of a tagged training subject or tagged asset, and surface a shared operating picture on a chest-worn or handheld device such as an iPad, phone, or similar field computer.
+
+The CASK-backed omni-model should fuse the sensor streams into a local, evidence-grounded view:
+
+- RFID provides the primary identity/presence signal.
+- Camera events provide visual confirmation, movement, zone, and scene context.
+- Microphone events provide transcripts, acoustic events, and local context.
+- Foundry/OSDK provides governed mission context, asset/person/tag mappings, permissions, and writeback.
+- The local LLM explains the fused picture, calls out uncertainty, and recommends non-kinetic coordination steps such as coverage, search, deconfliction, sensor repositioning, and next verification checks.
+
+This repo should not encode instructions for harming, capturing, or attacking a real person. Any "target" language in demos should mean an authorized, tagged training subject or simulated entity.
 
 ## Hard Constraints
 
@@ -62,6 +78,8 @@ Decide:
 - Mesh transport and offline queue behavior.
 - Clock sync, node identity, node health, and retry semantics.
 - Local cache format and retention policy.
+- Broadcast/ping behavior for high-confidence location updates.
+- Chest-device display protocol for phones, tablets, or other field computers.
 
 ### Sensor Pipeline
 
@@ -72,6 +90,17 @@ Initial event contracts:
 - `RfidEvent`: reader ID, tag ID, antenna/zone, RSSI if available, read count, timestamp, matched Foundry reference.
 - `Anomaly`: deterministic rule ID, threshold, score, related observations.
 - `InsightDraft`: LLM explanation, evidence references, confidence, limitations, recommended next check.
+- `TrackEstimate`: tracked subject/asset ID, last known zone, confidence, supporting RFID/camera/audio events, freshness, and conflict markers.
+- `NodePing`: event notification sent to edge nodes when a track estimate crosses confidence or urgency thresholds.
+
+Processing granularity:
+
+- Each node should extract local events before sending data across the mesh.
+- Camera frames should become detections, thumbnails, or short clips only when policy allows.
+- Microphone streams should become voice-activity windows, transcripts, and acoustic labels.
+- RFID reads should be deduplicated, timestamped, and joined to known tags.
+- The hub should reconcile conflicting observations and produce track estimates with freshness and confidence.
+- The LLM should consume the compact evidence bundle, not continuous raw sensor streams.
 
 ### Local Models
 
