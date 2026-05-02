@@ -2,6 +2,22 @@
 
 # Find Fix Target is our Demo
 
+## A squad in a jammed, cloud-denied environment has eyes, ears, and personnel trackers — but no way to fuse them into a threat picture without a cloud connection.
+
+Right now a squad in a DDIL environment has:
+- A separate soldier who sees something
+- Another sensor that hears something
+- An RFID ping that goes silent elsewhere
+
+Three signals. Zero fusion. No one connecting them automatically. The squad leader has to mentally stitch it together under fire, with degraded comms, while making a shoot/no-shoot decision.
+
+The current solution is either:
+
+A cloud-connected C2 system that's dead when the network is jammed
+A human analyst behind a laptop that isn't at the tactical edge
+
+---
+
 Altiair is a hackathon prototype for resilient edge sensing in unreliable network environments. Raspberry Pi nodes form a peer-to-peer mesh, collect sensor data, and forward video, image, audio, RFID, and other telemetry through whichever node currently has the best cloud path. If any node can reach Palantir Foundry, the rest of the mesh can daisy chain through it to synchronize data and receive cloud-enriched operator updates.
 
 ## Architecture
