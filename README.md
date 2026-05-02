@@ -18,8 +18,10 @@ flowchart LR
 
   subgraph Local["Local node services"]
     Capture["Sensor capture\nvideo / images / audio / RFID / telemetry"]
+    Filter["Pi-hosted LLM filter\ntriage + priority scoring"]
     Queue["Durable local queue\nmetadata + blob references"]
     Router["Mesh router\npeer discovery + best-uplink selection"]
+    Guard["Congestion guard\nrate limits + backpressure"]
     Inference["Edge decision loop\nlocal LLM + rules"]
   end
 
@@ -32,15 +34,17 @@ flowchart LR
   PiA --> Capture
   PiB --> Capture
   PiC --> Capture
-  Capture --> Queue
+  Capture --> Filter
+  Filter --> Queue
   Queue --> Router
   Queue --> Inference
+  Router --> Guard
   Inference --> Operators
 
-  Router -- "uplink available" --> Foundry
-  Router -- "no direct uplink\nrelay through best peer" --> PiA
-  Router -- "no direct uplink\nrelay through best peer" --> PiB
-  Router -- "no direct uplink\nrelay through best peer" --> PiC
+  Guard -- "uplink available" --> Foundry
+  Guard -- "no direct uplink\nrelay through best peer" --> PiA
+  Guard -- "no direct uplink\nrelay through best peer" --> PiB
+  Guard -- "no direct uplink\nrelay through best peer" --> PiC
 
   Danti --> Foundry
   Foundry --> Operators
@@ -80,13 +84,15 @@ sequenceDiagram
 
 ## Workstreams
 
-The hackathon should split into four parallel workstreams with a narrow integration contract between them. Each team should expose a small command or HTTP endpoint that the other teams can call without needing to understand the internals.
+The hackathon should split into four parallel workstreams with a narrow integration contract between them. Each team should expose a small Rust CLI command or HTTP endpoint that the other teams can call without needing to understand the internals.
+
+The edge stack should be Rust-first for memory safety and deployment reliability on Raspberry Pi. Use Swift/SwiftUI for the native iPad app because Swift is the memory-safe native framework for iPadOS.
 
 | Workstream | Primary goal | Day-one output |
 | --- | --- | --- |
 | Raspberry Pi networking | Bring up a resilient peer-to-peer network across all Pis | Three nodes can discover each other, exchange heartbeats, and report peer health |
 | Foundry integration | Move Pi-generated bundles into Palantir Foundry and read back cloud context | One Pi can upload a sample bundle and receive or simulate an acknowledgement |
-| Sensor forwarding and gateway selection | Forward bundles across Pis and choose which Pi should upload to Foundry | A disconnected node can route data to the best Foundry-connected gateway |
+| Sensor filtering, forwarding, and gateway selection | Use Pi-hosted LLM filtering, forward high-value bundles across Pis, and choose which Pi should upload to Foundry | A disconnected node can route prioritized data to the best Foundry-connected gateway without jamming it |
 | iPad operator interface | Give operators a field-ready view of mesh health, sensor events, and cloud-fused alerts | An iPad can connect to a Pi gateway and display live node status, observations, and alerts |
 
 ### Workstream 1: Raspberry Pi Networking
@@ -98,14 +104,14 @@ Tasks:
 - Assign stable node names: `altiair-node-a`, `altiair-node-b`, and `altiair-node-c`.
 - Establish local network connectivity between all Pis using the fastest reliable option available during the hackathon.
 - Start with static peer configuration if automatic discovery costs too much time.
-- Add a lightweight heartbeat endpoint on each node.
+- Add a lightweight Rust heartbeat endpoint on each node.
 - Track peer state: online/offline, last seen, IP address, latency, and packet success.
 - Expose a local status endpoint such as `GET /peers`.
 
 Recommended day-one approach:
 
-- Use HTTP between known peer IPs first.
-- Keep libp2p, Wi-Fi Direct, or ad hoc mesh as stretch goals once the demo path works.
+- Use `axum` and `tokio` for HTTP between known peer IPs first.
+- Use Rust `libp2p`, Wi-Fi Direct, or ad hoc mesh as stretch goals once the demo path works.
 - Use `systemd` or a simple shell script to start the node agent on boot.
 
 Acceptance criteria:
@@ -113,7 +119,7 @@ Acceptance criteria:
 - Each Pi can list the other two Pis.
 - Each Pi can send and receive a heartbeat.
 - Pulling network from one Pi does not prevent the other two from continuing to communicate.
-- The operator UI or CLI can show mesh health.
+- The iPad app or Rust CLI can show mesh health.
 
 ### Workstream 2: Raspberry Pi to Foundry Integration
 
@@ -123,7 +129,7 @@ Tasks:
 
 - Confirm the available Foundry sandbox endpoint, credentials, and upload method.
 - Define the minimum bundle format Foundry will accept.
-- Implement a small uploader that can send `metadata.json` plus optional media blobs.
+- Implement a small Rust uploader that can send `metadata.json` plus optional media blobs.
 - Map uploaded bundles into Foundry concepts such as `SensorObservation`, `Track`, `Alert`, `Asset`, and `Location`.
 - Return an acknowledgement receipt containing Foundry object ids, upload status, and any cloud-enriched context.
 - Provide a mock uploader mode if credentials or sandbox setup are blocked.
@@ -132,7 +138,8 @@ Recommended day-one approach:
 
 - First upload JSON-only bundles.
 - Add images, video, audio, and RFID payloads after the metadata path works.
-- Keep the uploader isolated behind one local command or endpoint such as `POST /foundry/upload`.
+- Keep the uploader isolated behind one Rust command or endpoint such as `POST /foundry/upload`.
+- Use `reqwest`, `rustls`, `serde`, and `tokio` for the upload path.
 
 Acceptance criteria:
 
@@ -141,39 +148,54 @@ Acceptance criteria:
 - The returned acknowledgement can be forwarded back through the mesh.
 - The demo can show the same event in local node state and in Foundry or the mock Foundry sink.
 
-### Workstream 3: Sensor Forwarding and Gateway Selection
+### Workstream 3: Sensor Filtering, Forwarding, and Gateway Selection
 
-**Owner focus:** store-and-forward routing, bundle replication, and choosing the best Foundry gateway.
+**Owner focus:** Pi-hosted LLM filtering, store-and-forward routing, bundle replication, network protection, and choosing the best Foundry gateway.
 
 Tasks:
 
 - Create a local durable queue for captured sensor bundles.
-- Add bundle states: `pending`, `forwarded`, `uploading`, `uploaded`, and `failed`.
-- Implement peer-to-peer bundle transfer between Pis.
+- Host a lightweight LLM or vision-language model on each Raspberry Pi to triage sensor data before it enters the forwarding queue.
+- Score each bundle for mission relevance, urgency, confidence, media size, and upload cost.
+- Add bundle states: `pending`, `held`, `forwarded`, `uploading`, `uploaded`, and `failed`.
+- Implement peer-to-peer bundle transfer between Pis in the Rust node agent.
 - Advertise each node's uplink score to peers.
 - Select the current Foundry gateway based on reachability, recent upload success, latency, and bandwidth.
 - Forward bundles to the selected gateway and propagate upload acknowledgements back to the origin node.
+- Apply backpressure so peers slow down or pause forwarding when the selected gateway is saturated.
+- Protect the mesh with per-peer rate limits, maximum in-flight bundle counts, retry jitter, and queue watermarks.
 
 Recommended day-one approach:
 
-- Use SQLite for metadata and the filesystem for media blobs.
+- Use SQLite through `sqlx` or `rusqlite` for metadata and the filesystem for media blobs.
+- Use the Pi-hosted LLM to send metadata, thumbnails, short clips, and high-priority events first; hold or summarize low-value raw media until bandwidth improves.
 - Use deterministic scoring before trying complex routing:
 
 ```text
+bundle_priority = mission_relevance * 40
+                + urgency * 30
+                + confidence * 20
+                - media_size_mb
+                - duplicate_penalty
+
 gateway_score = foundry_reachable * 100
               + internet_reachable * 50
               + recent_upload_success * 25
               - latency_ms / 100
               - pending_upload_count
+              - gateway_cpu_load
 ```
 
 Acceptance criteria:
 
 - A node without internet can enqueue a sensor bundle.
+- The local LLM can mark a bundle as `send_now`, `summarize_first`, `hold`, or `drop_duplicate`.
 - Another node can receive and store that bundle.
 - The best-connected node is selected as the gateway.
 - Upload acknowledgement returns to the originating node.
 - Duplicate uploads are avoided using `bundle_id`.
+- The selected gateway refuses or slows new transfers when its queue, CPU, memory, or network usage crosses a configured threshold.
+- Low-priority media does not block urgent alerts from reaching Foundry.
 
 ### Workstream 4: iPad Operator Interface
 
@@ -218,6 +240,8 @@ Every node should expose the same minimal API so the workstreams can integrate q
 | `GET /bundles/pending` | Lists bundles that still need forwarding or upload |
 | `POST /bundles/{bundle_id}/ack` | Records Foundry upload acknowledgement |
 | `POST /foundry/upload` | Uploads a bundle when this node is the selected gateway |
+| `GET /congestion` | Returns queue depth, in-flight transfers, CPU, memory, network usage, and gateway saturation state |
+| `POST /bundles/{bundle_id}/decision` | Records the local LLM decision to send, summarize, hold, or drop a bundle |
 | `GET /observations` | Returns recent local, forwarded, and uploaded sensor observations for the iPad UI |
 | `GET /alerts` | Returns edge-generated and Foundry-enriched alerts for the iPad UI |
 | `POST /alerts/{alert_id}/ack` | Records operator acknowledgement from the iPad UI |
@@ -228,10 +252,10 @@ Every node should expose the same minimal API so the workstreams can integrate q
    - Flash or verify Raspberry Pi OS on all three devices.
    - Set hostnames such as `altiair-node-a`, `altiair-node-b`, and `altiair-node-c`.
    - Enable SSH, camera support, and required interfaces for RFID hardware.
-   - Install Python, Docker or systemd services, camera utilities, and networking tools.
+   - Install the Rust toolchain, Docker or systemd services, camera utilities, and networking tools.
 
 2. **Create the peer-to-peer mesh**
-   - Use Wi-Fi ad hoc, Wi-Fi Direct, Tailscale, or libp2p depending on network constraints.
+   - Use Wi-Fi ad hoc, Wi-Fi Direct, Tailscale, or Rust `libp2p` depending on network constraints.
    - Each node should advertise:
      - node id
      - reachable peer addresses
@@ -251,17 +275,23 @@ Every node should expose the same minimal API so the workstreams can integrate q
    - Store bundles locally until acknowledged by Foundry.
    - Include timestamps, node id, sensor type, geolocation if available, and confidence.
 
-4. **Route through the best uplink**
+4. **Filter and protect the forwarding path**
+   - Run a lightweight LLM or deterministic fallback on each Pi to classify bundles before forwarding.
+   - Prioritize urgent alerts, compact metadata, thumbnails, and short clips before large raw media.
+   - Hold low-value or duplicate data locally when the mesh or selected gateway is saturated.
+   - Enforce per-peer rate limits, maximum in-flight transfers, queue high-water marks, and retry backoff.
+
+5. **Route through the best uplink**
    - Score each node by cloud reachability, bandwidth, latency, and recent upload success.
    - If a node cannot reach Foundry, it forwards bundles to the best peer.
    - The selected uplink node uploads to Foundry and returns acknowledgement receipts through the mesh.
 
-5. **Fuse with Foundry, sandbox data, and Danti**
+6. **Fuse with Foundry, sandbox data, and Danti**
    - Upload edge bundles into a Foundry dataset or object-backed ingestion path.
    - Map events into ontology objects such as `SensorObservation`, `Asset`, `Track`, `Alert`, and `Location`.
    - Join with Foundry sandbox and Danti-derived simulation data to create demo scenarios.
 
-6. **Add the iPad operator interface**
+7. **Add the iPad operator interface**
    - Build a SwiftUI iPad app that connects to the current Pi gateway.
    - Show mesh health, active nodes, pending uploads, recent observations, and generated alerts.
    - Highlight which node is acting as the current Foundry gateway.
@@ -272,32 +302,38 @@ Every node should expose the same minimal API so the workstreams can integrate q
 ```mermaid
 flowchart TB
   subgraph Pi["Each Raspberry Pi"]
-    Agent["altiair-agent\nPython service"]
+    Agent["altiair-agent\nRust service"]
     Sensors["sensor adapters\ncamera / RFID / telemetry"]
+    Filter["local LLM filter\npriority + dedupe decisions"]
     Store["local bundle store\nSQLite + filesystem"]
-    Mesh["mesh transport\nHTTP, libp2p, or Tailscale service"]
+    Mesh["mesh transport\naxum HTTP, Rust libp2p, or Tailscale service"]
+    Guard["congestion guard\nbackpressure + rate limits"]
     Uplink["Foundry uploader\nruns only when credentials and network exist"]
     LLM["edge LLM decision service\nsmall local model or API-compatible runtime"]
   end
 
   Sensors --> Agent
-  Agent --> Store
+  Agent --> Filter
+  Filter --> Store
   Store --> Mesh
-  Store --> Uplink
+  Mesh --> Guard
+  Guard --> Uplink
   Agent --> LLM
   LLM --> Store
 ```
 
 Recommended first-pass implementation:
 
-- **Language:** Python for fast hardware integration.
-- **Node service:** FastAPI or Flask for peer endpoints and local status.
-- **Local storage:** SQLite for bundle metadata, filesystem for media blobs.
-- **Peer transport:** HTTP between known peers for day-one reliability; swap to libp2p after the demo path works.
-- **Camera capture:** `libcamera` for Pi camera, OpenCV or `ffmpeg` for Logitech USB camera.
-- **RFID ingest:** Python RFID library matched to the available sensor module.
-- **Uploader:** Foundry SDK, Foundry REST API, or a sandbox upload endpoint depending on available credentials.
-- **Edge LLM:** small local model runtime when feasible; otherwise mock the interface with deterministic rules for the demo.
+- **Language:** Rust for the Raspberry Pi edge agent, mesh routing, bundle queue, and Foundry uploader.
+- **Node service:** `axum` on `tokio` for peer endpoints, local status, and iPad-facing APIs.
+- **Data contracts:** `serde` and `serde_json` for bundle metadata, peer state, alerts, and Foundry acknowledgements.
+- **Local storage:** SQLite through `sqlx` or `rusqlite` for bundle metadata, filesystem for media blobs.
+- **Peer transport:** `axum` HTTP between known peers for day-one reliability; swap to Rust `libp2p` after the demo path works.
+- **Camera capture:** call `libcamera` tools from the Rust agent or use Rust camera bindings where stable; keep media encoding behind a narrow process boundary.
+- **RFID ingest:** use a Rust SPI/I2C/GPIO crate matched to the RFID sensor module; isolate any vendor driver behind a small adapter.
+- **Uploader:** Rust `reqwest` with `rustls`, Foundry REST API, or a sandbox upload endpoint depending on available credentials.
+- **Edge LLM:** Pi-hosted lightweight model for filtering, prioritization, summarization, dedupe, and operator decision support; use deterministic Rust rules as a fallback.
+- **Network protection:** enforce backpressure, per-peer rate limits, in-flight transfer caps, retry jitter, queue watermarks, and gateway saturation checks before forwarding.
 - **Operator app:** SwiftUI iPad app polling the Pi gateway API for mesh health, observations, alerts, and acknowledgements.
 
 ## Demo Scenario
@@ -338,11 +374,22 @@ Recommended first-pass implementation:
   "edge_assessment": {
     "summary": "motion detected near checkpoint",
     "confidence": 0.72,
-    "recommended_action": "review"
+    "recommended_action": "review",
+    "llm_forwarding_decision": "send_now",
+    "priority": 81,
+    "duplicate_probability": 0.08,
+    "network_cost": {
+      "estimated_bytes": 245760,
+      "media_strategy": "thumbnail_first"
+    }
   },
   "upload": {
     "status": "pending",
-    "preferred_gateway": "altiair-node-c"
+    "preferred_gateway": "altiair-node-c",
+    "backpressure": {
+      "gateway_saturated": false,
+      "retry_after_seconds": null
+    }
   }
 }
 ```
@@ -352,6 +399,8 @@ Recommended first-pass implementation:
 - Three Raspberry Pis can discover or reach each other on a local mesh.
 - At least one Pi captures real camera or RFID data.
 - A disconnected Pi can pass a sensor bundle to another Pi.
+- Each Pi can use a local LLM or deterministic fallback to filter, prioritize, summarize, hold, or drop duplicate sensor data before forwarding.
+- The mesh protects the selected upload gateway with backpressure, rate limits, and queue thresholds.
 - The best-connected Pi can upload or simulate upload into Foundry.
 - The iPad operator app shows node status, pending bundles, uploaded bundles, and fused alerts.
 - Edge LLM or rule-based fallback produces a decision-support summary from sensor data.
