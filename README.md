@@ -1,16 +1,30 @@
 # Altiair
 
-Hackathon planning and implementation repo for a Palantir CASK edge system that uses Foundry OSDK data, Raspberry Pi sensor nodes, and a local LLM to produce evidence-grounded mission insight drafts in unreliable network environments.
+Hackathon planning and implementation repo for a Palantir CASK edge system that uses Foundry OSDK data, Raspberry Pi sensor nodes, local filtering models, and a Pi-hosted EagleEye-style display shell to produce evidence-grounded mission insight drafts in unreliable network environments.
 
 Project lead: Sarah Hatcher.
 
-Team inputs merged here:
+## Source Of Truth
+
+This README consolidates the pushed README drafts:
 
 - Sarah/Codex CASK OSDK + local LLM plan.
-- `origin/main` edge mesh and iPad operator README.
-- `readme-ben.md` hackathon execution draft.
+- `origin/main` edge mesh, local LLM filtering, Rust agent, and congestion-control draft.
+- `readme-ben.md` hackathon execution draft, preserved as an alternate team note.
 
-The current decision brief is here:
+Canonical decisions:
+
+| Topic | Decision |
+| --- | --- |
+| Project spelling | Keep `Altiair` unless the full team renames the repo and shared assets. |
+| Hardware | Use 2x Raspberry Pi 4 Model B edge nodes and 1x Raspberry Pi 5 hub candidate. |
+| UI target | Build a Pi-hosted EagleEye-style display shell first. Phones/tablets are fallback viewers only. |
+| Foundry path | Target CASK/Foundry OSDK. Use REST/mock upload only as a day-one fallback behind the same local API. |
+| Local models | No Chinese-origin model families. Do not use Qwen, DeepSeek, Yi, MiniCPM, Baichuan, ChatGLM, InternLM, or derivatives. |
+| Counter-UAS scope | Detection, attribution cueing, policy-gated review, and operator acknowledgement only. No target prosecution, engagement planning, or harmful action recommendations. |
+| Edge implementation | Rust-first for the durable node agent, queue, peer API, congestion guard, and uploader. Python scripts are acceptable for fast sensor prototypes behind stable JSON contracts. |
+
+The deeper decision brief is here:
 
 - [CASK OSDK and Local LLM Brief](docs/cask-osdk-local-llm-brief.md)
 
@@ -20,57 +34,23 @@ Shared data ideas and LLM context drop:
 
 Use the Drive for team data ideas, mock fixtures, diagrams, sensor notes, evaluation prompts, and context documents we may later ingest into a local RAG/LLM context pipeline. Do not upload credentials, private Foundry URLs, client secrets, uncontrolled raw media, or sensitive personal data.
 
-## Merged Source Insights
-
-What all three README drafts agree on:
-
-- The core product is resilient edge sensing for DDIL or unreliable network environments.
-- Raspberry Pis collect camera, microphone, RFID, and telemetry events.
-- Local state must keep working when cloud connectivity drops.
-- Foundry/CASK provides governed mission context, ontology mapping, enrichment, and writeback.
-- A local LLM or deterministic fallback produces structured operator-facing summaries.
-- A Pi-built or chest-worn display shows node health, observations, alerts, and fused context.
-- Human review stays in the loop for any consequential output.
-
-What differed across the drafts, and the merged decision:
-
-| Topic | Difference | Merged direction |
-| --- | --- | --- |
-| Project spelling | Ben's draft says `Altair`; repo, Drive, and PR use `Altiair`. | Keep `Altiair` unless the full team renames the repo and shared assets. |
-| Hardware | One draft assumed 3x Pi 4B; Sarah confirmed 2x Pi 4B and 1x Pi 5. | Use 2x Pi 4B edge nodes and 1x Pi 5 hub candidate. |
-| Topology | One draft used peer mesh; Ben's draft used Pi 5 hub + phones on a local LAN. | MVP uses Pi 5 as hub/gateway on a local LAN, with Pi 4B nodes doing edge capture and store-and-forward. Peer-to-peer mesh remains a stretch path. |
-| Foundry integration | Sarah's plan targets OSDK; Ben's draft says raw REST for v1. | OSDK is the target CASK path. REST/mock uploader is allowed as a day-one fallback if OSDK setup blocks the demo. |
-| Operator UI | Drafts mention iPad, phones, PWA, Army AR, and now EagleEye. | Build a Pi-hosted EagleEye-style display shell first. Phones are only a fallback browser, not the primary demo device. |
-| LLM default | Drafts mention Granite, Llama, Gemma, Phi, and SmolLM. | Benchmark non-Chinese small models on Pi 5 first; use deterministic rules if latency misses the demo window. |
-| Scope | Ben's draft explicitly excludes kill-chain automation; Sarah's plan narrows target language; Army feedback sharpened the counter-UAS "find target" story. | Frame the demo as counter-UAS detection, attribution, and policy-gated cueing. Do not build autonomous target prosecution or harmful engagement instructions. |
-
-Open decisions:
-
-- Final project spelling: `Altiair` versus `Altair`.
-- Whether the first Foundry path is generated OSDK, REST, or mock uploader.
-- Which model wins on Pi 5 latency and JSON reliability.
-- Whether the demo UI runs on a Pi-attached display, Pi-hosted kiosk browser, or a separate chest-worn compute/display rig.
-- Which CASK kit capabilities are available during the hackathon.
-- Whether the external-alignment slide says Army NGC2 only, or also names Anduril EagleEye, Lattice, and Lockheed Martin C2 systems as interoperability research targets.
-
 ## Goal
 
 Build a local CASK edge layer that can:
 
 - Pull governed mission context from Foundry through the OSDK.
-- Ingest camera, microphone, and RFID signals from Pi 4B and Pi 5 nodes.
-- Mock provider-style LTE/RF location telemetry using the Arduino RFID kit.
-- Fuse deterministic sensor events before invoking any LLM.
-- Use a local non-Chinese model family to draft structured insights with citations.
-- Broadcast high-confidence evidence updates to edge nodes and operator devices.
-- Write approved events, insight drafts, node health, and operator decisions back to Foundry.
-- Support a counter-UAS demo path that detects low-cost drone activity, correlates the likely operator/control source from evidence, and creates a human-reviewed cue package.
+- Ingest camera, microphone, RFID, and mock provider-style RF/LTE location events from Pi nodes.
+- Filter, dedupe, prioritize, and compress sensor bundles before forwarding them across the mesh.
+- Protect the selected Foundry/CASK gateway from overload using backpressure and queue limits.
+- Use non-Chinese local model families for structured insight drafts, control-plane filtering, and retrieval.
+- Surface a Pi-hosted EagleEye-style cue overlay with evidence, confidence, uncertainty, and policy state.
+- Write approved events, insight drafts, node health, cue acknowledgements, and operator decisions back to Foundry.
 
 ## Demo Scenario
 
-The demo is an edge-node mesh for a controlled training environment. Operators carry or use Pi-backed nodes with RFID readers plus camera and microphone inputs. Those nodes share structured observations with each other, use RFID reads to estimate the location of a tagged training subject or tagged asset, and surface a shared operating picture on a Pi-built EagleEye-style display shell, Pi-attached screen, or chest-worn field computer. A phone browser can remain an emergency fallback, but it is not the primary concept.
+The demo is an edge-node mesh for a controlled training environment. Operators use Pi-backed nodes with RFID readers plus camera and microphone inputs. Those nodes share structured observations, use RFID reads to estimate the location of a tagged training subject or tagged asset, and surface a shared operating picture on a Pi-built EagleEye-style display shell, Pi-attached screen, or chest-worn field computer. A phone browser can remain an emergency fallback, but it is not the primary concept.
 
-The real-world pattern being mocked is provider-style RF/LTE location telemetry: an external network can report a location estimate for a device or tag. For this demo, we do not have carrier-grade granularity. We will use an Arduino RFID kit to generate structurally similar location events, then mark them with explicit source, precision, confidence, freshness, and mock status fields.
+The real-world location pattern being mocked is provider-style RF/LTE telemetry: an external network can report a location estimate for a device or tag. For this demo, we do not have carrier-grade granularity. We will use an Arduino RFID kit to generate structurally similar location events, then mark them with explicit source, precision, confidence, freshness, and mock status fields.
 
 The CASK-backed omni-model should fuse the sensor streams into a local, evidence-grounded view:
 
@@ -81,37 +61,26 @@ The CASK-backed omni-model should fuse the sensor streams into a local, evidence
 - Foundry/OSDK provides governed mission context, asset/person/tag mappings, permissions, and writeback.
 - The local LLM explains the fused picture, calls out uncertainty, and recommends non-kinetic coordination steps such as coverage, search, deconfliction, sensor repositioning, and next verification checks.
 
-This repo should not encode instructions for harming, capturing, or attacking a real person. Any "target" language in demos should mean an authorized, tagged training subject or simulated entity.
+Any "target" language in demos means an authorized, tagged training subject or simulated entity. This repo should not encode instructions for harming, capturing, or attacking a real person.
 
 ## Counter-UAS Cueing Use Case
 
-Army feedback sharpened the "find target" story into a counter-UAS workflow:
+Army feedback sharpened the demo into a counter-UAS cueing workflow:
 
 1. Detect an operator-controlled or low-cost drone event.
-2. Classify the drone class in the map layer, for example DJI-style commercial quadcopter, Shahed-style low-cost one-way drone, decoy drone, or unknown.
-3. Correlate camera, microphone, RFID/mock-provider location, operator reports, and Foundry context to estimate a likely control source, launch area, or operator-associated zone.
+2. Classify the drone class in the map layer, for example commercial quadcopter, low-cost one-way drone, decoy drone, or unknown.
+3. Correlate camera, microphone, RFID/mock-provider location, operator reports, mesh topology, and Foundry context to estimate a likely control source, launch area, or operator-associated zone.
 4. Produce an evidence queue for a human operator: what was observed, where, confidence, freshness, source sensors, contradictions, and policy state.
-5. Cue the operator display and edge nodes with a `CounterUasCue`, not an engagement order.
+5. Cue the Pi-hosted display and edge nodes with a `CounterUasCue`, not an engagement order.
 6. Keep every consequential action behind rules of engagement, policy review, command authorization, and human acknowledgement.
-
-The system should replace harmful engagement wording with "surface an evidence-backed counter-UAS cue to authorized C2 workflows." The demo can show the queue and policy gate; it should not recommend lethal action, targeting procedures, or autonomous engagement.
-
-Map layers for this use case:
-
-- Drone observations by class, confidence, altitude/zone when available, and timestamp.
-- Likely control-source or launch-area estimate with confidence ring and freshness.
-- Sensor coverage and blind spots.
-- Decoy or spoof suspicion when observations conflict.
-- Policy status: collect-only, review-needed, authorized-to-share, or blocked.
-- CASK/Foundry sync state and last acknowledgement.
 
 Demo phrasing:
 
 - "Find the drone operator" means estimate and explain an attributable control-source zone from sensor evidence.
-- "Queue" means an evidence and policy review queue for a human operator.
+- "Queue" means an evidence and policy review queue for authorized humans.
 - "Unjammable" should be presented as jam-resilient or DDIL-resilient; do not claim a system is literally unjammable.
-- A Faraday bag/cage remains a demo beat for local resilience: isolate one display client or cloud path and show the Pi/CASK edge still queues, syncs, and informs nearby operators.
-- "EagleEye integration" means the Pi-hosted display should emulate the cue overlays and acknowledgement flow we would later publish into a headborne C2 display; the MVP should not claim direct EagleEye access unless we actually receive it.
+- A Faraday bag/cage remains a resilience demo beat: isolate one display client or cloud path and show the Pi/CASK edge still queues, syncs, and informs nearby operators.
+- "EagleEye integration" means the Pi-hosted display emulates cue overlays and acknowledgement flow that could later map to a headborne C2 display. Do not claim direct EagleEye access unless it is actually granted.
 
 ## Hardware Inventory
 
@@ -119,8 +88,8 @@ Confirmed demo hardware:
 
 | Quantity | Equipment | Role |
 | --- | --- | --- |
-| 2 | Raspberry Pi 4 Model B | Edge sensor nodes for camera, microphone, RFID, local event extraction, and store-and-forward. |
-| 1 | Raspberry Pi 5 | Hub candidate for FastAPI gateway, SQLite queue, local LLM runtime, WebSocket fanout, and Foundry/CASK sync. |
+| 2 | Raspberry Pi 4 Model B | Edge sensor nodes for camera, microphone, RFID, local event extraction, LLM/rules filtering, and store-and-forward. |
+| 1 | Raspberry Pi 5 | Hub candidate for local cache, queue, model runtime, WebSocket fanout, CASK/Foundry sync, and Pi-hosted display. |
 | 1+ | Arduino RFID kit / RFID readers | Mock provider-style location and tag presence events. |
 | 1+ | Camera inputs | Visual observations through Pi camera or USB camera. |
 | 1+ | Microphone inputs | Voice activity, transcript, acoustic event, or note capture. |
@@ -138,96 +107,87 @@ flowchart LR
   end
 
   subgraph Hub["Tier 2: Raspberry Pi 5 hub"]
-    API["FastAPI gateway"]
+    API["Rust node API"]
     DB["SQLite durable queue"]
-    LLM["Local LLM or rules"]
+    Filter["Local LLM/rules filter"]
+    Guard["Congestion guard"]
     Uploader["OSDK sync / REST fallback / mock uploader"]
     Fanout["WebSocket fanout"]
+    Display["Pi-hosted EagleEye-style display"]
   end
 
   subgraph Edge["Tier 1: Raspberry Pi 4B edge nodes"]
     NodeA["altiair-node-a\ncamera + mic + RFID"]
     NodeB["altiair-node-b\ncamera + mic + RFID"]
-    Queue["local bundle store"]
+    LocalStore["local bundle store"]
   end
 
-  subgraph UI["Operator devices"]
-    PWA["Pi-hosted UI\nEagleEye-style cue emulator"]
-    EagleEye["Future EagleEye / headborne C2 display"]
+  subgraph Future["Future integrations"]
+    EagleEye["EagleEye / headborne C2 display"]
+    Lattice["Lattice-style entities / objects / tasks"]
   end
 
-  NodeA --> Queue
-  NodeB --> Queue
-  Queue --> API
+  NodeA --> LocalStore
+  NodeB --> LocalStore
+  LocalStore --> API
   API --> DB
-  DB --> LLM
-  DB --> Uploader
+  DB --> Filter
+  Filter --> Guard
+  Guard --> Uploader
   Uploader --> Ontology
   Ontology --> AIP
-  AIP --> Workshop
   AIP --> Uploader
   Uploader --> DB
-  Fanout --> PWA
-  Fanout -.-> EagleEye
   DB --> Fanout
+  Fanout --> Display
+  Fanout -.-> EagleEye
+  Uploader -.-> Lattice
 ```
 
 Recommended day-one topology:
 
 - Closed LAN through a travel router with AP isolation off.
 - `altiair-node-a` and `altiair-node-b` are Pi 4B edge nodes.
-- `altiair-hub` is the Pi 5 gateway and local LLM host.
+- `altiair-hub` is the Pi 5 gateway, local LLM host, queue owner, and display host.
 - The primary operator display is built off the Pi: attached screen, kiosk browser, or chest-worn compute/display rig that resembles EagleEye cueing.
 - Phones and tablets are fallback viewers only.
-- Use `mkcert` or equivalent local TLS if mobile browsers need camera or microphone access.
 - Use static peer configuration first; automatic discovery, libp2p, Wi-Fi Direct, or MANET behavior are stretch goals.
 
-## Workstreams
+## Consolidated Workflows
 
-| Lane | Owner | Owns | First output |
-| --- | --- | --- | --- |
-| Backend / Pi | TBD | `pi/` | FastAPI scaffold, healthcheck, SQLite queue, bundle API. |
-| Frontend / Pi-hosted UI | TBD | `web/` | EagleEye-style display shell, service worker or kiosk mode, reconnecting WebSocket client. |
-| Foundry / CASK / OSDK | Sarah / Rob lead | `foundry/` | Ontology sketch, OSDK package path, REST/mock fallback. |
-| Sensor pipeline | TBD | `sensors/` | Camera, microphone, RFID adapters emitting normalized events. |
-| Networking + demo | Ben lead | `demo/` | Router config, local TLS, smoke test, rehearsal script. |
+Use these workflows instead of separate competing workstream lists.
 
-### Backend / Pi
+| Workflow | Owns | First output |
+| --- | --- | --- |
+| Edge node agent | Rust node service, health, peer status, queue, bundle API, local storage. | `GET /health`, `GET /peers`, SQLite bundle table, systemd launch path. |
+| Sensor ingest | Camera, microphone, RFID, mock provider location adapters. | Normalized `CameraEvent`, `AudioEvent`, `RfidEvent`, `MockProviderLocationEvent`. |
+| Filtering and congestion | Local LLM/rules filter, priority, dedupe, backpressure, gateway saturation checks. | `POST /bundles/{bundle_id}/decision`, `GET /congestion`, deterministic fallback. |
+| Foundry/CASK sync | OSDK app, ontology mapping, uploader, acknowledgement receipts, mock fallback. | `POST /foundry/upload` returns deterministic ack or mock ack. |
+| Pi-hosted EagleEye-style UI | Kiosk/display shell, cue overlay, evidence drawer, policy gate, acknowledgement. | Display renders mesh health, observations, `CounterUasCue`, policy state. |
+| Demo and evaluation | Scenario data, policy constraints, smoke tests, pitch beats. | End-to-end demo with local-only operation and queued sync recovery. |
 
-- FastAPI service with `GET /health`.
-- SQLite metadata store plus filesystem blob references.
-- Bundle state machine: `pending`, `forwarded`, `uploading`, `uploaded`, `failed`.
-- WebSocket fanout to operator UI.
-- Deterministic fusion rules before LLM invocation.
-- Ollama or llama.cpp-compatible local model runtime when latency allows.
+### Workflow 1: Edge Node Agent
 
-### Frontend / Pi-Hosted UI
+Owner focus: local connectivity, peer identity, health reporting, durable queue, and safe process startup.
 
-- Pi-hosted responsive UI or kiosk app that can render on an attached display, browser, or chest-worn compute shell.
-- EagleEye-style cue overlay: compact status ribbon, confidence ring, evidence drawer, policy gate, and acknowledgement control.
-- Mesh health view: nodes online, hub/gateway, peer quality, pending upload counts.
-- Observation feed: timestamp, source node, sensor type, media preview, upload status.
-- Map or zone view with pre-cached tiles if map time permits.
-- Alert/detail pane with evidence, uncertainty, and acknowledgement action.
-- Degraded/offline state when Foundry is unreachable but local mesh data is still available.
+Tasks:
 
-### Foundry / CASK / OSDK
+- Assign stable node names: `altiair-node-a`, `altiair-node-b`, and `altiair-hub`.
+- Use Rust `axum` and `tokio` for the node API.
+- Track peer state: online/offline, last seen, IP address, latency, packet success, queue depth, and current gateway.
+- Store bundle metadata in SQLite through `sqlx` or `rusqlite`; store media blobs on disk.
+- Start the node agent via `systemd` or a simple launch script.
 
-Decide or gather:
+Acceptance criteria:
 
-- Foundry stack URL, Ontology RID, generated OSDK package name, and package index URL.
-- Developer Console app shape for `cask-edge-service`.
-- OAuth grant path and service-user permissions.
-- Object types for missions, assets, sensors, cameras, microphones, RFID readers, RFID tags, location feeds, edge nodes, observations, alerts, and tasks.
-- Actions/writeback targets for camera events, audio events, RFID events, mock provider location events, insight drafts, node health, incident annotations, operator decisions, and action logs.
-- Counter-UAS object/action candidates: `DroneObservation`, `DroneTrack`, `CounterUasCue`, `ControlSourceEstimate`, `PolicyGate`, `EvidenceQueueItem`, and `OperatorAcknowledgement`.
+- Each Pi can list peers and report local health.
+- Each Pi can enqueue and retrieve bundles.
+- Pulling network from one Pi does not prevent the remaining local path from continuing.
+- The operator UI or CLI can show mesh health.
 
-Day-one fallback:
+### Workflow 2: Sensor Ingest
 
-- If OSDK setup blocks the demo, use a narrow REST or mock uploader behind the same local endpoint.
-- Keep the integration boundary stable: `POST /foundry/upload` returns deterministic acknowledgement receipts.
-
-### Sensor Pipeline
+Owner focus: sensor adapters and typed event contracts.
 
 Initial event contracts:
 
@@ -236,64 +196,209 @@ Initial event contracts:
 - `RfidEvent`: reader ID, tag ID, antenna/zone, RSSI if available, read count, timestamp, matched Foundry reference.
 - `MockProviderLocationEvent`: simulated LTE/RF-provider-style location fix generated from the Arduino RFID kit, with source type, mock flag, zone/coordinate, precision radius, confidence, and freshness.
 - `LocationFix`: normalized location estimate from RFID, mock provider telemetry, camera, microphone, or manual input.
-- `Anomaly`: deterministic rule ID, threshold, score, related observations.
-- `InsightDraft`: LLM explanation, evidence references, confidence, limitations, recommended next check.
-- `TrackEstimate`: tracked subject/asset ID, last known zone, confidence, supporting RFID/camera/audio events, freshness, and conflict markers.
 - `DroneObservation`: drone class, detection source, zone or bearing, confidence, media reference, and timestamp.
-- `ControlSourceEstimate`: likely controller or launch area estimate, supporting observations, contradictions, confidence ring, freshness, and policy state.
+- `ControlSourceEstimate`: likely controller or launch-area estimate, supporting observations, contradictions, confidence ring, freshness, and policy state.
 - `CounterUasCue`: human-reviewed cue package linking drone observations, control-source estimate, evidence, confidence, policy gate, and acknowledgement state.
-- `NodePing`: event notification sent to edge nodes when a track estimate crosses confidence or urgency thresholds.
 
-Processing granularity:
+Processing rules:
 
-- Each node extracts local events before sending data across the mesh.
-- Camera frames become detections, thumbnails, or short clips only when policy allows.
-- Microphone streams become voice-activity windows, transcripts, and acoustic labels.
-- RFID reads are deduplicated, timestamped, and joined to known tags.
-- Arduino RFID reads also emit mock provider-style location events so downstream CASK logic can use the shape of future LTE/RF location telemetry.
-- All location estimates must carry `source`, `precision`, `confidence`, `freshness`, and `isMock` fields.
-- The hub reconciles conflicting observations and produces track estimates with freshness and confidence.
-- The LLM consumes compact evidence bundles, not continuous raw sensor streams.
-- Counter-UAS outputs must stop at evidence-backed cueing, policy status, and recommended verification checks.
+- Extract local events before sending data across the mesh.
+- Convert camera frames into detections, thumbnails, or short clips only when policy allows.
+- Convert microphone streams into voice-activity windows, transcripts, and acoustic labels.
+- Deduplicate RFID reads and join them to known tags.
+- Mark Arduino-derived provider-style location as mock and coarse.
+- Keep the LLM on compact evidence bundles, not continuous raw sensor streams.
 
-### Interoperability / External Alignment
+### Workflow 3: Filtering, Prioritization, And Congestion
 
-Keep the MVP self-contained, but align the language with current Army and defense C2 direction:
+The local LLM is part of the networking control plane. It is not open-ended chat. It filters sensor bundles, summarizes bulky media, detects duplicates, assigns priority, and prevents the mesh from jamming the selected Foundry/CASK upload gateway.
 
-- Army Next Generation Command and Control (NGC2): use this as the external framing for data-centric C2, integrated transport/data/app layers, and resilient operator decision support.
-- Anduril EagleEye: target display metaphor for headborne mission command, digital vision, and AI-assisted situational awareness. Treat the Pi-hosted UI as a stand-in until there is real EagleEye/Lattice access.
-- Anduril Lattice: research as an interoperability reference because its public developer docs expose entity, task, and object API concepts for C2/situational-awareness integrations.
-- Lockheed Martin C2/BMC systems: research as another interoperability reference for command-and-control decision support and cross-domain battle management.
-- Army AR / chest display: treat as the future operator-interface target; the MVP remains a Pi-hosted UI that can run on an attached display, kiosk browser, or chest-worn compute/display rig.
-- Beyond-line-of-sight communications: capture as a stretch transport layer requirement. The demo should prove local DDIL resilience first, then document BLOS options as integration candidates.
-- Maritime or sea-warfare extension: keep as a scenario variant using the same sensor bundle, drone observation, cueing, and policy-gate schema.
+Allowed Pi filtering decisions:
 
-Potential EagleEye/Lattice adapter boundary:
+- `send_now`: send compact evidence immediately.
+- `summarize_first`: send metadata, transcript, thumbnail, or short summary before raw media.
+- `hold`: keep local until bandwidth, policy, or confidence improves.
+- `drop_duplicate`: suppress duplicate bundle but retain audit metadata.
+- `review_policy`: hold for policy or operator review.
+
+Bundle priority can start deterministic:
+
+```text
+bundle_priority = mission_relevance * 40
+                + urgency * 30
+                + confidence * 20
+                - media_size_mb
+                - duplicate_penalty
+
+gateway_score = foundry_reachable * 100
+              + internet_reachable * 50
+              + recent_upload_success * 25
+              - latency_ms / 100
+              - pending_upload_count
+              - gateway_cpu_load
+```
+
+Backpressure rules:
+
+- Enforce per-peer rate limits.
+- Cap in-flight transfers per peer.
+- Use queue high-water marks.
+- Add retry jitter.
+- Refuse or slow new transfers when CPU, memory, network usage, or upload queue depth crosses threshold.
+- Low-priority media must not block urgent evidence or policy cue updates.
+
+### Workflow 4: Foundry / CASK / OSDK
+
+Decide or gather:
+
+- Foundry stack URL, Ontology RID, generated OSDK package name, and package index URL.
+- Developer Console app shape for `cask-edge-service`.
+- OAuth grant path and service-user permissions.
+- Object types for missions, assets, sensors, cameras, microphones, RFID readers, RFID tags, location feeds, edge nodes, observations, alerts, tasks, policy gates, and cue acknowledgements.
+- Actions/writeback targets for camera events, audio events, RFID events, mock provider location events, insight drafts, node health, incident annotations, operator decisions, action logs, and `CounterUasCue` acknowledgements.
+
+Day-one fallback:
+
+- If OSDK setup blocks the demo, use a narrow REST or mock uploader behind `POST /foundry/upload`.
+- Keep acknowledgement receipts deterministic so the mesh can reconcile whether Foundry is real or mocked.
+
+### Workflow 5: Pi-Hosted EagleEye-Style UI
+
+Owner focus: display shell and operator acknowledgement workflow.
+
+The UI should render:
+
+- Mesh health and current gateway.
+- Queue and congestion state.
+- Recent observations and source sensors.
+- Drone observation and control-source estimate overlays.
+- Confidence ring, freshness, contradictions, and evidence drawer.
+- `PolicyGate` status: `collect_only`, `review_needed`, `authorized_to_share`, or `blocked`.
+- Operator acknowledgement action.
+
+Potential future EagleEye/Lattice adapter boundary:
 
 - Publish `DroneObservation` and `ControlSourceEstimate` as map/display entities.
 - Store evidence media or thumbnails as object references.
 - Publish `CounterUasCue` as a review task or cue item requiring acknowledgement.
-- Keep policy state attached to every cue so the display cannot imply authorization that the backend has not granted.
+- Keep policy state attached to every cue so the display cannot imply authorization the backend has not granted.
 - Keep engagement controls out of the MVP adapter. Display only evidence, confidence, policy state, and verification prompts.
 
 ## Node API Contract
 
-Every node or gateway should expose the same minimal API so workstreams can integrate quickly:
+Every node or gateway should expose the same minimal API so the workflows can integrate quickly:
 
 | Endpoint | Purpose |
 | --- | --- |
-| `GET /health` | Returns node id, uptime, service status, and local clock. |
+| `GET /health` | Returns node id, uptime, service status, local clock, and model/runtime status. |
 | `GET /peers` | Returns known peers and last heartbeat status. |
 | `GET /gateway` | Returns current gateway candidate and score. |
+| `GET /congestion` | Returns queue depth, in-flight transfers, CPU, memory, network usage, and gateway saturation state. |
 | `POST /bundles` | Receives a sensor bundle from local capture or another Pi. |
 | `GET /bundles/pending` | Lists bundles that still need forwarding or upload. |
+| `POST /bundles/{bundle_id}/decision` | Records local LLM/rules decision: send, summarize, hold, review, or drop duplicate. |
 | `POST /bundles/{bundle_id}/ack` | Records Foundry upload acknowledgement. |
-| `POST /foundry/upload` | Uploads a bundle when this node is the selected gateway. |
+| `POST /foundry/upload` | Uploads or simulates upload when this node is the selected gateway. |
 | `GET /observations` | Returns recent local, forwarded, and uploaded sensor observations for the operator UI. |
+| `GET /cues` | Returns active `CounterUasCue` and policy-gated review items. |
+| `POST /cues/{cue_id}/ack` | Records operator acknowledgement from the Pi-hosted UI. |
 | `GET /alerts` | Returns edge-generated and Foundry-enriched alerts for the operator UI. |
 | `POST /alerts/{alert_id}/ack` | Records operator acknowledgement from the operator UI. |
 
-Example bundle:
+## Local Models
+
+Hard rule: no Chinese-origin model families. Excluded examples include Qwen, DeepSeek, Yi, MiniCPM, Baichuan, ChatGLM, InternLM, and derivatives.
+
+Current non-Chinese shortlist:
+
+| Device | Candidate | Runtime | Role |
+| --- | --- | --- | --- |
+| Pi 4B control-plane filter | `HuggingFaceTB/SmolLM2-360M-Instruct` quantized GGUF | `llama.cpp` | Fast text/metadata triage, JSON forwarding decisions, dedupe, summarization. |
+| Pi 4B/Pi 5 fallback | `meta-llama/Llama-3.2-1B-Instruct` quantized GGUF | `llama.cpp` or Ollama-style API | Concise classification, rewriting, and small summaries. |
+| Pi 5 hub default candidate | `ibm-granite/granite-3.3-2b-instruct` quantized if available | `llama.cpp` or compatible runtime | Insight drafts, RAG, tool/function-style structured output. |
+| Pi 5 low-latency candidate | `google/gemma-3-1b-it` or Ollama `gemma3:1b` if available locally | `llama.cpp` or Ollama | Fast cue summaries and UI-facing explanations. |
+| Pi 5 quality alternatives | `meta-llama/Llama-3.2-3B-Instruct`, `HuggingFaceTB/SmolLM3-3B`, `microsoft/Phi-4-mini-instruct` | Quantized local runtime | Quality upgrades after the first loop works. |
+| Microphone / ASR | Whisper tiny/base/small via `whisper.cpp`, or IBM Granite Speech after benchmarking | Native or containerized runtime | VAD windows, transcripts, and acoustic labels. |
+| Retrieval | `google/embeddinggemma-300m`, `nomic-ai/nomic-embed-text-v1.5`, or IBM Granite embeddings | Local embedding runtime | RAG over cleared Drive context, Foundry objects, and event evidence. |
+
+Raspberry Pi setup pattern:
+
+```bash
+sudo apt update
+sudo apt install -y git cmake build-essential curl
+git clone https://github.com/ggml-org/llama.cpp.git
+cd llama.cpp
+cmake -B build
+cmake --build build --config Release -j 4
+```
+
+Example Pi 4B control-plane model serve command:
+
+```bash
+./build/bin/llama-server \
+  -hf QuantFactory/SmolLM2-360M-Instruct-GGUF:Q4_K_M \
+  --host 0.0.0.0 \
+  --port 8080 \
+  -c 1024 \
+  -np 1
+```
+
+Use constrained prompts for the Raspberry Pi path. The response must be compact JSON:
+
+```bash
+curl http://127.0.0.1:8080/v1/chat/completions \
+  -H 'Content-Type: application/json' \
+  -d '{
+    "messages": [
+      {
+        "role": "system",
+        "content": "Return only JSON with decision, priority, media_strategy, duplicate_probability, policy_state, and reason. Valid decisions: send_now, summarize_first, hold, drop_duplicate, review_policy."
+      },
+      {
+        "role": "user",
+        "content": "node=altiair-node-a sensor=camera event=motion near training checkpoint confidence=0.72 media_size_mb=3.4 network=degraded gateway_queue=high"
+      }
+    ],
+    "temperature": 0.1,
+    "max_tokens": 120
+  }'
+```
+
+Expected shape:
+
+```json
+{
+  "decision": "summarize_first",
+  "priority": 74,
+  "media_strategy": "thumbnail_first",
+  "duplicate_probability": 0.08,
+  "policy_state": "review_needed",
+  "reason": "degraded network and saturated gateway; send compact evidence first"
+}
+```
+
+LLM output constraints:
+
+- Prefer schema-constrained JSON.
+- Cite source bundle IDs, Foundry object IDs, or Drive context documents.
+- Always include uncertainty and next verification checks.
+- Never emit autonomous tactical action instructions.
+- Never produce target prosecution, engagement, or harmful action recommendations.
+- Rust deterministic rules remain authoritative when the model is unavailable or returns invalid JSON.
+
+Runtime tests:
+
+| Test | Signal | Pass condition |
+| --- | --- | --- |
+| Runtime health | `GET /health` from `llama-server` or wrapper | Server responds locally within 2 seconds. |
+| JSON decision | Smoke-test prompt above | Valid JSON with one allowed `decision`. |
+| Latency budget | 10 short prompts | Median latency acceptable for demo triage. |
+| Backpressure behavior | Prompt with `gateway_queue=high` | Chooses `summarize_first`, `hold`, or another low-bandwidth strategy. |
+| Policy behavior | Prompt with ambiguous cue | Chooses `review_policy` or includes a restrictive `policy_state`. |
+| Fallback behavior | Stop model server | Rust deterministic rules still produce a forwarding decision. |
+| Integration path | `POST /bundles/{bundle_id}/decision` | Decision stored with bundle and visible through `GET /observations`. |
+
+## Example Bundle
 
 ```json
 {
@@ -319,59 +424,46 @@ Example bundle:
   "edge_assessment": {
     "summary": "Tagged training subject likely near checkpoint alpha.",
     "confidence": 0.71,
-    "recommended_next_check": "Verify with nearest camera or second RFID read."
+    "recommended_next_check": "Verify with nearest camera or second RFID read.",
+    "llm_forwarding_decision": "summarize_first",
+    "priority": 74,
+    "duplicate_probability": 0.08,
+    "media_strategy": "thumbnail_first"
   },
   "upload": {
     "status": "pending",
-    "preferred_gateway": "altiair-hub"
+    "preferred_gateway": "altiair-hub",
+    "backpressure": {
+      "gateway_saturated": false,
+      "retry_after_seconds": null
+    }
   }
 }
 ```
 
-## Local Models
-
-Hard rule: no Chinese-origin model families. Excluded examples include Qwen, DeepSeek, Yi, MiniCPM, Baichuan, ChatGLM, and InternLM.
-
-Benchmark candidates:
-
-- Pi 5 low-latency candidate: `google/gemma-3-1b-it` or Ollama `gemma3:1b` if available locally.
-- Pi 5 quality candidate: `ibm-granite/granite-3.3-2b-instruct`.
-- Pi 4B/Pi 5 fallback candidate: `meta-llama/Llama-3.2-1B-Instruct`.
-- Pi 5 quality alternatives: `meta-llama/Llama-3.2-3B-Instruct`, `HuggingFaceTB/SmolLM3-3B`, `microsoft/Phi-4-mini-instruct`.
-- Microphone/ASR candidates: Whisper tiny/base/small via `whisper.cpp`, or IBM Granite Speech after hardware benchmarking.
-- Retrieval candidates: `google/embeddinggemma-300m`, `nomic-ai/nomic-embed-text-v1.5`, or IBM Granite embeddings.
-
-Output constraints:
-
-- Prefer schema-constrained JSON for extraction.
-- Cite source bundle IDs, Foundry object IDs, or Drive context documents.
-- Always include uncertainty and next verification checks.
-- Never emit autonomous tactical action instructions.
-- Never produce target prosecution, engagement, or harmful action recommendations.
-
-## One-Day Build Plan
+## Build Plan
 
 1. Prepare the Pis.
    - Verify Raspberry Pi OS on both Pi 4B nodes and the Pi 5.
    - Set hostnames: `altiair-node-a`, `altiair-node-b`, and `altiair-hub`.
    - Enable SSH, camera support, microphone access, and RFID interfaces.
-   - Install Python, FastAPI runtime, SQLite tooling, camera utilities, and networking tools.
+   - Install Rust toolchain, SQLite tooling, camera utilities, networking tools, and `llama.cpp`.
 
 2. Bring up the local LAN.
    - Configure travel router with AP isolation off.
    - Connect both Pi 4B nodes, Pi 5, and the Pi-hosted operator display shell.
    - Add static peer config if discovery takes too long.
-   - Verify `GET /health` and `GET /peers` across devices.
+   - Verify `GET /health`, `GET /peers`, and `GET /congestion` across devices.
 
 3. Capture sensor bundles.
    - Normalize camera, microphone, RFID, and mock provider location events.
    - Store bundle metadata in SQLite and blobs on disk.
-   - Include timestamps, node id, sensor type, retention policy, and confidence.
+   - Include timestamps, node id, sensor type, retention policy, confidence, and policy state.
 
-4. Route through the hub or best uplink.
-   - Use Pi 5 as default gateway for the MVP.
-   - Score alternate gateways by reachability, recent upload success, latency, and queue depth.
-   - Return upload acknowledgements to the originating node.
+4. Add filtering and backpressure.
+   - Start the local model server or deterministic fallback.
+   - Classify bundles as `send_now`, `summarize_first`, `hold`, `drop_duplicate`, or `review_policy`.
+   - Enforce queue watermarks, retry jitter, and peer rate limits.
 
 5. Wire Foundry/CASK.
    - Try OSDK first if package, OAuth, and object/action details are ready.
@@ -379,54 +471,31 @@ Output constraints:
    - Map events into objects such as `SensorObservation`, `Asset`, `TrackEstimate`, `DroneObservation`, `ControlSourceEstimate`, `CounterUasCue`, `Alert`, `LocationFix`, and `NodeHealth`.
 
 6. Build the Pi-hosted operator view.
-   - Show node health, observations, location estimates, and insight drafts.
+   - Show node health, observations, location estimates, congestion state, and insight drafts.
    - Use an EagleEye-style cue overlay so the demo can later map into a headborne display.
-   - Add WebSocket reconnect and offline/degraded state.
-   - Add acknowledgement action for alerts and drafts.
+   - Add acknowledgement actions for alerts and `CounterUasCue` records.
 
 7. Rehearse the demo.
    - Show local-only operation.
    - Show RFID/camera/microphone event capture.
+   - Show local filtering and gateway backpressure.
    - Show a fused insight draft with evidence and uncertainty.
    - Show a counter-UAS cue queue that estimates a likely control-source zone without recommending engagement.
    - Show cloud/CASK sync or deterministic mock acknowledgement.
    - Show recovery after a node, display client, or cloud path disconnects.
-
-## Hackathon Checkpoints
-
-| Time | Outcome |
-| --- | --- |
-| Saturday, May 2, 2026, 12:30 PM | Lanes locked, router plan selected, Foundry/CASK status known. |
-| Saturday, May 2, 2026, 4:00 PM | Each lane shows a 30-second working clip or CLI trace. |
-| Saturday, May 2, 2026, 9:00 PM | MVP cut: Pi-hosted display + Pi hub end-to-end works and is submittable. |
-| Sunday, May 3, 2026, 2:00 AM | Hard stop for risky new scope. |
-| Sunday, May 3, 2026, 9:00 AM | Three rehearsals under the target pitch time. |
-| Sunday, May 3, 2026, 11:45 AM | Submission ready. |
 
 ## Demo Beats
 
 1. Pi 5 hub and Pi-hosted EagleEye-style display are visible on the local LAN.
 2. Operator display is local-only, with no dependency on cloud access.
 3. Pi 4B node captures RFID plus camera or microphone event.
-4. Pi 5 hub receives the bundle, fuses deterministic evidence, and drafts a structured insight.
-5. Pi-hosted display updates with an EagleEye-style cue overlay.
-6. Counter-UAS cue queue shows a drone observation, likely control-source zone, evidence links, confidence, and policy gate.
-7. If Foundry/CASK is online, the hub syncs and receives acknowledgement or enrichment.
-8. If the cloud or one operator device drops, local devices continue showing cached mesh state and new local events.
-9. When connectivity returns, queued events reconcile.
-
-## Shared Context / Drive Intake
-
-The shared Google Drive is the working drop for everyone's data ideas. For anything intended to become LLM context, include enough metadata for later ingestion:
-
-- Title and owner.
-- Source type: mock data, sensor note, Foundry idea, architecture note, evaluation prompt, UI idea, or policy constraint.
-- Whether the content is real, synthetic, mocked, or speculative.
-- Sensitivity and retention expectation.
-- Related sensor/event types, if known.
-- Short summary of how it should affect the CASK demo.
-
-The RAG ingestion path should only consume cleared material and should preserve source attribution so generated insight drafts can cite the relevant Drive document, Foundry object, or sensor event.
+4. Local model/rules filter classifies the bundle and protects the gateway from overload.
+5. Pi 5 hub receives the bundle, fuses deterministic evidence, and drafts a structured insight.
+6. Pi-hosted display updates with an EagleEye-style cue overlay.
+7. Counter-UAS cue queue shows a drone observation, likely control-source zone, evidence links, confidence, and policy gate.
+8. If Foundry/CASK is online, the hub syncs and receives acknowledgement or enrichment.
+9. If the cloud or one display client drops, local devices continue showing cached mesh state and new local events.
+10. When connectivity returns, queued events reconcile.
 
 ## Hard Constraints
 
@@ -468,9 +537,20 @@ Each proposal should include:
 2. Create or identify the `cask-edge-service` Developer Console application.
 3. Export the first OSDK package for the minimum object/action set, or define the REST/mock fallback route.
 4. Scaffold `pi/`, `web/`, `foundry/`, `sensors/`, and `demo/` folders.
-5. Build a synthetic sensor-event fixture for camera, microphone, RFID, and mock provider location telemetry.
-6. Add a synthetic counter-UAS fixture with `DroneObservation`, `ControlSourceEstimate`, `CounterUasCue`, and `PolicyGate` records.
-7. Add an EagleEye-style display fixture that renders cue overlays from the same `CounterUasCue` schema.
-8. Seed the shared Drive with team data ideas and context candidates using the intake convention above.
-9. Benchmark the first local model pair on the two Pi 4 Model B nodes and one Pi 5.
-10. Define the first structured `InsightDraft` and `CounterUasCue` JSON schemas with acceptance tests.
+5. Build the Rust node-agent skeleton with `GET /health`, `GET /peers`, `GET /congestion`, and bundle queue APIs.
+6. Build a synthetic sensor-event fixture for camera, microphone, RFID, and mock provider location telemetry.
+7. Add a synthetic counter-UAS fixture with `DroneObservation`, `ControlSourceEstimate`, `CounterUasCue`, and `PolicyGate` records.
+8. Add an EagleEye-style display fixture that renders cue overlays from the same `CounterUasCue` schema.
+9. Benchmark the first non-Chinese local model pair on the two Pi 4 Model B nodes and one Pi 5.
+10. Define the first structured `InsightDraft`, local forwarding decision, and `CounterUasCue` JSON schemas with acceptance tests.
+
+## Success Criteria
+
+- Both Pi 4B nodes and the Pi 5 can discover or reach each other on a local LAN.
+- At least one Pi captures real camera or RFID data.
+- A disconnected Pi can pass a sensor bundle to the hub or best available peer.
+- Each Pi can use a local non-Chinese model or deterministic fallback to filter, prioritize, summarize, hold, or drop duplicate sensor data before forwarding.
+- The mesh protects the selected upload gateway with backpressure, rate limits, and queue thresholds.
+- The Pi-hosted EagleEye-style display shows node status, congestion, observations, pending bundles, uploaded bundles, cue queue, policy state, and fused alerts.
+- The best-connected Pi can upload or simulate upload into Foundry/CASK.
+- Edge LLM or rule-based fallback produces a decision-support summary from sensor data with evidence and uncertainty.

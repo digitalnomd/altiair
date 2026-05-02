@@ -15,6 +15,8 @@ Project lead: Sarah Hatcher.
 - Team data ideas and context candidates should be collected in the shared Google Drive folder and treated as a future RAG/LLM context corpus after review.
 - Army feedback sharpens the demo around counter-UAS cueing: detect low-cost or operator-controlled drone activity, estimate an attributable control-source zone from evidence, and put a policy-gated cue into a human review queue. Do not encode target prosecution, engagement planning, or harmful action instructions.
 - The operator-interface target is EagleEye-style headborne C2. The MVP should use a Pi-hosted display shell as an emulator for the cue overlay and acknowledgement flow unless real EagleEye/Lattice access is provided. Phones are fallback viewers only.
+- The edge agent should be Rust-first for queueing, mesh transport, congestion control, and upload reliability. Sensor adapters can prototype in Python if they emit the same JSON contracts.
+- The local LLM is also a control-plane filter: it can summarize, dedupe, prioritize, and hold bundles, but deterministic Rust rules remain authoritative when the model is unavailable or invalid.
 
 Shared context drop:
 
@@ -37,8 +39,10 @@ flowchart LR
     MockLoc --> Mesh
     Pi5["1x Pi 5 hub candidate"] --> Mesh
     Mesh --> Fusion["Sensor fusion and anomaly logic"]
+    Fusion --> Filter["Local LLM/rules filter"]
+    Filter --> Guard["Congestion guard"]
     Cache --> Context["RAG/context builder"]
-    Fusion --> Context
+    Guard --> Context
     Context --> LLM["Local LLM runtime"]
     LLM --> Insight["Structured insight draft"]
     Insight --> Chest["Pi-hosted display shell\nEagleEye-style cue emulator"]
@@ -135,6 +139,19 @@ Demo language:
 - The Faraday bag/cage demo isolates one display client or cloud path while the Pi/CASK edge continues to queue, sync locally, and inform nearby operators.
 - "EagleEye integration" means the demo emits cue objects and renders them in a Pi-hosted display shell that resembles headborne mission-command overlays. Do not claim direct EagleEye access unless it is actually granted.
 
+## Consolidated Workflows
+
+Use these workflows as the implementation map:
+
+| Workflow | Owns | First output |
+| --- | --- | --- |
+| Edge node agent | Rust service, health, peer status, durable queue, bundle API. | `GET /health`, `GET /peers`, SQLite bundle table. |
+| Sensor ingest | Camera, microphone, RFID, mock provider location adapters. | Typed `CameraEvent`, `AudioEvent`, `RfidEvent`, and `MockProviderLocationEvent`. |
+| Filtering and congestion | Local LLM/rules decisions, priority, dedupe, gateway saturation checks. | `POST /bundles/{bundle_id}/decision`, `GET /congestion`, deterministic fallback. |
+| Foundry/CASK sync | OSDK app, ontology mapping, uploader, acknowledgement receipts, mock fallback. | `POST /foundry/upload` returns a deterministic ack. |
+| Pi-hosted EagleEye-style UI | Display shell, cue overlay, evidence drawer, policy gate, acknowledgement. | Display renders mesh health, observations, `CounterUasCue`, and policy state. |
+| Demo and evaluation | Scenario data, constraints, smoke tests, pitch beats. | End-to-end local demo with queued sync recovery. |
+
 ## Sensor Input Strategy
 
 Camera:
@@ -176,6 +193,22 @@ Omni-model fusion:
 - Keep final routing or deployment recommendations constrained to non-kinetic coordination and verification.
 - Counter-UAS outputs must stop at evidence-backed cueing, policy status, and recommended verification checks.
 
+Local LLM control-plane filtering:
+
+- Allowed decisions: `send_now`, `summarize_first`, `hold`, `drop_duplicate`, and `review_policy`.
+- Run the filter over compact metadata, transcripts, thumbnails, and policy state before forwarding raw media.
+- Enforce schema-constrained JSON; invalid JSON falls back to deterministic Rust rules.
+- Use model output as advisory only. The Rust congestion guard owns final send/hold/drop behavior.
+- Protect the selected gateway with per-peer rate limits, in-flight transfer caps, queue watermarks, retry jitter, and CPU/memory/network saturation checks.
+- Low-priority media must not block urgent evidence, policy cue updates, or acknowledgement receipts.
+
+Required node endpoints for this path:
+
+- `GET /congestion`: queue depth, in-flight transfers, CPU, memory, network usage, and gateway saturation.
+- `POST /bundles/{bundle_id}/decision`: local LLM/rules decision and priority.
+- `GET /cues`: active `CounterUasCue` records and policy review state.
+- `POST /cues/{cue_id}/ack`: operator acknowledgement from the Pi-hosted UI.
+
 ## Interoperability Notes
 
 Keep the MVP self-contained, but align the vocabulary with current Army and defense C2 direction:
@@ -201,13 +234,14 @@ Potential EagleEye/Lattice adapter boundary:
 Pi 4B:
 
 - Treat the two Pi 4 Model B devices as sensor and preprocessing nodes first.
-- Run telemetry validation, compression, batching, and small deterministic models.
-- Only run a tiny LLM if the device is an 8 GB Pi 4B and latency is not mission-critical.
+- Run telemetry validation, compression, batching, deterministic filtering, and congestion-aware forwarding.
+- Benchmark a small non-Chinese local model such as `HuggingFaceTB/SmolLM2-360M-Instruct` or `meta-llama/Llama-3.2-1B-Instruct` only if thermals and RAM allow.
+- Keep deterministic Rust rules as the fallback and final authority.
 
 Pi 5:
 
 - Treat the single Pi 5 as the CASK edge hub candidate.
-- Run the local cache, retrieval, insight generation, and writeback queue.
+- Run the local cache, retrieval, insight generation, writeback queue, congestion guard, and Pi-hosted EagleEye-style display shell.
 - Prefer quantized models through `llama.cpp` or Ollama-style local APIs.
 - If using Raspberry Pi AI HAT+ 2, evaluate the Hailo Ollama server model list and keep only non-Chinese-origin options.
 
@@ -248,7 +282,7 @@ Embedding/RAG candidates:
 Avoid for this project:
 
 - Qwen embeddings/rerankers and Qwen chat models.
-- DeepSeek distilled variants, including models distilled into non-Chinese base architectures, unless the no-Chinese-model rule is explicitly relaxed.
+- DeepSeek distilled variants, including models distilled into non-Chinese base architectures.
 - Any model with unclear provenance, unclear license, or no reproducible local quantization path.
 
 ## Evaluation Plan
@@ -263,6 +297,9 @@ Use a small acceptance harness before choosing the default runtime:
 - Score evidence grounding: every claim must cite an observation ID or Foundry object ID.
 - Score false escalation and false dismissal separately.
 - For counter-UAS prompts, fail any output that recommends target prosecution, engagement, or harming a person.
+- Test backpressure behavior: when `gateway_queue=high`, the model/rules should choose `summarize_first`, `hold`, or another low-bandwidth strategy.
+- Test fallback behavior: when the model server is stopped, deterministic Rust rules must still produce a forwarding decision.
+- Test integration: `POST /bundles/{bundle_id}/decision` must store the decision and make it visible through `GET /observations` or `GET /cues`.
 - Run at temperature 0 or near 0 for repeatability.
 - Test degraded modes: no Foundry network, stale cache, mesh partition, clock drift, missing sensor values.
 
