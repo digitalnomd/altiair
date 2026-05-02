@@ -1,0 +1,85 @@
+# CASK Edge Implementation
+
+This repo now includes a runnable local scaffold for the CASK edge path:
+
+- Typed sensor, cue, node-health, and insight contracts in `src/cask/types.ts`.
+- A sample Pi sensor bundle in `src/cask/sampleBundle.ts`.
+- A local insight adapter in `src/llm/localInsight.ts`.
+- A Foundry OSDK uploader in `src/foundry/uploader.ts`.
+- A smoke runner in `src/scripts/smoke.ts`.
+
+The smoke runner defaults to mock Foundry and mock LLM mode, so it can run without secrets:
+
+```bash
+npm install
+npm run smoke:mock
+```
+
+## Foundry OSDK Setup
+
+Create a Developer Console backend-service application for the Pi-side daemon. The Palantir OSDK backend-service flow uses a confidential OAuth client, `@osdk/client`, `@osdk/oauth`, the Foundry stack URL, and the Ontology RID.
+
+Required local environment values:
+
+```bash
+export FOUNDRY_MODE=osdk
+export FOUNDRY_API_URL="https://<your-foundry-stack>.palantirfoundry.com"
+export FOUNDRY_ONTOLOGY_RID="ri.ontology.main.ontology.<your-ontology-rid>"
+export FOUNDRY_CLIENT_ID="<client-id>"
+export FOUNDRY_CLIENT_SECRET="<client-secret>"
+export FOUNDRY_OSDK_PACKAGE="<generated-osdk-package-name>"
+```
+
+Install the generated OSDK package after configuring a local `.npmrc` from the Developer Console package registry. Keep tokens local:
+
+```bash
+export FOUNDRY_TOKEN="<developer-console-token>"
+npm install <generated-osdk-package-name>@latest
+```
+
+Then run:
+
+```bash
+npm run smoke:foundry
+```
+
+## Expected Foundry Action Contract
+
+Until we lock the exact ontology action parameter names in Foundry, the uploader supports two payload styles:
+
+- `json` default: each action receives `{ externalId, sourceNodeId, observedAt, policyState, payloadJson }`.
+- `raw`: each action receives the full typed object directly.
+
+The current default action export names are:
+
+| Purpose | Env override | Default generated export |
+| --- | --- | --- |
+| Sensor events | `FOUNDRY_ACTION_CREATE_SENSOR_OBSERVATION` | `createSensorObservation` |
+| Location fixes | `FOUNDRY_ACTION_CREATE_LOCATION_FIX` | `createLocationFix` |
+| Counter-UAS cues | `FOUNDRY_ACTION_CREATE_COUNTER_UAS_CUE` | `createCounterUasCue` |
+| Insight drafts | `FOUNDRY_ACTION_CREATE_INSIGHT_DRAFT` | `createInsightDraft` |
+| Node health | `FOUNDRY_ACTION_UPSERT_NODE_HEALTH` | `upsertNodeHealth` |
+
+If the hackathon ontology already has action names with different API names, set the env overrides instead of changing code.
+
+## Local LLM Setup
+
+The LLM adapter supports:
+
+- `LOCAL_LLM_MODE=mock`: deterministic local explanation for demos and tests.
+- `LOCAL_LLM_MODE=ollama`: sends the compact CASK bundle to an Ollama-compatible `/api/chat` endpoint.
+
+Example:
+
+```bash
+export LOCAL_LLM_MODE=ollama
+export LOCAL_LLM_BASE_URL=http://127.0.0.1:11434
+export LOCAL_LLM_MODEL=gemma3:1b
+npm run smoke:mock
+```
+
+Project policy blocks Chinese-origin model family names, including Qwen, DeepSeek, Yi, MiniCPM, Baichuan, ChatGLM, and InternLM.
+
+## Safety Boundary
+
+The code intentionally emits evidence-backed, policy-gated cue packages. It does not generate engagement plans, target prosecution, capture instructions, or autonomous action recommendations. Recommended checks are limited to verification, sensor repositioning, coverage, deconfliction, and human review.
