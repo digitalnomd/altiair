@@ -132,44 +132,6 @@
         </button>
       </nav>
 
-      <section class="mission-strip" aria-label="Mission summary">
-        <article class="summary-cell">
-          <svg class="summary-icon"><use href="#icon-crosshair"></use></svg>
-          <div>
-            <p>Mission</p>
-            <strong id="missionName">-</strong>
-          </div>
-        </article>
-        <article class="summary-cell">
-          <svg class="summary-icon"><use href="#icon-wave"></use></svg>
-          <div>
-            <p>Status</p>
-            <strong id="meshStatus">-</strong>
-          </div>
-        </article>
-        <article class="summary-cell">
-          <svg class="summary-icon"><use href="#icon-shield"></use></svg>
-          <div>
-            <p>Confidence</p>
-            <strong id="confidenceLabel" class="metric-warning">-</strong>
-          </div>
-        </article>
-        <article class="summary-cell">
-          <svg class="summary-icon"><use href="#icon-antenna"></use></svg>
-          <div>
-            <p>Latest fused event</p>
-            <strong id="latestEvent">-</strong>
-          </div>
-        </article>
-        <article class="summary-cell">
-          <svg class="summary-icon"><use href="#icon-chevrons"></use></svg>
-          <div>
-            <p>Recommended next action</p>
-            <strong id="recommendedAction">-</strong>
-          </div>
-        </article>
-      </section>
-
       <section class="ops-grid" aria-label="Hawkeye operations workspace">
         <main class="map-panel" aria-label="Mission map">
           <div class="map-system-bar" aria-label="Map status">
@@ -178,6 +140,44 @@
             <span id="mapFeedLabel">Map feed pending</span>
             <span id="scanCadence">5s poll / passive observe</span>
           </div>
+
+          <section class="mission-strip" aria-label="Mission summary">
+            <article class="summary-cell">
+              <svg class="summary-icon"><use href="#icon-crosshair"></use></svg>
+              <div>
+                <p>Mission</p>
+                <strong id="missionName">-</strong>
+              </div>
+            </article>
+            <article class="summary-cell">
+              <svg class="summary-icon"><use href="#icon-wave"></use></svg>
+              <div>
+                <p>Status</p>
+                <strong id="meshStatus">-</strong>
+              </div>
+            </article>
+            <article class="summary-cell">
+              <svg class="summary-icon"><use href="#icon-shield"></use></svg>
+              <div>
+                <p>Confidence</p>
+                <strong id="confidenceLabel" class="metric-warning">-</strong>
+              </div>
+            </article>
+            <article class="summary-cell">
+              <svg class="summary-icon"><use href="#icon-antenna"></use></svg>
+              <div>
+                <p>Latest fused event</p>
+                <strong id="latestEvent">-</strong>
+              </div>
+            </article>
+            <article class="summary-cell">
+              <svg class="summary-icon"><use href="#icon-chevrons"></use></svg>
+              <div>
+                <p>Recommended next action</p>
+                <strong id="recommendedAction">-</strong>
+              </div>
+            </article>
+          </section>
 
           <div class="legend" aria-label="Map legend">
             <div><span class="legend-mark node-friendly"></span>Friendly Node</div>

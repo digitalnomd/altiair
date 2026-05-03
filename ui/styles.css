@@ -118,24 +118,20 @@ button {
   order: 2;
 }
 
-.mission-strip {
+.ops-grid {
   order: 3;
 }
 
-.ops-grid {
+.team-pulse {
   order: 4;
 }
 
-.team-pulse {
+.dashboard-bottom {
   order: 5;
 }
 
-.dashboard-bottom {
-  order: 6;
-}
-
 .detail-row {
-  order: 7;
+  order: 6;
 }
 
 .titlebar {
@@ -367,6 +363,22 @@ svg use {
   overflow: hidden;
 }
 
+.map-panel .mission-strip {
+  position: absolute;
+  top: 42px;
+  left: 16px;
+  right: 16px;
+  z-index: 6;
+  min-height: 72px;
+  grid-template-columns: 0.86fr 0.9fr 0.72fr 1.22fr minmax(240px, 1.45fr);
+  border-color: rgba(218, 232, 229, 0.3);
+  background:
+    linear-gradient(90deg, rgba(3, 10, 10, 0.88), rgba(6, 13, 14, 0.72)),
+    rgba(2, 5, 6, 0.78);
+  box-shadow: 0 18px 54px rgba(0, 0, 0, 0.34);
+  backdrop-filter: blur(14px);
+}
+
 .summary-cell {
   display: flex;
   align-items: center;
@@ -375,6 +387,11 @@ svg use {
   padding: 16px 20px;
   border-left: 1px solid var(--line);
   position: relative;
+}
+
+.map-panel .summary-cell {
+  gap: 10px;
+  padding: 12px 14px;
 }
 
 .summary-cell:first-child {
@@ -402,6 +419,12 @@ svg use {
   filter: drop-shadow(0 0 10px rgba(37, 225, 217, 0.16));
 }
 
+.map-panel .summary-icon {
+  flex-basis: 25px;
+  width: 25px;
+  height: 25px;
+}
+
 .summary-cell p,
 .next-action-card p,
 .card-header p,
@@ -413,6 +436,11 @@ svg use {
   text-transform: uppercase;
 }
 
+.map-panel .summary-cell p {
+  margin-bottom: 5px;
+  font-size: 0.61rem;
+}
+
 .summary-cell strong {
   display: block;
   min-width: 0;
@@ -421,6 +449,11 @@ svg use {
   line-height: 1.24;
   font-weight: 560;
   overflow-wrap: anywhere;
+}
+
+.map-panel .summary-cell strong {
+  font-size: 0.82rem;
+  line-height: 1.2;
 }
 
 .summary-cell .metric-warning {
@@ -829,7 +862,7 @@ svg use {
 
 .legend {
   position: absolute;
-  top: 50px;
+  top: 132px;
   left: 16px;
   z-index: 5;
   width: 188px;
@@ -932,7 +965,7 @@ svg use {
 
 .compass {
   position: absolute;
-  top: 50px;
+  top: 132px;
   right: 22px;
   z-index: 5;
   display: grid;
@@ -1613,6 +1646,10 @@ svg use {
     height: min(680px, calc(100svh - 190px));
   }
 
+  .map-panel .mission-strip {
+    grid-template-columns: 0.88fr 0.9fr 0.68fr 1.08fr minmax(210px, 1.28fr);
+  }
+
   .target-panel {
     grid-template-columns: 1.1fr 1fr 1fr;
     grid-template-rows: auto auto;
@@ -1659,6 +1696,43 @@ svg use {
 
   .mission-strip {
     grid-template-columns: repeat(2, 1fr);
+  }
+
+  .map-panel .mission-strip {
+    top: 42px;
+    grid-template-columns: 0.78fr 0.86fr 0.62fr 1fr minmax(190px, 1.16fr);
+    min-height: 0;
+  }
+
+  .map-panel .summary-cell,
+  .map-panel .summary-cell:nth-child(-n + 2) {
+    min-height: 62px;
+    padding: 10px 11px;
+    border-top: 0;
+    border-left: 1px solid var(--line);
+  }
+
+  .map-panel .summary-cell:first-child,
+  .map-panel .summary-cell:nth-child(odd):first-child {
+    border-left: 0;
+  }
+
+  .map-panel .summary-cell:nth-child(odd) {
+    border-left: 1px solid var(--line);
+  }
+
+  .map-panel .summary-cell:nth-child(5) {
+    grid-column: auto;
+  }
+
+  .map-panel .summary-icon {
+    flex-basis: 22px;
+    width: 22px;
+    height: 22px;
+  }
+
+  .map-panel .summary-cell strong {
+    font-size: 0.72rem;
   }
 
   .summary-cell {
@@ -1776,6 +1850,56 @@ svg use {
     backdrop-filter: blur(10px);
   }
 
+  .map-panel .mission-strip {
+    top: 50px;
+    left: 10px;
+    right: 10px;
+    display: flex;
+    min-height: 68px;
+    max-height: none;
+    overflow-x: auto;
+    overflow-y: hidden;
+    scrollbar-width: none;
+  }
+
+  .map-panel .summary-cell,
+  .map-panel .summary-cell:nth-child(-n + 2) {
+    flex: 0 0 184px;
+    min-height: 52px;
+    padding: 10px;
+    border-top: 0;
+    border-left: 1px solid var(--line);
+  }
+
+  .map-panel .mission-strip::-webkit-scrollbar {
+    display: none;
+  }
+
+  .map-panel .summary-cell:first-child {
+    border-left: 0;
+  }
+
+  .map-panel .summary-cell:nth-child(5) {
+    flex-basis: 280px;
+    grid-column: auto;
+  }
+
+  .map-panel .summary-icon {
+    flex-basis: 22px;
+    width: 22px;
+    height: 22px;
+  }
+
+  .map-panel .summary-cell p {
+    margin-bottom: 3px;
+    font-size: 0.54rem;
+  }
+
+  .map-panel .summary-cell strong {
+    font-size: 0.74rem;
+    line-height: 1.14;
+  }
+
   .map-system-bar span:nth-child(3),
   .map-system-bar span:nth-child(4) {
     display: none;
@@ -1798,7 +1922,8 @@ svg use {
   }
 
   .compass {
-    top: 46px;
+    top: auto;
+    bottom: 58px;
     right: 10px;
     width: 52px;
     height: 52px;
@@ -1927,6 +2052,26 @@ svg use {
 
   .map-panel {
     height: min(500px, calc(100svh - 104px));
+  }
+
+  .map-panel .mission-strip {
+    top: 48px;
+    min-height: 62px;
+  }
+
+  .map-panel .summary-cell,
+  .map-panel .summary-cell:nth-child(-n + 2) {
+    flex-basis: 50%;
+    min-height: 44px;
+    padding: 8px 10px;
+  }
+
+  .map-panel .summary-cell:nth-child(5) {
+    flex-basis: 100%;
+  }
+
+  .map-panel .summary-cell strong {
+    font-size: 0.7rem;
   }
 
   .map-system-bar,
