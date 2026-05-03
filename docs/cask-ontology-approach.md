@@ -15,6 +15,11 @@ The target CASK ontology shape is:
 | Object | Purpose |
 | --- | --- |
 | `CaskMission` | Mission/exercise context and policy state. |
+| `CaskMissionInstruction` | Operator-provided mission instruction packet that seeds deployment. |
+| `CaskPolicyDecision` | Deployability, review state, allowed actions, and rejected actions. |
+| `CaskDeploymentOrder` | Policy-gated order mapping the mission instruction onto Pi/Jetson node leases. |
+| `CaskNodeLease` | Short-lived role lease for sensing, display, relay, gateway, and coordinator-candidate duties. |
+| `CaskMissionTimelineEvent` | Auditable instruction, policy, lease, activation, and blocked-deployment timeline. |
 | `CaskEdgeNode` | Pi 4B, Pi 5, Jetson, and display node metadata. |
 | `CaskSensorObservation` | Normalized camera, audio, RFID, or provider-style location events. |
 | `CaskLocationFix` | Coarse RFID/provider-style location fixes with precision radius and freshness. |
@@ -33,6 +38,11 @@ The target CASK ontology shape is:
 When the Foundry ontology is expanded past the current `[Example] CASK GPS Position` smoke path, the generated OSDK should expose actions matching these names or env overrides should map to the actual generated names:
 
 ```text
+createCaskMissionInstruction
+createCaskPolicyDecision
+createCaskDeploymentOrder
+upsertCaskNodeLease
+createCaskMissionTimelineEvent
 createCaskSensorObservation
 createCaskLocationFix
 createCaskUasObservation
@@ -52,7 +62,14 @@ The current live Foundry connection is already validated for the narrow `createE
 
 ```mermaid
 flowchart LR
-  Camera["camera_detection"] --> Merge["CASK live merge"]
+  Mission["mission instruction"] --> Policy["CaskPolicyDecision"]
+  Policy --> Deployment["CaskDeploymentOrder"]
+  Deployment --> Leases["CaskNodeLease"]
+  Leases --> Camera["camera_detection"]
+  Leases --> Mic["audio_window"]
+  Leases --> RFID["rfid_read"]
+  Leases --> Health["node_health"]
+  Camera --> Merge["CASK live merge"]
   Mic["audio_window"] --> Merge
   RFID["rfid_read"] --> Merge
   Health["node_health"] --> Merge
@@ -65,11 +82,41 @@ flowchart LR
   Tag --> Coordinator
   Ledger --> Peers["reachable Pi/Nano peers"]
   LLM --> Display["/insights/latest"]
+  Deployment --> Display0["/mission/deployment/latest"]
   Coordinator --> Display2["/coordinator/latest + /instructions/latest"]
   Bundle --> Foundry["Foundry CASK OSDK when policy + ontology allow"]
 ```
 
 Every Pi and the Jetson can run `POST /sensor-events`, `GET /gossip/world`, `GET /coordinator/latest`, and `GET /instructions/latest`. The Pi 5 hub is the preferred CASK/Foundry gateway, and the Jetson is the secondary gateway, but the local CASK ledger, gossip world, tag-plan records, and coordinator directives replicate to every reachable node. Each node also runs its own local LLM insight path; Gemma is the default approved model family for the Pi starter profile, with Ollama mode enabled once the model runtime is installed. The coordinator LLM is singleton per Raft-style term: local fusion can run everywhere, but only the elected leader publishes coordinator directives. Election favors the best connected or best positioned viable node using link/load/model/role state plus current evidence and task ownership.
+
+Foundry is not a live dependency for the decentralized path. When connected, a gateway can use `GET /foundry/intelligence?refresh=true` to pull governed mission, zone, policy, tag, and object context through the OSDK. That context is cached into the local CASK ledger for DDIL use, cited by the local LLM where relevant, and paired with queued writeback so what happened can be sent back up to the commander when connectivity returns.
+
+## Mission Instruction Deployment
+
+The operator/frontend can seed the demo with one CASK-shaped instruction:
+
+```bash
+curl -X POST http://127.0.0.1:8080/mission/deploy \
+  -H 'content-type: application/json' \
+  --data '{
+    "title": "CASK controlled training tag",
+    "missionText": "Deploy the Pi and Jetson CASK mesh to collect RFID, microphone, camera, and node-health evidence for a controlled training tag in training-zone-alpha.",
+    "objectiveType": "controlled_training_tag",
+    "authorizedZoneId": "training-zone-alpha",
+    "subjectRef": "training-tag-001",
+    "operatorAuthorized": true,
+    "requestedBy": "Sarah Hatcher"
+  }'
+```
+
+The runtime returns a `CaskDeploymentOrder` with one `CaskNodeLease` per node:
+
+- `altiair-hub`: mission LAN/display, Foundry gateway queue, coordinator candidate.
+- `altiair-node-a`: RFID reader/proximity ingest plus fallback relay.
+- `altiair-node-b`: microphone/audio-window ingest plus fallback relay.
+- `altiair-orin`: camera inference, accelerated local model work, secondary gateway, fallback relay.
+
+Every lease includes the node API base URL, startup command, required endpoints, sensor event kinds, fallback node IDs, and policy state. Harmful or operational attack wording sets `policyState=blocked` and prevents lease creation.
 
 ## Instruction Boundary
 

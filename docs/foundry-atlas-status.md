@@ -46,6 +46,14 @@ FOUNDRY_ACTION_CREATE_CASK_GPS_POSITION=createExampleCaskGpsPosition
 
 Keep real runtime values in `.env` or shell exports only.
 
+The repo also supports a read-side intelligence profile:
+
+```bash
+GET /foundry/intelligence?refresh=true
+```
+
+In `FOUNDRY_MODE=osdk`, the node uses `FOUNDRY_INTEL_OBJECT_EXPORTS` to fetch generated OSDK object exports. The current SDK can pull `ExampleCaskGpsPosition`; full mission intelligence pull expands as the CASK ontology resources are added. This is gateway-only and opportunistic: if Foundry is disconnected, the local LLM continues decentralized operation from cached/local CASK records and queues what happened for later commander sync.
+
 ## Atlas Steps Completed
 
 - Added `[Example] CASK GPS Position` to the Ontology SDK resource list.
@@ -62,7 +70,7 @@ Keep real runtime values in `.env` or shell exports only.
 
 The current live connection is operational for the narrow GPS-position writeback profile. Remaining work is ontology expansion rather than connection setup:
 
-1. Add full CASK object/action types for sensor observations, drone observations, control-source estimates, counter-UAS cues, gossip world state, coordinator directives, insight drafts, and node health.
+1. Add full CASK object/action types for mission instructions, policy decisions, deployment orders, node leases, mission timeline events, sensor observations, drone observations, control-source estimates, counter-UAS cues, gossip world state, coordinator directives, insight drafts, and node health.
 2. Regenerate the OSDK package after those resources are added.
 3. Switch `FOUNDRY_UPLOAD_PROFILE` from `cask_gps_position` to `bundle_actions` once matching actions exist.
 
@@ -75,9 +83,14 @@ To move beyond the narrow GPS smoke, the ontology should gain first-class object
 - Drone observation.
 - Control source estimate.
 - Counter-UAS cue.
+- Mission instruction.
+- Policy decision.
+- Deployment order.
+- Node lease.
+- Mission timeline event.
 - Gossip world state.
 - Coordinator directive.
 - Insight draft.
 - Node health.
 
-The local TypeScript contracts already model those records. Until the ontology catches up, the Pi mesh can keep full bundles locally and write only the available GPS-position slice to Foundry.
+The local TypeScript contracts already model those records. The mission deployment layer is represented by `CaskMissionInstruction`, `CaskPolicyDecision`, `CaskDeploymentOrder`, `CaskNodeLease`, and `CaskMissionTimelineEvent`. Until the ontology catches up, the Pi mesh can keep full bundles and deployment orders locally and write only the available GPS-position slice to Foundry.

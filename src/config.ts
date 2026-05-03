@@ -4,6 +4,11 @@ export type FoundryActionPayloadStyle = "json" | "raw";
 export type FoundryUploadProfile = "bundle_actions" | "cask_gps_position";
 
 export interface FoundryActionMap {
+  createMissionInstruction: string;
+  createPolicyDecision: string;
+  createDeploymentOrder: string;
+  upsertNodeLease: string;
+  createMissionTimelineEvent: string;
   createSensorObservation: string;
   createLocationFix: string;
   createCounterUasCue: string;
@@ -25,6 +30,7 @@ export interface CaskGpsDefaults {
 export interface FoundryConfig {
   mode: FoundryMode;
   uploadProfile: FoundryUploadProfile;
+  intelligenceObjectExports: string[];
   foundryUrl?: string;
   ontologyRid?: string;
   clientId?: string;
@@ -124,6 +130,17 @@ function numberEnv(name: string, fallback: number): number {
   return value;
 }
 
+function listEnv(name: string, fallback: string[]): string[] {
+  const raw = env(name);
+  if (raw === undefined) {
+    return fallback;
+  }
+  return raw
+    .split(",")
+    .map((value) => value.trim())
+    .filter((value) => value.length > 0);
+}
+
 export function assertAllowedLocalModel(model: string): void {
   const blockedBy = bannedModelPatterns.find((pattern) => pattern.test(model));
   if (blockedBy) {
@@ -141,6 +158,21 @@ export function loadConfig(): AppConfig {
     foundry: {
       mode: parseFoundryMode(env("FOUNDRY_MODE")),
       uploadProfile: parseUploadProfile(env("FOUNDRY_UPLOAD_PROFILE")),
+      intelligenceObjectExports: listEnv("FOUNDRY_INTEL_OBJECT_EXPORTS", [
+        "ExampleCaskGpsPosition",
+        "CaskMission",
+        "CaskMissionInstruction",
+        "CaskDeploymentOrder",
+        "CaskSensorObservation",
+        "CaskLocationFix",
+        "CaskUasObservation",
+        "CaskControlSourceEstimate",
+        "CaskCounterUasCue",
+        "CaskGossipWorldState",
+        "CaskCoordinatorDirective",
+        "CaskInsightDraft",
+        "CaskNodeHealth",
+      ]),
       foundryUrl: env("FOUNDRY_API_URL"),
       ontologyRid: env("FOUNDRY_ONTOLOGY_RID"),
       clientId: env("FOUNDRY_CLIENT_ID"),
@@ -148,6 +180,23 @@ export function loadConfig(): AppConfig {
       osdkPackage: env("FOUNDRY_OSDK_PACKAGE"),
       actionPayloadStyle: parsePayloadStyle(env("FOUNDRY_ACTION_PAYLOAD_STYLE")),
       actions: {
+        createMissionInstruction: env(
+          "FOUNDRY_ACTION_CREATE_MISSION_INSTRUCTION",
+          "createCaskMissionInstruction",
+        )!,
+        createPolicyDecision: env(
+          "FOUNDRY_ACTION_CREATE_POLICY_DECISION",
+          "createCaskPolicyDecision",
+        )!,
+        createDeploymentOrder: env(
+          "FOUNDRY_ACTION_CREATE_DEPLOYMENT_ORDER",
+          "createCaskDeploymentOrder",
+        )!,
+        upsertNodeLease: env("FOUNDRY_ACTION_UPSERT_NODE_LEASE", "upsertCaskNodeLease")!,
+        createMissionTimelineEvent: env(
+          "FOUNDRY_ACTION_CREATE_MISSION_TIMELINE_EVENT",
+          "createCaskMissionTimelineEvent",
+        )!,
         createSensorObservation: env(
           "FOUNDRY_ACTION_CREATE_SENSOR_OBSERVATION",
           "createCaskSensorObservation",

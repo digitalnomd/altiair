@@ -8,7 +8,9 @@ This repo now includes a runnable local scaffold for the CASK edge path:
 - Deterministic demo-shaped sensor data in `src/mock/caskDemoScenario.ts`.
 - A local insight adapter in `src/llm/localInsight.ts`.
 - Gossip world state and singleton coordinator directives in `src/mesh/coordinator.ts`.
+- Mission instruction, policy decision, deployment order, node lease, and timeline records in `src/cask/missionDeployment.ts`.
 - A Foundry OSDK uploader in `src/foundry/uploader.ts`.
+- A Foundry OSDK read-side intelligence connector in `src/foundry/intelligence.ts`.
 - A smoke runner in `src/scripts/smoke.ts`.
 
 The smoke runner defaults to mock Foundry and mock LLM mode for local tests, so it can run without secrets:
@@ -39,6 +41,49 @@ Accepted event kinds are `camera_detection`, `audio_window`, `rfid_read`, and `n
 `POST /sensor-events` and `POST /bundles` also run the configured local insight client on the receiving node. The response includes the local LLM mode/model, the generated `InsightDraft`, the CASK training tag objective summary, this node's local instruction view, and the latest singleton coordinator summary. `GET /insights/latest`, `GET /tag-plan/latest`, `GET /instructions/latest`, `GET /gossip/world`, and `GET /coordinator/latest` return those latest runtime products.
 
 All four compute nodes are modeled as local-LLM capable: the two Pi 4B sensor nodes, the Pi 5 hub/display/gateway, and the Jetson Orin Nano inference node.
+
+## Mission Instructions And Deployment
+
+Use the mission deployment endpoint to start the demo from an operator instruction:
+
+```bash
+curl -X POST http://127.0.0.1:8080/mission/deploy \
+  -H 'content-type: application/json' \
+  --data '{
+    "title": "CASK controlled training tag",
+    "missionText": "Deploy the Pi and Jetson CASK mesh to collect RFID, microphone, camera, and node-health evidence for a controlled training tag in training-zone-alpha. Share the fused cue to all reachable edge nodes and keep Foundry writeback queued until policy and connectivity allow it.",
+    "objectiveType": "controlled_training_tag",
+    "authorizedZoneId": "training-zone-alpha",
+    "subjectRef": "training-tag-001",
+    "operatorAuthorized": true,
+    "requestedBy": "Sarah Hatcher"
+  }'
+```
+
+The endpoint returns a `CaskDeploymentOrder` with:
+
+- policy decision and blocked/review reasons;
+- one node lease per Pi/Jetson node;
+- startup command and required API endpoints for each node;
+- sensor event kinds expected from each node;
+- mission timeline events for instruction receipt, policy check, lease assignment, and deployment activation.
+
+Read the result through:
+
+```text
+GET /mission/instructions/latest
+GET /mission/deployment/latest
+GET /mission/timeline
+GET /dashboard
+```
+
+Run the deterministic check:
+
+```bash
+npm run mission:smoke
+```
+
+The policy gate blocks harmful or operational attack language before node leases are assigned. Accepted deployment output is limited to evidence collection, local fusion, gossip, coordinator election, display, relay, queueing, and policy-gated Foundry writeback.
 
 ## Gossip And Singleton Coordinator
 
@@ -106,6 +151,40 @@ Then run:
 npm run smoke:foundry
 ```
 
+## Foundry Intelligence Pull
+
+Foundry is used only when a gateway node is connected. The local LLM and gossip/coordinator path remain decentralized during DDIL; Foundry provides governed context on the way in and commander visibility on the way back out.
+
+Read governed context through:
+
+```bash
+curl -sS "http://127.0.0.1:8080/foundry/intelligence?refresh=true&page_size=10"
+```
+
+In `FOUNDRY_MODE=osdk`, this uses the generated OSDK object exports listed in `FOUNDRY_INTEL_OBJECT_EXPORTS`. The current generated package exposes `ExampleCaskGpsPosition`; after ontology expansion, add the full CASK exports such as `CaskMission`, `CaskMissionInstruction`, `CaskDeploymentOrder`, `CaskSensorObservation`, `CaskLocationFix`, `CaskCoordinatorDirective`, and `CaskInsightDraft`.
+
+The endpoint returns a commander/mission-context snapshot:
+
+- retrieved Foundry records with payload JSON and summaries;
+- generated object/action exports visible in the SDK package;
+- object exports that are unavailable until the ontology resources are added;
+- local uses: cache context for DDIL, resolve RFID tags, cite Foundry object IDs, and queue what happened back to the commander when connected.
+
+Local validation:
+
+```bash
+npm run foundry:intel:smoke
+```
+
+To push what happened back up when a gateway is connected, post the latest bundle and local insight:
+
+```bash
+curl -X POST http://127.0.0.1:8080/foundry/upload
+curl -sS http://127.0.0.1:8080/foundry/sync/latest
+```
+
+In mock mode this returns a queued commander-sync package. In OSDK mode, the existing upload profile controls the direct write: `cask_gps_position` writes the currently available GPS/location slice, while `bundle_actions` writes the full bundle once the matching CASK actions exist.
+
 Current Atlas status is tracked in [Foundry Atlas Status](foundry-atlas-status.md). The visible hackathon ontology currently supports a narrow live smoke through `[Example] CASK GPS Position`; it does not yet expose the full CASK bundle ontology.
 
 ## Expected Foundry Action Contract
@@ -124,6 +203,11 @@ The current default action export names are:
 
 | Purpose | Env override | Default generated export |
 | --- | --- | --- |
+| Mission instructions | `FOUNDRY_ACTION_CREATE_MISSION_INSTRUCTION` | `createCaskMissionInstruction` |
+| Policy decisions | `FOUNDRY_ACTION_CREATE_POLICY_DECISION` | `createCaskPolicyDecision` |
+| Deployment orders | `FOUNDRY_ACTION_CREATE_DEPLOYMENT_ORDER` | `createCaskDeploymentOrder` |
+| Node leases | `FOUNDRY_ACTION_UPSERT_NODE_LEASE` | `upsertCaskNodeLease` |
+| Mission timeline events | `FOUNDRY_ACTION_CREATE_MISSION_TIMELINE_EVENT` | `createCaskMissionTimelineEvent` |
 | Sensor events | `FOUNDRY_ACTION_CREATE_SENSOR_OBSERVATION` | `createCaskSensorObservation` |
 | Location fixes | `FOUNDRY_ACTION_CREATE_LOCATION_FIX` | `createCaskLocationFix` |
 | Counter-UAS cues | `FOUNDRY_ACTION_CREATE_COUNTER_UAS_CUE` | `createCaskCounterUasCue` |

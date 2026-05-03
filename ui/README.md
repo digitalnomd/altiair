@@ -18,11 +18,14 @@ The UI accepts either:
 
 - `GET /api/dashboard` returning the dashboard state shape used in `data/demo-state.json`.
 - The node API `/dashboard` snapshot through the proxy.
-- The existing node API endpoints through the proxy: `/health`, `/topology`, `/peers`, `/gateway`, `/mission-continuity`, `/congestion`, `/gossip/world`, `/coordinator/latest`, `/bundles/pending`, `/ledger`, `/replication/latest`, `/insights/latest`, `/tag-plan/latest`, and `/instructions/latest`.
+- The existing node API endpoints through the proxy: `/health`, `/topology`, `/peers`, `/gateway`, `/mission-continuity`, `/congestion`, `/gossip/world`, `/mission/instructions/latest`, `/mission/deployment/latest`, `/mission/timeline`, `/foundry/intelligence`, `/foundry/sync/latest`, `/coordinator/latest`, `/bundles/pending`, `/ledger`, `/replication/latest`, `/insights/latest`, `/tag-plan/latest`, and `/instructions/latest`.
 
 The intended producer split is:
 
 - `fusion`: local LLM fusion output from camera, microphone, RF/RFID, and confidence/evidence.
+- `missionInstruction` and `deploymentOrder`: operator mission text, policy decision, Pi/Jetson node leases, timeline, and startup commands.
+- `foundryIntelligence`: opportunistic Foundry context pull for connected gateways and commander sync status.
+- `foundrySync`: latest upload/queue acknowledgement for commander visibility.
 - `coordinator`: the current Raft-term singleton coordinator directive, next checks, operator action, and per-node intent assignments.
 - `gossip`: node reachability, failed nodes, peer roles, mesh links, and replicated ledger hints.
 

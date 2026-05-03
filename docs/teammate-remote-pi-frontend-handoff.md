@@ -15,6 +15,8 @@ Altiair runs as a local CASK edge mesh:
 
 The baseline demo does not require a phone hotspot or venue router. The Pi 5 should create or host the local mission LAN (`Altiair-LAN`), the two Pi 4Bs join it, and the Jetson joins by Wi-Fi or Ethernet. Foundry/CASK sync is queued whenever no gateway has internet.
 
+Foundry connectivity is optional and gateway-only. When a gateway is connected, it can pull governed mission/tag/policy context down and push the local after-action/intelligence record back up to the commander. When disconnected, the local LLM, gossip, coordinator election, deployment leases, and replicated ledger continue without Foundry.
+
 ## What Runs On Each Node
 
 Each node runs the same local API shape through `scripts/pi/run-altiair-node.sh`:
@@ -30,6 +32,24 @@ POST /sensor-events
 ```
 
 The node merges those events into a CASK bundle, drafts a local LLM insight, creates a controlled training tag objective, builds per-node instructions, records the replicated mission ledger state, and updates the gossip/coordinator surfaces.
+
+The frontend can also start the full demo by posting a mission instruction:
+
+```bash
+curl -X POST http://127.0.0.1:18080/mission/deploy \
+  -H 'content-type: application/json' \
+  --data '{
+    "title": "CASK controlled training tag",
+    "missionText": "Deploy the Pi and Jetson CASK mesh to collect RFID, microphone, camera, and node-health evidence for a controlled training tag in training-zone-alpha.",
+    "objectiveType": "controlled_training_tag",
+    "authorizedZoneId": "training-zone-alpha",
+    "subjectRef": "training-tag-001",
+    "operatorAuthorized": true,
+    "requestedBy": "Sarah Hatcher"
+  }'
+```
+
+That returns a `CaskDeploymentOrder` with one `CaskNodeLease` per node, then `/dashboard` will include `missionInstruction` and `deploymentOrder` for the UI.
 
 Before real sensor adapters are available, use the deterministic mock scenario:
 
@@ -140,6 +160,8 @@ That proxy calls the node API and returns:
     "replication": {},
     "insight": {},
     "tagPlan": {},
+    "missionInstruction": {},
+    "deploymentOrder": {},
     "instructions": {}
   }
 }
@@ -155,6 +177,10 @@ A custom frontend should read:
 | `pending` | Latest local CASK bundles from camera, microphone, RFID, and location events |
 | `insight` | Local LLM summary, limitations, confidence, and recommended checks |
 | `tagPlan` | Controlled training tag objective and per-node assignments |
+| `missionInstruction` | Operator-entered mission text, objective, zone, subject/tag reference, requested-by, and policy state |
+| `deploymentOrder` | Active deployment state, node leases, startup commands, timeline, and Foundry action plan |
+| `foundryIntelligence` | Opportunistic Foundry/OSDK context pull, generated SDK exports, unavailable CASK exports, and commander-sync guidance |
+| `foundrySync` | Latest upload acknowledgement and commander-facing mission/evidence summary |
 | `instructions` | The current node's local CASK instruction view |
 | `gossipWorld` | Online nodes, failed nodes, per-node evidence IDs, and queue/load hints |
 | `coordinator` | Current Raft-term singleton coordinator leader, authority state, and per-node directive map |
@@ -202,6 +228,11 @@ Live frontend and teammate tooling should prefer `/dashboard`, but the lower-lev
 | `GET /gateway` | Preferred Foundry/CASK gateway selection |
 | `GET /mission-continuity` | Local fusion continuity after degraded comms or node loss |
 | `GET /gossip/world` | Gossip-derived shared awareness state for frontend and coordinator input |
+| `GET /mission/instructions/latest` | Latest operator mission instruction packet |
+| `GET /mission/deployment/latest` | Latest deployment order and node leases |
+| `GET /mission/timeline` | Auditable deployment timeline |
+| `GET /foundry/intelligence` | Pull governed Foundry context when connected; otherwise use cached/mock context |
+| `GET /foundry/sync/latest` | Latest commander-sync acknowledgement and mission/evidence summary |
 | `GET /coordinator/latest` | Current singleton coordinator directive for the active Raft-style term |
 | `GET /bundles/pending` | Local queued CASK bundles |
 | `GET /ledger` | Local ledger summary |
@@ -210,6 +241,9 @@ Live frontend and teammate tooling should prefer `/dashboard`, but the lower-lev
 | `GET /tag-plan/latest` | Latest controlled training tag objective |
 | `GET /instructions/latest` | Current node's local instruction view |
 | `POST /sensor-events` | Live camera, microphone, RFID, provider-style location, and health ingest |
+| `POST /mission/instructions` | Validate and store a mission instruction without activating leases |
+| `POST /mission/deploy` | Validate a mission instruction and activate policy-gated node leases |
+| `POST /foundry/upload` | Gateway-selected upload/queue for commander visibility |
 
 Mock data contract details are in [Mock CASK Demo Data](mock-cask-demo-data.md).
 

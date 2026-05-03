@@ -54,6 +54,21 @@ Start the node API:
 ALTIAIR_API_HOST=127.0.0.1 ALTIAIR_API_PORT=8080 npm run node:api -- --node altiair-hub
 ```
 
+Optionally seed the mission deployment before replay:
+
+```bash
+curl -X POST http://127.0.0.1:8080/mission/deploy \
+  -H 'content-type: application/json' \
+  --data '{
+    "title": "CASK controlled training tag",
+    "missionText": "Deploy the Pi and Jetson CASK mesh to collect RFID, microphone, camera, and node-health evidence for a controlled training tag in training-zone-alpha.",
+    "authorizedZoneId": "training-zone-alpha",
+    "subjectRef": "training-tag-001",
+    "operatorAuthorized": true,
+    "requestedBy": "Sarah Hatcher"
+  }'
+```
+
 Replay the four mock steps:
 
 ```bash
@@ -75,6 +90,10 @@ curl -sS http://127.0.0.1:8080/tag-plan/latest
 curl -sS http://127.0.0.1:8080/instructions/latest
 curl -sS http://127.0.0.1:8080/gossip/world
 curl -sS http://127.0.0.1:8080/coordinator/latest
+curl -sS http://127.0.0.1:8080/mission/deployment/latest
+curl -sS http://127.0.0.1:8080/mission/timeline
+curl -X POST http://127.0.0.1:8080/foundry/upload
+curl -sS http://127.0.0.1:8080/foundry/sync/latest
 curl -sS http://127.0.0.1:8080/mission-continuity
 ```
 
@@ -86,6 +105,9 @@ Expected result:
 - `/instructions/latest` returns the current node's local instruction view.
 - `/gossip/world` reports `altiair-node-b` as failed after the final mock step and keeps the surviving nodes online.
 - `/coordinator/latest` reports the current Raft-style singleton coordinator leader, term, authority state, and per-node instruction map.
+- `/mission/deployment/latest` reports the active mission deployment order and node leases for Pi 5, the two Pi 4Bs, and Jetson.
+- `/mission/timeline` reports instruction receipt, policy check, lease assignment, and activation events.
+- `/foundry/upload` and `/foundry/sync/latest` show the commander-sync package. In mock mode it is queued; in connected OSDK mode it writes the available CASK profile.
 - `/mission-continuity` reports degraded state after the final step because `altiair-node-b` is mocked unreachable.
 
 ## Mock-To-Real Swap

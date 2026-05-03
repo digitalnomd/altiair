@@ -263,6 +263,10 @@ async function loadLivePayload() {
     fetchJson(joinUrl(apiBase, "replication/latest")),
     fetchJson(joinUrl(apiBase, "insights/latest")),
     fetchJson(joinUrl(apiBase, "tag-plan/latest")),
+    fetchJson(joinUrl(apiBase, "mission/instructions/latest")),
+    fetchJson(joinUrl(apiBase, "mission/deployment/latest")),
+    fetchJson(joinUrl(apiBase, "foundry/intelligence")),
+    fetchJson(joinUrl(apiBase, "foundry/sync/latest")),
     fetchJson(joinUrl(apiBase, "instructions/latest")),
     fetchJson(joinUrl(apiBase, "coordinator/latest")),
     fetchJson(joinUrl(apiBase, "gossip/world")),
@@ -280,6 +284,10 @@ async function loadLivePayload() {
     replication,
     insight,
     tagPlan,
+    missionInstruction,
+    deploymentOrder,
+    foundryIntelligence,
+    foundrySync,
     instructions,
     coordinator,
     gossipWorld,
@@ -305,6 +313,10 @@ async function loadLivePayload() {
       replication,
       insight,
       tagPlan,
+      missionInstruction,
+      deploymentOrder,
+      foundryIntelligence,
+      foundrySync,
       instructions,
       coordinator,
       gossipWorld,
@@ -362,8 +374,13 @@ function fromNodeApiSnapshot(snapshot) {
   const latestEstimate = latestBundle?.controlSourceEstimates?.[0];
   const latestInsight = snapshot.insight && !snapshot.insight.error ? snapshot.insight : null;
   const latestTagPlan = snapshot.tagPlan && !snapshot.tagPlan.error ? snapshot.tagPlan : null;
+  const missionInstruction = snapshot.missionInstruction && !snapshot.missionInstruction.error ? snapshot.missionInstruction : null;
+  const deploymentOrder = snapshot.deploymentOrder && !snapshot.deploymentOrder.error ? snapshot.deploymentOrder : null;
+  const foundryIntelligence = snapshot.foundryIntelligence && !snapshot.foundryIntelligence.error ? snapshot.foundryIntelligence : null;
+  const foundrySync = snapshot.foundrySync && !snapshot.foundrySync.error ? snapshot.foundrySync : null;
   const localInstructions = snapshot.instructions && !snapshot.instructions.error ? snapshot.instructions : null;
   const localAssignment = localInstructions?.localAssignments?.[0];
+  const localLease = deploymentOrder?.nodeLeases?.find((lease) => lease.nodeId === health.nodeId);
   const coordinatorDirective = snapshot.coordinator && !snapshot.coordinator.error ? snapshot.coordinator : null;
   const gossipWorld = snapshot.gossipWorld && !snapshot.gossipWorld.error ? snapshot.gossipWorld : coordinatorDirective?.gossipWorld ?? null;
   const missionContinuity = snapshot.missionContinuity && !snapshot.missionContinuity.error ? snapshot.missionContinuity : null;
@@ -420,6 +437,7 @@ function fromNodeApiSnapshot(snapshot) {
     null;
 
   base.updatedAt = snapshot.capturedAt ?? new Date().toISOString();
+  base.mission.name = missionInstruction?.title ?? deploymentOrder?.title ?? base.mission.name;
   base.mission.status = missionContinuity
     ? `${onlineCount}/${totalCount} nodes active - ${formatToken(missionContinuity.status)}`
     : `${onlineCount}/${totalCount} nodes active - ${onlineCount >= 3 ? "mesh stable" : "mesh degraded"}`;
@@ -434,8 +452,18 @@ function fromNodeApiSnapshot(snapshot) {
       ? `${pendingBundles.length} pending evidence bundle${pendingBundles.length === 1 ? "" : "s"}`
       : "No active fused event";
   base.fusion.policyGate = latestCue?.policyGate ?? latestBundle?.counterUasCues?.[0]?.policyGate ?? "review_needed";
+  if (deploymentOrder?.policyDecision?.policyState) {
+    base.fusion.policyGate = deploymentOrder.policyDecision.policyState;
+  }
   base.fusion.evidence = evidenceFromBundle(latestBundle, base.fusion.evidence);
   base.fusion.feed = [
+    ...(deploymentOrder
+      ? [{
+          level: deploymentOrder.state === "blocked" ? "bad" : "good",
+          title: "Deployment",
+          text: `${formatToken(deploymentOrder.state)} with ${deploymentOrder.nodeLeases?.length ?? 0} node leases for ${deploymentOrder.authorizedZoneId}.`,
+        }]
+      : []),
     {
       level: latestCue ? "warn" : "info",
       title: "Fusion",
@@ -448,6 +476,23 @@ function fromNodeApiSnapshot(snapshot) {
       title: "Policy",
       text: `Current policy gate is ${formatPolicy(base.fusion.policyGate)}.`,
     },
+    ...(foundryIntelligence
+      ? [{
+          level: foundryIntelligence.connected ? "good" : "info",
+          title: "Foundry intel",
+          text: foundryIntelligence.connected
+            ? `${foundryIntelligence.records?.length ?? 0} governed context records pulled for commander sync.`
+            : "Foundry disconnected or mock; edge LLM continues from local cache and gossip.",
+        }]
+      : []),
+    ...(foundrySync
+      ? [{
+          level: foundrySync.ack?.status === "accepted" ? "good" : "info",
+          title: "Foundry output",
+          text: foundrySync.commanderVisibility?.message ??
+            "Latest CASK evidence package is staged for commander visibility.",
+        }]
+      : []),
     {
       level: congestion?.acceptBundle === false ? "bad" : "good",
       title: "Backpressure",
@@ -462,14 +507,23 @@ function fromNodeApiSnapshot(snapshot) {
     instructionText ??
     (congestion?.preferredDecision ? `Coordinator fallback: ${formatToken(congestion.preferredDecision)}` : base.coordinator.recommendedNextAction);
   base.coordinator.operatorNextAction = instructionText ??
+    localLease?.instruction ??
     "Maintain observation. Keep collecting compact evidence until a cue is available.";
   const assignmentByNode = new Map((latestTagPlan?.assignments ?? []).map((assignment) => [assignment.nodeId, assignment]));
+  const leaseByNode = new Map((deploymentOrder?.nodeLeases ?? []).map((lease) => [lease.nodeId, lease]));
   base.coordinator.teamPulse = liveNodes.map((node) => ({
     nodeId: node.id,
-    task: teamTaskLabel(node, assignmentByNode, selectedGateway, health.nodeId),
-    status: teamTaskStatus(node, assignmentByNode, selectedGateway),
+    task: teamTaskLabel(node, assignmentByNode, leaseByNode, selectedGateway, health.nodeId),
+    status: teamTaskStatus(node, assignmentByNode, leaseByNode, selectedGateway),
   }));
   base.coordinator.feed = [
+    ...(missionInstruction
+      ? [{
+          level: missionInstruction.policyState === "blocked" ? "bad" : "good",
+          title: "Instruction",
+          text: `${missionInstruction.requestedBy ?? "Operator"} loaded ${missionInstruction.objectiveType} for ${missionInstruction.authorizedZoneId}.`,
+        }]
+      : []),
     {
       level: coordinatorDirective?.election?.authorityState === "leader_active" ? "good" : "warn",
       title: "Coordinator",
@@ -516,18 +570,30 @@ function fromNodeApiSnapshot(snapshot) {
           ? `${snapshot.ledger.storedRecordCount} replicated records visible locally.`
           : "No replicated records reported yet.",
     },
+    ...(foundryIntelligence
+      ? [{
+          level: foundryIntelligence.connected ? "good" : "info",
+          title: "Commander sync",
+          text: foundryIntelligence.recommendedLocalUses?.[4] ??
+            "Queue what happened back to Foundry/CASK when a gateway reconnects.",
+        }]
+      : []),
   ];
 
   return base;
 }
 
-function teamTaskLabel(node, assignmentByNode, selectedGateway, healthNodeId) {
+function teamTaskLabel(node, assignmentByNode, leaseByNode, selectedGateway, healthNodeId) {
   const assignment = assignmentByNode.get(node.sourceId);
+  const lease = leaseByNode.get(node.sourceId);
   if (node.status === "degraded") {
     return "Degraded";
   }
   if (assignment) {
     return formatToken(assignment.role);
+  }
+  if (lease?.roles?.length) {
+    return formatToken(lease.roles[0]);
   }
   if (selectedGateway === node.sourceId) {
     return "Gateway";
@@ -538,8 +604,9 @@ function teamTaskLabel(node, assignmentByNode, selectedGateway, healthNodeId) {
   return "Peer";
 }
 
-function teamTaskStatus(node, assignmentByNode, selectedGateway) {
+function teamTaskStatus(node, assignmentByNode, leaseByNode, selectedGateway) {
   const assignment = assignmentByNode.get(node.sourceId);
+  const lease = leaseByNode.get(node.sourceId);
   if (node.status === "degraded") {
     return "warn";
   }
@@ -548,6 +615,12 @@ function teamTaskStatus(node, assignmentByNode, selectedGateway) {
   }
   if (assignment || selectedGateway === node.sourceId) {
     return "good";
+  }
+  if (lease?.state === "assigned") {
+    return "good";
+  }
+  if (lease?.state === "standby") {
+    return "warn";
   }
   return "neutral";
 }

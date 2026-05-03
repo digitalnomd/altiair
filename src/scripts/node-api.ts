@@ -11,12 +11,25 @@ import {
   buildGossipWorldState,
   type CoordinatorDirective,
 } from "../mesh/coordinator.js";
+import {
+  buildDeploymentOrder,
+  buildMissionInstruction,
+  type CaskDeploymentOrder,
+  type CaskMissionInstruction,
+  type MissionInstructionInput,
+} from "../cask/missionDeployment.js";
 import { buildDistributedResolutionReport } from "../cask/distributedResolution.js";
 import { buildTrainingTagPlan } from "../cask/trainingTag.js";
 import { buildReplicationReport } from "../mesh/replication.js";
 import { buildCaskBundleFromLiveInputs, type LiveSensorInput } from "../sensors/liveMerge.js";
 import { createLocalInsightClient, type LocalInsightClient } from "../llm/localInsight.js";
-import type { CaskBundle, InsightDraft, NodeHealth, PolicyState } from "../cask/types.js";
+import {
+  createFoundryIntelligenceClient,
+  type FoundryIntelligenceClient,
+  type FoundryIntelligenceSnapshot,
+} from "../foundry/intelligence.js";
+import { createFoundryUploader, type FoundryUploader } from "../foundry/uploader.js";
+import type { CaskBundle, InsightDraft, NodeHealth, PolicyState, UploadAck } from "../cask/types.js";
 import type { TrainingTagPlan } from "../cask/trainingTag.js";
 import type { NodeDescriptor, PeerObservation, ReplicationReport } from "../mesh/types.js";
 
@@ -28,7 +41,13 @@ interface RuntimeState {
   tagPlans: TrainingTagPlan[];
   replicationReports: ReplicationReport[];
   coordinatorDirectives: CoordinatorDirective[];
+  missionInstructions: CaskMissionInstruction[];
+  deploymentOrders: CaskDeploymentOrder[];
   insightClient: LocalInsightClient;
+  foundryIntelligenceClient: FoundryIntelligenceClient;
+  foundryIntelligenceSnapshots: FoundryIntelligenceSnapshot[];
+  foundryUploader: FoundryUploader;
+  uploadAcks: UploadAck[];
   llmMode: string;
   llmModel: string;
   startedAt: number;
@@ -71,7 +90,13 @@ const state: RuntimeState = {
   tagPlans: [],
   replicationReports: [],
   coordinatorDirectives: [],
+  missionInstructions: [],
+  deploymentOrders: [],
   insightClient: createLocalInsightClient(config.llm),
+  foundryIntelligenceClient: createFoundryIntelligenceClient(config.foundry),
+  foundryIntelligenceSnapshots: [],
+  foundryUploader: createFoundryUploader(config.foundry),
+  uploadAcks: [],
   llmMode: config.llm.mode,
   llmModel: config.llm.model,
   startedAt: Date.now(),
@@ -103,6 +128,7 @@ server.listen(port, host, () => {
           model: state.llmModel,
         },
         dashboard: "/dashboard",
+        missionDeploy: "/mission/deploy",
         coordinator: "/coordinator/latest",
         frontendCors: corsOrigin === undefined ? "disabled" : corsOrigin,
         protectedRoutes: apiToken === undefined ? "disabled" : "bearer",
@@ -190,6 +216,79 @@ async function handleRequest(
         latestTrainingTagPlan(state),
       ),
     );
+    return;
+  }
+
+  if (request.method === "GET" && path === "/mission/instructions/latest") {
+    const latestInstruction = latestMissionInstruction(state);
+    if (latestInstruction === undefined) {
+      writeJson(response, 404, {
+        error: "No mission instruction.",
+        message: "POST /mission/instructions or POST /mission/deploy first.",
+      });
+      return;
+    }
+
+    writeJson(response, 200, latestInstruction);
+    return;
+  }
+
+  if (request.method === "GET" && path === "/mission/deployment/latest") {
+    const latestDeployment = latestDeploymentOrder(state);
+    if (latestDeployment === undefined) {
+      writeJson(response, 404, {
+        error: "No mission deployment.",
+        message: "POST /mission/deploy first.",
+      });
+      return;
+    }
+
+    writeJson(response, 200, latestDeployment);
+    return;
+  }
+
+  if (request.method === "GET" && path === "/mission/timeline") {
+    writeJson(response, 200, {
+      nodeId: state.node.id,
+      deploymentId: latestDeploymentOrder(state)?.deploymentId ?? null,
+      timeline: state.deploymentOrders.flatMap((deployment) => deployment.timeline),
+    });
+    return;
+  }
+
+  if (request.method === "GET" && path === "/foundry/intelligence") {
+    const pageSize = numberQuery(url, "page_size", 25);
+    const missionId = url.searchParams.get("mission_id") ?? undefined;
+    const refresh = boolQuery(url, "refresh", false);
+    if (!refresh) {
+      const latestSnapshot = latestFoundryIntelligenceSnapshot(state);
+      if (latestSnapshot !== undefined) {
+        writeJson(response, 200, latestSnapshot);
+        return;
+      }
+    }
+
+    const snapshot = await state.foundryIntelligenceClient.getMissionIntelligence({
+      missionId,
+      pageSize,
+      objectExports: listQuery(url, "object"),
+    });
+    state.foundryIntelligenceSnapshots.push(snapshot);
+    writeJson(response, 200, snapshot);
+    return;
+  }
+
+  if (request.method === "GET" && path === "/foundry/sync/latest") {
+    const latestAck = latestUploadAck(state);
+    if (latestAck === undefined) {
+      writeJson(response, 404, {
+        error: "No Foundry sync acknowledgement.",
+        message: "POST /foundry/upload after a bundle exists to sync what happened back to the commander.",
+      });
+      return;
+    }
+
+    writeJson(response, 200, buildCommanderSyncPackage(state, latestAck));
     return;
   }
 
@@ -318,6 +417,80 @@ async function handleRequest(
     return;
   }
 
+  if (request.method === "POST" && path === "/mission/instructions") {
+    if (!isJsonRequest(request)) {
+      writeJson(response, 415, {
+        error: "Unsupported media type.",
+        message: "POST /mission/instructions requires content-type application/json.",
+      });
+      return;
+    }
+
+    const rawBody = await readBody(request, defaultDdilMeshTopology.policy.maxBundleSizeBytes);
+    const input = parseMissionInstructionInputResponse(rawBody, response);
+    if (input === undefined) {
+      return;
+    }
+
+    const instruction = buildMissionInstruction(input);
+    if (!state.missionInstructions.some((candidate) => candidate.instructionId === instruction.instructionId)) {
+      state.missionInstructions.push(instruction);
+    }
+    writeJson(response, instruction.policyState === "blocked" ? 422 : 202, {
+      accepted: instruction.policyState !== "blocked",
+      instruction,
+    });
+    return;
+  }
+
+  if (request.method === "POST" && path === "/mission/deploy") {
+    if (!isJsonRequest(request)) {
+      writeJson(response, 415, {
+        error: "Unsupported media type.",
+        message: "POST /mission/deploy requires content-type application/json.",
+      });
+      return;
+    }
+
+    const rawBody = await readBody(request, defaultDdilMeshTopology.policy.maxBundleSizeBytes);
+    const deployment = parseAndBuildDeploymentResponse(rawBody, state, response);
+    if (deployment === undefined) {
+      return;
+    }
+
+    state.deploymentOrders.push(deployment);
+    writeJson(response, deployment.state === "blocked" ? 422 : 202, {
+      accepted: deployment.state !== "blocked",
+      deployment,
+    });
+    return;
+  }
+
+  if (request.method === "POST" && path === "/foundry/upload") {
+    const bundle = latestBundle(state);
+    if (bundle === undefined) {
+      writeJson(response, 404, {
+        error: "No CASK bundle available.",
+        message: "POST /sensor-events or POST /bundles first, then POST /foundry/upload.",
+      });
+      return;
+    }
+
+    const insightResult = await ensureInsightForBundle(state, bundle);
+    if (insightResult.insight === undefined) {
+      writeJson(response, 503, {
+        error: "No local insight available.",
+        message: insightResult.error ?? "Local insight generation failed.",
+      });
+      return;
+    }
+
+    const ack = await state.foundryUploader.uploadBundle(bundle, insightResult.insight);
+    state.uploadAcks.push(ack);
+    writeJson(response, ack.status === "failed" ? 502 : 202, buildCommanderSyncPackage(state, ack));
+    return;
+  }
+
   if (request.method === "GET" && path === "/insights/latest") {
     const latestInsight = latestInsightDraft(state);
     if (latestInsight === undefined) {
@@ -370,6 +543,11 @@ async function handleRequest(
       "GET /gateway",
       "GET /mission-continuity",
       "GET /gossip/world",
+      "GET /mission/instructions/latest",
+      "GET /mission/deployment/latest",
+      "GET /mission/timeline",
+      "GET /foundry/intelligence",
+      "GET /foundry/sync/latest",
       "GET /coordinator/latest",
       "GET /congestion",
       "GET /replication",
@@ -377,6 +555,9 @@ async function handleRequest(
       "GET /ledger",
       "POST /bundles",
       "POST /sensor-events",
+      "POST /mission/instructions",
+      "POST /mission/deploy",
+      "POST /foundry/upload",
       "GET /insights/latest",
       "GET /tag-plan/latest",
       "GET /instructions/latest",
@@ -428,6 +609,9 @@ function buildDashboardSnapshot(state: RuntimeState): unknown {
   const latestReport = latestReplicationReport(state);
   const latestTagPlan = latestTrainingTagPlan(state);
   const latestCoordinator = latestCoordinatorDirective(state);
+  const latestInstruction = latestMissionInstruction(state);
+  const latestDeployment = latestDeploymentOrder(state);
+  const latestFoundryIntelligence = latestFoundryIntelligenceSnapshot(state);
 
   return {
     nodeApi: {
@@ -461,6 +645,10 @@ function buildDashboardSnapshot(state: RuntimeState): unknown {
       replication: latestReport ?? null,
       insight: latestInsightDraft(state) ?? null,
       tagPlan: latestTagPlan ?? null,
+      missionInstruction: latestInstruction ?? null,
+      deploymentOrder: latestDeployment ?? null,
+      foundryIntelligence: latestFoundryIntelligence ?? null,
+      foundrySync: latestUploadAck(state) ?? null,
       coordinator: latestCoordinator ?? null,
       gossipWorld: buildGossipWorldState(
         defaultDdilMeshTopology,
@@ -507,6 +695,169 @@ function parseLiveSensorPostResponse(rawBody: string, response: ServerResponse):
     });
     return undefined;
   }
+}
+
+function parseMissionInstructionInputResponse(
+  rawBody: string,
+  response: ServerResponse,
+): MissionInstructionInput | undefined {
+  try {
+    const parsed = JSON.parse(rawBody) as unknown;
+    if (!isRecord(parsed)) {
+      throw new Error("Mission instruction payload must be an object.");
+    }
+    const missionText = stringField(parsed, "missionText") ?? stringField(parsed, "instruction");
+    if (missionText === undefined) {
+      throw new Error("Mission instruction payload must include missionText.");
+    }
+    return {
+      missionId: stringField(parsed, "missionId"),
+      title: stringField(parsed, "title"),
+      missionText,
+      objectiveType: objectiveTypeField(parsed),
+      authorizedZoneId: stringField(parsed, "authorizedZoneId"),
+      subjectRef: stringField(parsed, "subjectRef"),
+      requiredSensorKinds: sensorKindsField(parsed),
+      operatorAuthorized: booleanField(parsed, "operatorAuthorized"),
+      requestedBy: stringField(parsed, "requestedBy"),
+      createdAt: stringField(parsed, "createdAt"),
+    };
+  } catch (error: unknown) {
+    writeJson(response, 400, {
+      error: "Invalid mission instruction.",
+      message: error instanceof Error ? error.message : "Mission instruction payload is invalid.",
+    });
+    return undefined;
+  }
+}
+
+function parseAndBuildDeploymentResponse(
+  rawBody: string,
+  state: RuntimeState,
+  response: ServerResponse,
+): CaskDeploymentOrder | undefined {
+  try {
+    const parsed = JSON.parse(rawBody) as unknown;
+    if (!isRecord(parsed)) {
+      throw new Error("Mission deployment payload must be an object.");
+    }
+
+    const instruction = stringField(parsed, "instructionId") !== undefined &&
+      stringField(parsed, "missionText") === undefined &&
+      stringField(parsed, "instruction") === undefined
+      ? existingInstruction(state, stringField(parsed, "instructionId")!)
+      : buildMissionInstructionFromRecord(parsed, state);
+
+    if (!state.missionInstructions.some((candidate) => candidate.instructionId === instruction.instructionId)) {
+      state.missionInstructions.push(instruction);
+    }
+    return buildDeploymentOrder(
+      instruction,
+      defaultDdilMeshTopology,
+      state.observations,
+      { deploy: booleanField(parsed, "deploy") ?? true },
+    );
+  } catch (error: unknown) {
+    writeJson(response, 400, {
+      error: "Invalid mission deployment.",
+      message: error instanceof Error ? error.message : "Mission deployment payload is invalid.",
+    });
+    return undefined;
+  }
+}
+
+function buildMissionInstructionFromRecord(
+  parsed: Record<string, unknown>,
+  state: RuntimeState,
+): CaskMissionInstruction {
+  const payload = parseMissionInstructionInputPayload(parsed, state);
+  return buildMissionInstruction(payload);
+}
+
+function parseMissionInstructionInputPayload(
+  parsed: Record<string, unknown>,
+  state: RuntimeState,
+): MissionInstructionInput {
+  const missionText = stringField(parsed, "missionText") ?? stringField(parsed, "instruction");
+  if (missionText === undefined) {
+    const latestInstruction = latestMissionInstruction(state);
+    if (latestInstruction !== undefined) {
+      return {
+        missionId: latestInstruction.missionId,
+        title: latestInstruction.title,
+        missionText: latestInstruction.missionText,
+        objectiveType: latestInstruction.objectiveType,
+        authorizedZoneId: latestInstruction.authorizedZoneId,
+        subjectRef: latestInstruction.subjectRef,
+        requiredSensorKinds: latestInstruction.requiredSensorKinds,
+        operatorAuthorized: latestInstruction.operatorAuthorized,
+        requestedBy: latestInstruction.requestedBy,
+      };
+    }
+    throw new Error("Mission deployment payload must include missionText or reference an existing instructionId.");
+  }
+
+  return {
+    missionId: stringField(parsed, "missionId"),
+    title: stringField(parsed, "title"),
+    missionText,
+    objectiveType: objectiveTypeField(parsed),
+    authorizedZoneId: stringField(parsed, "authorizedZoneId"),
+    subjectRef: stringField(parsed, "subjectRef"),
+    requiredSensorKinds: sensorKindsField(parsed),
+    operatorAuthorized: booleanField(parsed, "operatorAuthorized"),
+    requestedBy: stringField(parsed, "requestedBy"),
+    createdAt: stringField(parsed, "createdAt"),
+  };
+}
+
+function existingInstruction(state: RuntimeState, instructionId: string): CaskMissionInstruction {
+  const instruction = state.missionInstructions.find((candidate) => candidate.instructionId === instructionId);
+  if (instruction === undefined) {
+    throw new Error(`No mission instruction found for instructionId ${instructionId}.`);
+  }
+  return instruction;
+}
+
+function objectiveTypeField(record: Record<string, unknown>): MissionInstructionInput["objectiveType"] {
+  const value = record.objectiveType;
+  if (
+    value === "controlled_training_tag" ||
+    value === "counter_uas_review" ||
+    value === "mesh_resilience_drill"
+  ) {
+    return value;
+  }
+  return undefined;
+}
+
+function sensorKindsField(record: Record<string, unknown>): MissionInstructionInput["requiredSensorKinds"] {
+  const value = record.requiredSensorKinds;
+  if (!Array.isArray(value)) {
+    return undefined;
+  }
+  return value.filter((candidate) =>
+    candidate === "rfid" ||
+    candidate === "audio" ||
+    candidate === "camera" ||
+    candidate === "node_health",
+  );
+}
+
+function booleanField(record: Record<string, unknown>, field: string): boolean | undefined {
+  const value = record[field];
+  if (typeof value === "boolean") {
+    return value;
+  }
+  if (typeof value === "string") {
+    if (["1", "true", "yes"].includes(value.toLowerCase())) {
+      return true;
+    }
+    if (["0", "false", "no"].includes(value.toLowerCase())) {
+      return false;
+    }
+  }
+  return undefined;
 }
 
 function stringField(record: Record<string, unknown>, field: string): string | undefined {
@@ -650,6 +1001,17 @@ async function draftLocalInsight(
   }
 }
 
+async function ensureInsightForBundle(
+  state: RuntimeState,
+  bundle: CaskBundle,
+): Promise<{ insight?: InsightDraft; error?: string }> {
+  const existing = state.insights.find((insight) => insight.bundleId === bundle.id);
+  if (existing !== undefined) {
+    return { insight: existing };
+  }
+  return draftLocalInsight(state, bundle);
+}
+
 function requireString(value: unknown, field: string): asserts value is string {
   if (typeof value !== "string" || value.length === 0) {
     throw new Error(`Bundle must include non-empty string ${field}.`);
@@ -742,6 +1104,26 @@ function latestCoordinatorDirective(state: RuntimeState): CoordinatorDirective |
   return state.coordinatorDirectives[state.coordinatorDirectives.length - 1];
 }
 
+function latestBundle(state: RuntimeState): CaskBundle | undefined {
+  return state.bundles[state.bundles.length - 1];
+}
+
+function latestMissionInstruction(state: RuntimeState): CaskMissionInstruction | undefined {
+  return state.missionInstructions[state.missionInstructions.length - 1];
+}
+
+function latestDeploymentOrder(state: RuntimeState): CaskDeploymentOrder | undefined {
+  return state.deploymentOrders[state.deploymentOrders.length - 1];
+}
+
+function latestFoundryIntelligenceSnapshot(state: RuntimeState): FoundryIntelligenceSnapshot | undefined {
+  return state.foundryIntelligenceSnapshots[state.foundryIntelligenceSnapshots.length - 1];
+}
+
+function latestUploadAck(state: RuntimeState): UploadAck | undefined {
+  return state.uploadAcks[state.uploadAcks.length - 1];
+}
+
 function summarizeTagPlan(tagPlan: TrainingTagPlan): unknown {
   return {
     objectiveId: tagPlan.objectiveId,
@@ -765,6 +1147,58 @@ function summarizeCoordinatorDirective(directive: CoordinatorDirective): unknown
     authorityState: directive.election.authorityState,
     recommendedNextAction: directive.recommendedNextAction,
     instructionNodeIds: Object.keys(directive.instructions).sort(),
+  };
+}
+
+function buildCommanderSyncPackage(state: RuntimeState, ack: UploadAck): unknown {
+  const latestDeployment = latestDeploymentOrder(state);
+  const latestCoordinator = latestCoordinatorDirective(state);
+  const latestInsight = latestInsightDraft(state);
+  const latestReport = latestReplicationReport(state);
+  return {
+    ack,
+    commanderVisibility: {
+      status: ack.status,
+      mode: ack.mode,
+      uploadedAt: ack.uploadedAt,
+      message: ack.message ??
+        (ack.status === "accepted"
+          ? "Foundry accepted the available CASK records for commander visibility."
+          : "CASK records are queued locally for commander visibility when connectivity and ontology actions allow it."),
+    },
+    mission: {
+      instruction: latestMissionInstruction(state) ?? null,
+      deployment: latestDeployment === undefined
+        ? null
+        : {
+            deploymentId: latestDeployment.deploymentId,
+            state: latestDeployment.state,
+            title: latestDeployment.title,
+            authorizedZoneId: latestDeployment.authorizedZoneId,
+            subjectRef: latestDeployment.subjectRef,
+            nodeLeaseCount: latestDeployment.nodeLeases.length,
+            timelineEventCount: latestDeployment.timeline.length,
+          },
+    },
+    evidence: {
+      latestBundleId: latestBundle(state)?.id ?? null,
+      latestInsight: latestInsight === undefined
+        ? null
+        : {
+            id: latestInsight.id,
+            summary: latestInsight.summary,
+            confidence: latestInsight.confidence,
+            evidenceIds: latestInsight.evidenceIds,
+            policyState: latestInsight.policyState,
+          },
+      replication: summarizeReplicationReport(latestReport),
+      coordinator: latestCoordinator === undefined ? null : summarizeCoordinatorDirective(latestCoordinator),
+    },
+    constraints: [
+      "Foundry sync is gateway-selected and only runs when connectivity, credentials, ontology scope, and policy allow it.",
+      "The local LLM, gossip, and replicated CASK ledger continue decentralized operation without Foundry.",
+      "Commander sync is evidence, context, and after-action visibility; it is not an autonomous action channel.",
+    ],
   };
 }
 
@@ -886,6 +1320,20 @@ function numberQuery(url: URL, name: string, fallback: number): number {
   }
   const parsed = Number(value);
   return Number.isFinite(parsed) ? parsed : fallback;
+}
+
+function boolQuery(url: URL, name: string, fallback: boolean): boolean {
+  const value = url.searchParams.get(name);
+  if (value === null) {
+    return fallback;
+  }
+  return value === "1" || value.toLowerCase() === "true" || value.toLowerCase() === "yes";
+}
+
+function listQuery(url: URL, name: string): string[] | undefined {
+  const values = url.searchParams.getAll(name).flatMap((value) => value.split(","));
+  const cleaned = values.map((value) => value.trim()).filter((value) => value.length > 0);
+  return cleaned.length === 0 ? undefined : cleaned;
 }
 
 function readBody(request: IncomingMessage, maxBytes: number): Promise<string> {

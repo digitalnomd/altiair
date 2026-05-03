@@ -90,14 +90,17 @@ Build a local CASK edge layer that can:
 - Use non-Chinese local model families for structured insight drafts, control-plane filtering, and retrieval.
 - Surface a Pi-hosted EagleEye-style cue overlay with evidence, confidence, uncertainty, and policy state.
 - Write approved events, insight drafts, node health, cue acknowledgements, and operator decisions back to Foundry.
+- When a gateway has Foundry connectivity, pull governed mission/tag/policy context down and push what happened back up for commander visibility. In DDIL, the local LLM, gossip, and cached CASK ledger continue without a live Foundry dependency.
 
 ## Current Implementation Status
 
 The repo now includes a runnable TypeScript integration scaffold for the Foundry/CASK and local LLM path:
 
 - `src/cask/types.ts`: mission-critical CASK event schema for sensor observations, location fixes, node health, insight drafts, and policy-gated `CounterUasCue` records.
+- `src/cask/missionDeployment.ts`: CASK-shaped mission instruction, policy decision, deployment order, node lease, and timeline model for "mission text in, Pi/Jetson deployment out."
 - `src/cask/ontology.ts`: proposed Foundry-shaped `CASK` ontology object/action/link shape for the full mission data model.
 - `src/foundry/uploader.ts`: Foundry uploader with OSDK mode plus test-only mock mode.
+- `src/foundry/intelligence.ts`: Foundry read-side intelligence connector for governed mission context when a gateway is connected, with a local mock shape for offline development.
 - `src/foundry/osdkClient.ts`: OSDK client creation through `@osdk/client` and confidential OAuth through `@osdk/oauth`.
 - `src/llm/localInsight.ts`: local LLM adapter with Ollama-compatible mode plus test-only mock mode.
 - `src/scripts/smoke.ts`: end-to-end smoke path that builds a sample Pi bundle, drafts an insight, and queues/uploads it.
@@ -106,10 +109,13 @@ The repo now includes a runnable TypeScript integration scaffold for the Foundry
 - `src/scripts/mesh-plan.ts`: per-node environment and WireGuard template generator with no committed secrets.
 - `src/scripts/mesh-smoke.ts`: gateway failover and congestion smoke simulation.
 - `src/scripts/node-api.ts`: dependency-free prototype node API exposing health, peer, gateway, congestion, live sensor merge, local LLM insight, tag-plan instruction, replication, and ledger endpoints.
+- `src/scripts/mission-deploy-smoke.ts` and `npm run mission:smoke`: validates mission instruction deployment, node lease assignment, and policy blocking.
 - `src/mock/caskDemoScenario.ts` and `npm run mock:replay`: deterministic camera, microphone, RFID, provider-style location, and node-health mock events for the full CASK demo path.
 - `scripts/pi/`: Pi/Jetson deployment scripts, env templates, sensor-event poster, and local-instruction watcher.
 
 The current Atlas ontology has a narrow live path for `[Example] CASK GPS Position`. Use `FOUNDRY_UPLOAD_PROFILE=cask_gps_position` for the first live OSDK writeback smoke. Keep `FOUNDRY_UPLOAD_PROFILE=bundle_actions` for the full local CASK contract once matching ontology actions exist.
+
+Foundry is opportunistic, not required for decentralized operation. Use `GET /foundry/intelligence?refresh=true` only when a gateway node has connectivity and credentials; it pulls governed context into the local cache for the LLM and commander-facing evidence citations. When disconnected, the same node API continues from cached/local CASK records and queues commander sync until reconnection.
 
 Run locally without Foundry secrets:
 
@@ -147,6 +153,34 @@ The demo should be a distributed evidence puzzle. No single node is allowed to r
 Any surviving three-node quorum can produce the fused review cue. Full four-node operation gives the strongest confidence; one-node failure stays degraded but operational; two-node failure stays below quorum and keeps collecting evidence. After quorum resolution, nodes publish peer intents with role, confidence, estimated distance to the objective zone, and a short lease so support roles can be deconflicted. The output remains a policy-gated review cue rather than an autonomous action.
 
 The active demo objective is a controlled training tag. After quorum resolution and peer deconfliction, the mesh can stage role assignments for observation, checkpoint guidance, non-contact tag confirmation, safety observation, and display relay. The tag is confirmed through NFC/RFID, QR, BLE beacon proximity, or operator/referee acknowledgement; it is not pursuit, capture, restraint, or physical contact.
+
+## Mission Instruction Deployment
+
+The demo can now start from a mission instruction instead of only from sensor replay. A teammate or frontend posts one instruction packet to the node API, and the runtime turns it into CASK records:
+
+```bash
+curl -X POST http://127.0.0.1:8080/mission/deploy \
+  -H 'content-type: application/json' \
+  --data '{
+    "title": "CASK controlled training tag",
+    "missionText": "Deploy the Pi and Jetson CASK mesh to collect RFID, microphone, camera, and node-health evidence for a controlled training tag in training-zone-alpha. Share the fused cue to all reachable edge nodes and keep Foundry writeback queued until policy and connectivity allow it.",
+    "objectiveType": "controlled_training_tag",
+    "authorizedZoneId": "training-zone-alpha",
+    "subjectRef": "training-tag-001",
+    "operatorAuthorized": true,
+    "requestedBy": "Sarah Hatcher"
+  }'
+```
+
+That creates:
+
+- `CaskMissionInstruction`: the operator-provided instruction packet.
+- `CaskPolicyDecision`: deployability, review state, allowed actions, and rejected actions.
+- `CaskDeploymentOrder`: the whole Pi/Jetson deployment order.
+- `CaskNodeLease`: short-lived role leases for Pi 5 display/gateway, Pi 4 RFID, Pi 4 audio, Jetson camera/inference, and coordinator candidacy.
+- `CaskMissionTimelineEvent`: auditable instruction, policy, lease, and activation events.
+
+The dashboard and frontend proxy read this through `GET /mission/instructions/latest`, `GET /mission/deployment/latest`, `GET /mission/timeline`, and `GET /dashboard`. The deployment layer stays policy-gated: harmful or operational attack language blocks lease creation; training-tag, observation, relay, verification, queueing, and Foundry writeback preparation remain allowed.
 
 Every reachable node stores the mission ledger from every node: observations, location fixes, peer intents, tag-plan state, node health, policy state, and sync receipts. Raw media is policy-gated, but hashes/references and allowed thumbnails/transcripts replicate everywhere.
 
@@ -450,8 +484,16 @@ Every node or gateway should expose the same minimal API so the workflows can in
 | `GET /gateway` | Returns current gateway candidate and score. |
 | `GET /congestion` | Returns queue depth, in-flight transfers, CPU, memory, network usage, and gateway saturation state. |
 | `GET /gossip/world` | Returns the gossip-derived shared world state: online nodes, failed nodes, per-node evidence IDs, and queue/load hints. |
+| `GET /mission/instructions/latest` | Returns the latest operator mission instruction packet. |
+| `GET /mission/deployment/latest` | Returns the active deployment order, policy decision, node leases, timeline, and startup sequence. |
+| `GET /mission/timeline` | Returns auditable mission instruction, policy, lease, activation, and blocked-deployment events. |
+| `GET /foundry/intelligence` | Pulls governed Foundry/OSDK context when connected, or returns cached/mock context for offline development. |
+| `GET /foundry/sync/latest` | Returns the latest commander-sync acknowledgement and mission/evidence summary. |
 | `GET /coordinator/latest` | Returns the latest Raft-term singleton coordinator directive, elected leader, authority state, and per-node instruction map. |
 | `POST /sensor-events` | Receives live adapter JSON from Pi/Nano camera, microphone, RFID, or health processes, merges it into a CASK bundle, and drafts a local LLM insight. |
+| `POST /mission/instructions` | Validates and stores a CASK mission instruction without activating leases. |
+| `POST /mission/deploy` | Validates a CASK mission instruction and creates policy-gated Pi/Jetson node leases. |
+| `POST /foundry/upload` | Gateway-selected upload of the latest CASK bundle/insight for commander visibility; queues in mock or disconnected modes. |
 | `POST /bundles` | Receives a sensor bundle from local capture or another Pi. |
 | `GET /bundles/pending` | Lists bundles that still need forwarding or upload. |
 | `GET /insights/latest` | Returns the most recent local LLM insight drafted by this node. |
