@@ -10,7 +10,7 @@
     </marker>
     <style>
       .bg { fill: #000000; }
-      .title { font: 700 36px Orbitron, Nasalization, "Eurostile Extended", "Bank Gothic", "Michroma", Futura, Arial, sans-serif; fill: #2f7d5b; letter-spacing: 1px; }
+      .title { font: 400 44px Nasalization, "Arial Rounded MT Bold", "Eurostile Extended", Orbitron, Michroma, Futura, Arial, sans-serif; fill: #2f7d5b; letter-spacing: 4px; }
       .subtitle { font: 18px Arial, Helvetica, sans-serif; fill: #b8c4cf; }
       .section { font: 700 16px Arial, Helvetica, sans-serif; fill: #d6dee7; text-transform: uppercase; }
       .box { fill: #1c2631; stroke: #657383; stroke-width: 2; rx: 12; }
@@ -42,7 +42,7 @@
   </defs>
 
   <rect class="bg" width="1500" height="1000"/>
-  <text x="70" y="72" class="title">Altier's Darkmesh</text>
+  <text x="70" y="78" class="title">ALTIER'S DARKMESH</text>
   <text x="70" y="108" class="subtitle">Soldier-carried edge devices gather local signals, share compact evidence in a resilient ring, and sync with Foundry when a secure link exists.</text>
 
   <rect x="70" y="138" width="124" height="32" class="badgeAlt"/>
