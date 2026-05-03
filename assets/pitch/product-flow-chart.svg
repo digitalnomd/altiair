@@ -9,8 +9,8 @@
       <path d="M2,2 L10,6 L2,10 Z" fill="#9aa8b7"/>
     </marker>
     <style>
-      .bg { fill: #0f1720; }
-      .title { font: 700 36px Futura, "Avenir Next", "DIN Alternate", "Trebuchet MS", Arial, sans-serif; fill: #2f7d5b; }
+      .bg { fill: #000000; }
+      .title { font: 700 36px Orbitron, Nasalization, "Eurostile Extended", "Bank Gothic", "Michroma", Futura, Arial, sans-serif; fill: #2f7d5b; letter-spacing: 1px; }
       .subtitle { font: 18px Arial, Helvetica, sans-serif; fill: #b8c4cf; }
       .section { font: 700 16px Arial, Helvetica, sans-serif; fill: #d6dee7; text-transform: uppercase; }
       .box { fill: #1c2631; stroke: #657383; stroke-width: 2; rx: 12; }
