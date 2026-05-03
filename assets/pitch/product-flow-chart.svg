@@ -10,7 +10,7 @@
     </marker>
     <style>
       .bg { fill: #0f1720; }
-      .title { font: 700 36px Arial, Helvetica, sans-serif; fill: #6ee7a8; }
+      .title { font: 700 36px Arial, Helvetica, sans-serif; fill: #2f7d5b; }
       .subtitle { font: 18px Arial, Helvetica, sans-serif; fill: #b8c4cf; }
       .section { font: 700 16px Arial, Helvetica, sans-serif; fill: #d6dee7; text-transform: uppercase; }
       .box { fill: #1c2631; stroke: #657383; stroke-width: 2; rx: 12; }
@@ -42,7 +42,7 @@
   </defs>
 
   <rect class="bg" width="1500" height="1000"/>
-  <text x="70" y="72" class="title">Darkmesh Product Flow</text>
+  <text x="70" y="72" class="title">Altier's Darkmesh</text>
   <text x="70" y="108" class="subtitle">Soldier-carried edge devices gather local signals, share compact evidence in a resilient ring, and sync with Foundry when a secure link exists.</text>
 
   <rect x="70" y="138" width="124" height="32" class="badgeAlt"/>
@@ -150,7 +150,7 @@
   <text x="1279" y="714" class="small">sync when online</text>
 
   <path d="M1175 260 C1193 230 1202 230 1214 260" class="greenLine"/>
-  <text x="1188" y="242" class="linkLabel">filtered evidence uplink</text>
+  <text x="1040" y="238" class="linkLabel">filtered evidence uplink</text>
   <path d="M1175 468 C1195 388 1208 388 1230 468" class="greenLine"/>
   <text x="1188" y="382" class="linkLabel">fused mission record</text>
   <path d="M1340 365 L1340 440" class="line"/>

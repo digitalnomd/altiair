@@ -1,4 +1,4 @@
-# Darkmesh Product Flow Chart
+# Altier's Darkmesh Product Flow Chart
 
 Darkmesh is a squad-level edge intelligence mesh. Each soldier carries an edge device that gathers local sensor data, filters it locally, exchanges compact evidence with nearby peers in a resilient ring, and can upload to or download from Palantir Foundry/CASK when that device has the best secure internet path.
 
