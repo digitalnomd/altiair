@@ -6,7 +6,7 @@ We built the tactical intelligence layer that keeps a squad operational after th
 ---
 
 Opening - the PAIN:
->  A squad in a jammed or cloud-denied battlefield has multiple sensors seeing different things. One soldier sees a drone. Another hears a sniper. A third gets an RF ping. Right now, the squad leader mentally stitches that together under fire. And if the central command node goes down — the whole unit fails. DARPA just issued a $50M program two weeks ago because this is unsolved. We solved it on $200 of hardware."
+>  A squad in a jammed or cloud-denied battlefield has multiple sensors seeing different things. One soldier sees a drone. Another hears a sniper. A third gets an RF ping. Right now, the squad leader mentally stitches that together under fire. And if the central command node goes down — the whole unit fails. DARPA just issued a $50M program two weeks ago because this is a huge unsolved problem."
 
 
 ---
@@ -36,7 +36,10 @@ Why this order matters: You go chaos → fusion → action. That arc is the prod
 
 ---
 The KILL moment:
-> Now we simulate the failure every traditional system fails on. The command node — Node 1, the current coordinator — goes down.
+> Now we simulate the failure every traditional system fails on. 
+Most systems solve this in software simulation. We built it in hardware, running live. (adresses creativity in the judging criteria)
+
+The command node — Node 1, the current coordinator — goes down.
 
 Physically unplug Node 1 or kill it on screen.
 Pause two seconds. Let judges watch.
