@@ -14,15 +14,17 @@ if [[ ! -d "$SOURCE_DIR" ]]; then
 fi
 
 camera_source="${SOURCE_DIR}/camera-event-adapter.py"
+audio_source="${SOURCE_DIR}/audio-event-adapter.py"
 rfid_source="${SOURCE_DIR}/rfid-event-adapter.py"
 
-if [[ ! -f "$camera_source" || ! -f "$rfid_source" ]]; then
-  echo "Expected camera-event-adapter.py and rfid-event-adapter.py under ${SOURCE_DIR}" >&2
+if [[ ! -f "$camera_source" || ! -f "$audio_source" || ! -f "$rfid_source" ]]; then
+  echo "Expected camera-event-adapter.py, audio-event-adapter.py, and rfid-event-adapter.py under ${SOURCE_DIR}" >&2
   exit 1
 fi
 
 sudo install -d -m 0755 "$APP_DIR" "$ENV_DIR"
 sudo install -m 0755 "$camera_source" "$APP_DIR/camera-event-adapter.py"
+sudo install -m 0755 "$audio_source" "$APP_DIR/audio-event-adapter.py"
 sudo install -m 0755 "$rfid_source" "$APP_DIR/rfid-event-adapter.py"
 
 node_id="unknown-node"
@@ -35,13 +37,18 @@ node_id="${ALTIAIR_NODE_ID:-${node_id:-unknown-node}}"
 api_port="${ALTIAIR_API_PORT:-${api_port:-8080}}"
 
 want_camera=false
+want_audio=false
 want_rfid=false
 case ",${ADAPTERS}," in
   *,auto,*)
     [[ "$node_id" == *node-a* ]] && want_camera=true
     [[ "$node_id" == *node-b* ]] && want_rfid=true
+    [[ "$node_id" == *orin* ]] && want_audio=true
     ;;
   *,camera,*) want_camera=true ;;
+esac
+case ",${ADAPTERS}," in
+  *,audio,*) want_audio=true ;;
 esac
 case ",${ADAPTERS}," in
   *,rfid,*) want_rfid=true ;;
@@ -71,6 +78,40 @@ Type=simple
 EnvironmentFile=-${NODE_ENV_FILE}
 EnvironmentFile=${ENV_DIR}/altiair-camera-adapter.env
 ExecStart=/usr/bin/python3 ${APP_DIR}/camera-event-adapter.py
+Restart=always
+RestartSec=5
+
+[Install]
+WantedBy=multi-user.target
+EOF
+}
+
+write_audio_service() {
+  sudo tee "${ENV_DIR}/altiair-audio-adapter.env" >/dev/null <<EOF
+ALTIAIR_NODE_ID=${node_id}
+ALTIAIR_API_PORT=${api_port}
+ALTIAIR_SENSOR_POST_URL=http://127.0.0.1:${api_port}/sensor-events
+ALTIAIR_ZONE_ID=${ZONE_ID}
+ALTIAIR_MICROPHONE_ID=${ALTIAIR_MICROPHONE_ID:-jetson-usb-mic}
+ALTIAIR_AUDIO_DEVICE=${ALTIAIR_AUDIO_DEVICE:-default}
+ALTIAIR_AUDIO_INTERVAL=${ALTIAIR_AUDIO_INTERVAL:-8}
+ALTIAIR_AUDIO_WINDOW_SECONDS=${ALTIAIR_AUDIO_WINDOW_SECONDS:-3}
+ALTIAIR_AUDIO_OUTPUT_DIR=${ALTIAIR_AUDIO_OUTPUT_DIR:-/var/lib/altiair/audio}
+ALTIAIR_AUDIO_MOCK_IF_MISSING=${ALTIAIR_AUDIO_MOCK_IF_MISSING:-1}
+EOF
+  sudo chmod 600 "${ENV_DIR}/altiair-audio-adapter.env"
+  sudo install -d -m 0755 /var/lib/altiair/audio
+  sudo tee /etc/systemd/system/altiair-audio-adapter.service >/dev/null <<EOF
+[Unit]
+Description=Altiair USB microphone event adapter
+After=altiair-node.service network-online.target
+Wants=altiair-node.service network-online.target
+
+[Service]
+Type=simple
+EnvironmentFile=-${NODE_ENV_FILE}
+EnvironmentFile=${ENV_DIR}/altiair-audio-adapter.env
+ExecStart=/usr/bin/python3 ${APP_DIR}/audio-event-adapter.py
 Restart=always
 RestartSec=5
 
@@ -113,6 +154,10 @@ if [[ "$want_camera" == true ]]; then
   write_camera_service
 fi
 
+if [[ "$want_audio" == true ]]; then
+  write_audio_service
+fi
+
 if [[ "$want_rfid" == true ]]; then
   write_rfid_service
 fi
@@ -121,13 +166,17 @@ sudo systemctl daemon-reload
 if [[ "$want_camera" == true ]]; then
   sudo systemctl enable --now altiair-camera-adapter.service
 fi
+if [[ "$want_audio" == true ]]; then
+  sudo systemctl enable --now altiair-audio-adapter.service
+fi
 if [[ "$want_rfid" == true ]]; then
   sudo systemctl enable --now altiair-rfid-adapter.service
 fi
 
 echo "Installed Altiair sensor adapter services for ${node_id}:"
 [[ "$want_camera" == true ]] && systemctl --no-pager --full status altiair-camera-adapter.service || true
+[[ "$want_audio" == true ]] && systemctl --no-pager --full status altiair-audio-adapter.service || true
 [[ "$want_rfid" == true ]] && systemctl --no-pager --full status altiair-rfid-adapter.service || true
-if [[ "$want_camera" != true && "$want_rfid" != true ]]; then
-  echo "No adapter selected. Set ALTIAIR_SENSOR_ADAPTERS=camera, rfid, or camera,rfid."
+if [[ "$want_camera" != true && "$want_audio" != true && "$want_rfid" != true ]]; then
+  echo "No adapter selected. Set ALTIAIR_SENSOR_ADAPTERS=camera, audio, rfid, or a comma-separated combination."
 fi

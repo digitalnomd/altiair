@@ -142,8 +142,21 @@ function buildContributions(
   return [
     {
       nodeId: "altiair-node-a",
-      role: "Pi 4B RFID/local LLM track proposer",
+      role: "Pi 4B deployable micro-observation/local LLM support",
       evidenceIds: evidenceIdsUnlessOffline(bundle, "altiair-node-a", offlineNodeIds),
+      localConfidence: 0.46,
+      estimatedMetersToObjective: 24,
+      executionPositionScore: positionScore(0.46, 24, 45),
+      localReadout: "A deployable edge node reports local micro-observation context in the same time window.",
+      whyInconclusiveAlone: "A micro-observation is ambiguous without identity, visual corroboration, and mission context.",
+      peerIntent: intent("safety_observer", zoneId, policyState, now),
+      leasePriority: 45,
+      whyNeedsPeerPing: "The deployable node is useful support evidence and a safety check, but should not own the active track.",
+    },
+    {
+      nodeId: "altiair-node-b",
+      role: "Pi 4B RFID/local LLM track proposer",
+      evidenceIds: evidenceIdsUnlessOffline(bundle, "altiair-node-b", offlineNodeIds),
       localConfidence: 0.62,
       estimatedMetersToObjective: 5,
       executionPositionScore: positionScore(0.62, 5, 82),
@@ -152,19 +165,6 @@ function buildContributions(
       peerIntent: intent("confirm_tag", zoneId, policyState, now),
       leasePriority: 82,
       whyNeedsPeerPing: "RFID can start a track, but peers need to know who is observing, moving, and confirming.",
-    },
-    {
-      nodeId: "altiair-node-b",
-      role: "Pi 4B audio/micro-observation local LLM",
-      evidenceIds: evidenceIdsUnlessOffline(bundle, "altiair-node-b", offlineNodeIds),
-      localConfidence: 0.46,
-      estimatedMetersToObjective: 24,
-      executionPositionScore: positionScore(0.46, 24, 45),
-      localReadout: "Audio signature or nearby activity is unusual in the same time window.",
-      whyInconclusiveAlone: "Audio is ambiguous without identity, visual corroboration, and mission context.",
-      peerIntent: intent("safety_observer", zoneId, policyState, now),
-      leasePriority: 45,
-      whyNeedsPeerPing: "Audio is useful support evidence and a safety check, but should not own the active track.",
     },
     {
       nodeId: "altiair-orin",
@@ -232,6 +232,9 @@ function idsForNode(bundle: CaskBundle, nodeId: string): string[] {
     ...bundle.droneObservations
       .filter((observation) => observation.sourceNodeId === nodeId)
       .map((observation) => observation.id),
+    ...bundle.nodeHealth
+      .filter((health) => health.nodeId === nodeId && health.networkReachable)
+      .map((health) => `node-health:${health.nodeId}:${health.observedAt}`),
   ];
 }
 

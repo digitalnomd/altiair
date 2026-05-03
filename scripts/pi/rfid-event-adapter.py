@@ -258,33 +258,42 @@ def parse_args(argv: Iterable[str]) -> argparse.Namespace:
     parser.add_argument("--confidence", type=float, default=float(os.environ.get("ALTIAIR_RFID_CONFIDENCE", "0.98")))
     parser.add_argument("--rssi", type=float, default=None)
     parser.add_argument("--post-timeout", type=float, default=float(os.environ.get("ALTIAIR_POST_TIMEOUT", "5")))
+    parser.add_argument("--retry-interval", type=float, default=float(os.environ.get("ALTIAIR_RFID_RETRY_INTERVAL", "5")))
     parser.add_argument("--once", action="store_true", default=os.environ.get("ALTIAIR_ONCE") == "1")
     return parser.parse_args(list(argv))
 
 
-def main(argv: Iterable[str]) -> int:
-    args = parse_args(argv)
+def read_available_tags(args: argparse.Namespace) -> tuple[int, list[str]]:
     errors: list[str] = []
     if args.mode in ("auto", "serial"):
         try:
             count = read_serial_tags(args)
-            return 0 if count else 1
+            return (0 if count else 1), errors
         except Exception as exc:
             errors.append(f"serial: {exc}")
             if args.mode == "serial":
-                sys.stderr.write(errors[-1] + "\n")
-                return 2
+                return 2, errors
     if args.mode in ("auto", "hid"):
         try:
             count = read_hid_tags(args)
-            return 0 if count else 1
+            return (0 if count else 1), errors
         except Exception as exc:
             errors.append(f"hid: {exc}")
             if args.mode == "hid":
-                sys.stderr.write(errors[-1] + "\n")
-                return 2
-    sys.stderr.write("; ".join(errors) + "\n")
-    return 2
+                return 2, errors
+    return 2, errors
+
+
+def main(argv: Iterable[str]) -> int:
+    args = parse_args(argv)
+    while True:
+        exit_code, errors = read_available_tags(args)
+        if errors:
+            sys.stderr.write("; ".join(errors) + "\n")
+        if exit_code != 2 or args.once:
+            return exit_code
+        sys.stderr.write(f"No RFID reader is available yet; retrying in {args.retry_interval:g}s.\n")
+        time.sleep(args.retry_interval)
 
 
 if __name__ == "__main__":

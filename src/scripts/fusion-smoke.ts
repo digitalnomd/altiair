@@ -10,7 +10,7 @@ if (!report.resolvedByQuorum || !report.resolvedByPeerMesh) {
   );
 }
 
-if (report.selectedNodeId !== "altiair-node-a") {
+if (report.selectedNodeId !== "altiair-node-b") {
   throw new Error(`Expected closest RFID node to own active tag role, got ${report.selectedNodeId ?? "none"}.`);
 }
 

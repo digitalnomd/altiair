@@ -2,21 +2,21 @@
   "events": [
     {
       "kind": "rfid_read",
-      "sourceNodeId": "altiair-node-a",
+      "sourceNodeId": "altiair-node-b",
       "zoneId": "training-zone-alpha",
-      "readerId": "rfid-reader-a",
+      "readerId": "node-b-rfid",
       "tagId": "training-tag-001",
       "rssi": -42,
       "providerStyle": {
-        "sourceId": "arduino-rfid-kit-a",
+        "sourceId": "node-b-rfid",
         "precisionRadiusMeters": 35
       }
     },
     {
       "kind": "audio_window",
-      "sourceNodeId": "altiair-node-b",
+      "sourceNodeId": "altiair-orin",
       "zoneId": "training-zone-alpha",
-      "microphoneId": "usb-mic-b",
+      "microphoneId": "jetson-usb-mic",
       "acousticClass": "small_rotor_noise",
       "confidence": 0.46
     },

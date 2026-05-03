@@ -6,6 +6,8 @@ export interface MockScenarioOptions {
   intervalMs?: number;
   zoneId?: string;
   subjectTagId?: string;
+  includePi5Hub?: boolean;
+  includeFailureStep?: boolean;
 }
 
 export interface MockScenarioStep {
@@ -35,12 +37,81 @@ export function buildCaskDemoMockScenario(options: MockScenarioOptions = {}): Mo
   const subjectTagId = options.subjectTagId ?? "training-tag-001";
   const startAt = options.startAt ?? DEFAULT_START_AT;
   const intervalMs = options.intervalMs ?? DEFAULT_INTERVAL_MS;
+  const includePi5Hub = options.includePi5Hub ?? false;
+  const includeFailureStep = options.includeFailureStep ?? false;
 
   const rfid = rfidRead(at(startAt, intervalMs, 0), zoneId, subjectTagId);
   const audio = audioWindow(at(startAt, intervalMs, 1), zoneId);
   const visual = cameraDetection(at(startAt, intervalMs, 2), zoneId);
-  const onlineHealth = nodeHealthSet(at(startAt, intervalMs, 0), false);
-  const degradedHealth = nodeHealthSet(at(startAt, intervalMs, 3), true);
+  const onlineHealth = nodeHealthSet(at(startAt, intervalMs, 0), {
+    includePi5Hub,
+    degradeNodeB: false,
+  });
+  const degradedHealth = nodeHealthSet(at(startAt, intervalMs, 3), {
+    includePi5Hub,
+    degradeNodeB: true,
+  });
+
+  const steps: MockScenarioStep[] = [
+    {
+      id: "01-rfid-provider-location",
+      title: "RFID identity and provider-style location",
+      description:
+        "Pi 4B node B reads the training tag and emits a coarse provider-style location fix.",
+      events: [...onlineHealth, rfid],
+      expectedRuntimeProducts: [
+        "RfidEvent",
+        "ProviderStyleLocationEvent",
+        "LocationFix",
+        "NodeHealth",
+      ],
+    },
+    {
+      id: "02-audio-corroboration",
+      title: "Jetson USB microphone joins the track",
+      description:
+        "The Jetson contributes a USB microphone window so the event is no longer RFID-only.",
+      events: [...onlineHealth, rfid, audio],
+      expectedRuntimeProducts: [
+        "AudioEvent",
+        "RfidEvent",
+        "ProviderStyleLocationEvent",
+        "LocationFix",
+        "InsightDraft",
+      ],
+    },
+    {
+      id: "03-jetson-visual-cue",
+      title: "Jetson visual inference completes the quorum",
+      description:
+        "The Jetson Orin Nano contributes a camera detection, allowing local CASK fusion to produce a policy-gated cue while the Pi 5 remains a reserved hub path.",
+      events: [...onlineHealth, rfid, audio, visual],
+      expectedRuntimeProducts: [
+        "DroneObservation",
+        "ControlSourceEstimate",
+        "CounterUasCue",
+        "TrainingTagPlan",
+        "CaskNodeInstruction",
+        "ReplicationReport",
+      ],
+    },
+  ];
+
+  if (includeFailureStep) {
+    steps.push({
+      id: "04-node-loss-continuity",
+      title: "Node loss after replication",
+      description:
+        "Node B is marked unreachable after contributing RFID evidence; the latest CASK snapshot should show degraded continuity while keeping replicated records available.",
+      events: [...degradedHealth, rfid, audio, visual],
+      expectedRuntimeProducts: [
+        "MissionContinuityReport",
+        "ReplicatedMissionLedger",
+        "DegradedTrainingTagPlan",
+        "DashboardSnapshot",
+      ],
+    });
+  }
 
   return {
     id: "distributed-training-tag-mock",
@@ -49,63 +120,7 @@ export function buildCaskDemoMockScenario(options: MockScenarioOptions = {}): Mo
     zoneId,
     subjectTagId,
     generatedAt: startAt.toISOString(),
-    steps: [
-      {
-        id: "01-rfid-provider-location",
-        title: "RFID identity and provider-style location",
-        description:
-          "Pi 4B node A reads the training tag and emits a coarse provider-style location fix.",
-        events: [...onlineHealth, rfid],
-        expectedRuntimeProducts: [
-          "RfidEvent",
-          "ProviderStyleLocationEvent",
-          "LocationFix",
-          "NodeHealth",
-        ],
-      },
-      {
-        id: "02-audio-corroboration",
-        title: "Audio context joins the track",
-        description:
-          "Pi 4B node B contributes a microphone window so the event is no longer RFID-only.",
-        events: [...onlineHealth, rfid, audio],
-        expectedRuntimeProducts: [
-          "AudioEvent",
-          "RfidEvent",
-          "ProviderStyleLocationEvent",
-          "LocationFix",
-          "InsightDraft",
-        ],
-      },
-      {
-        id: "03-jetson-visual-cue",
-        title: "Jetson visual inference completes the quorum",
-        description:
-          "The Jetson Orin Nano contributes a camera detection, allowing local CASK fusion to produce a policy-gated cue.",
-        events: [...onlineHealth, rfid, audio, visual],
-        expectedRuntimeProducts: [
-          "DroneObservation",
-          "ControlSourceEstimate",
-          "CounterUasCue",
-          "TrainingTagPlan",
-          "CaskNodeInstruction",
-          "ReplicationReport",
-        ],
-      },
-      {
-        id: "04-node-loss-continuity",
-        title: "Node loss after replication",
-        description:
-          "Node B is marked unreachable after contributing audio; the latest CASK snapshot should show degraded continuity while keeping replicated records available.",
-        events: [...degradedHealth, rfid, audio, visual],
-        expectedRuntimeProducts: [
-          "MissionContinuityReport",
-          "ReplicatedMissionLedger",
-          "DegradedTrainingTagPlan",
-          "DashboardSnapshot",
-        ],
-      },
-    ],
+    steps,
   };
 }
 
@@ -119,25 +134,32 @@ function at(startAt: Date, intervalMs: number, index: number): string {
   return new Date(startAt.getTime() + intervalMs * index).toISOString();
 }
 
-function nodeHealthSet(observedAt: string, degradeNodeB: boolean): LiveSensorInput[] {
+function nodeHealthSet(
+  observedAt: string,
+  options: {
+    includePi5Hub: boolean;
+    degradeNodeB: boolean;
+  },
+): LiveSensorInput[] {
+  const activePeerCount = options.includePi5Hub ? 3 : 2;
   return [
     {
       kind: "node_health",
       nodeId: "altiair-hub",
       observedAt,
-      peerCount: 3,
-      queueDepth: 0,
-      cpuLoad: 0.31,
-      memoryUsedMb: 1420,
-      networkReachable: true,
+      peerCount: options.includePi5Hub ? 3 : 0,
+      queueDepth: options.includePi5Hub ? 0 : 99,
+      cpuLoad: options.includePi5Hub ? 0.31 : 0,
+      memoryUsedMb: options.includePi5Hub ? 1420 : 0,
+      networkReachable: options.includePi5Hub,
       foundryReachable: false,
-      modelStatus: "ready",
+      modelStatus: options.includePi5Hub ? "ready" : "unavailable",
     },
     {
       kind: "node_health",
       nodeId: "altiair-node-a",
       observedAt,
-      peerCount: degradeNodeB ? 2 : 3,
+      peerCount: options.degradeNodeB ? activePeerCount - 1 : activePeerCount,
       queueDepth: 1,
       cpuLoad: 0.42,
       memoryUsedMb: 980,
@@ -149,19 +171,19 @@ function nodeHealthSet(observedAt: string, degradeNodeB: boolean): LiveSensorInp
       kind: "node_health",
       nodeId: "altiair-node-b",
       observedAt,
-      peerCount: degradeNodeB ? 0 : 3,
-      queueDepth: degradeNodeB ? 8 : 1,
-      cpuLoad: degradeNodeB ? 0.91 : 0.47,
-      memoryUsedMb: degradeNodeB ? 1860 : 1010,
-      networkReachable: !degradeNodeB,
+      peerCount: options.degradeNodeB ? 0 : activePeerCount,
+      queueDepth: options.degradeNodeB ? 8 : 1,
+      cpuLoad: options.degradeNodeB ? 0.91 : 0.47,
+      memoryUsedMb: options.degradeNodeB ? 1860 : 1010,
+      networkReachable: !options.degradeNodeB,
       foundryReachable: false,
-      modelStatus: degradeNodeB ? "unavailable" : "ready",
+      modelStatus: options.degradeNodeB ? "unavailable" : "ready",
     },
     {
       kind: "node_health",
       nodeId: "altiair-orin",
       observedAt,
-      peerCount: degradeNodeB ? 2 : 3,
+      peerCount: options.degradeNodeB ? activePeerCount - 1 : activePeerCount,
       queueDepth: 0,
       cpuLoad: 0.36,
       memoryUsedMb: 2380,
@@ -175,20 +197,20 @@ function nodeHealthSet(observedAt: string, degradeNodeB: boolean): LiveSensorInp
 function rfidRead(observedAt: string, zoneId: string, subjectTagId: string): LiveSensorInput {
   return {
     kind: "rfid_read",
-    sourceNodeId: "altiair-node-a",
+    sourceNodeId: "altiair-node-b",
     observedAt,
     receivedAt: observedAt,
     zoneId,
     confidence: 0.81,
     policyState: "review_needed",
     isTestFixture: true,
-    readerId: "rc522-reader-a",
+    readerId: "node-b-rfid",
     tagId: subjectTagId,
-    antennaId: "rfid-antenna-a",
+    antennaId: "rfid-antenna-b",
     rssi: -41,
     readCount: 4,
     providerStyle: {
-      sourceId: "l3harris-style-lte-mock-from-rfid-a",
+      sourceId: "l3harris-style-lte-mock-from-rfid-b",
       entityId: subjectTagId,
       precisionRadiusMeters: 35,
       expiresAt: new Date(Date.parse(observedAt) + 180_000).toISOString(),
@@ -212,14 +234,14 @@ function rfidRead(observedAt: string, zoneId: string, subjectTagId: string): Liv
 function audioWindow(observedAt: string, zoneId: string): LiveSensorInput {
   return {
     kind: "audio_window",
-    sourceNodeId: "altiair-node-b",
+    sourceNodeId: "altiair-orin",
     observedAt,
     receivedAt: observedAt,
     zoneId,
     confidence: 0.48,
     policyState: "review_needed",
     isTestFixture: true,
-    microphoneId: "usb-mic-b",
+    microphoneId: "jetson-usb-mic",
     vadWindowMs: [0, 2400],
     transcript: "small rotor tone near the training checkpoint, bearing uncertain",
     asrConfidence: 0.73,

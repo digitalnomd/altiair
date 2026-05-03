@@ -381,9 +381,10 @@ function preferredNodes(topology: MeshTopology): Record<"hub" | "rfid" | "audio"
   return {
     hub: findNode(topology, "altiair-hub") ??
       topology.nodes.find((node) => node.roles.includes("mesh_hub") || node.roles.includes("operator_display")),
-    rfid: findNode(topology, "altiair-node-a") ?? findNodeByCapability(topology, "rfid"),
-    audio: findNode(topology, "altiair-node-b") ?? findNodeByCapability(topology, "microphone") ?? findNodeByCapability(topology, "audio"),
-    camera: findNode(topology, "altiair-orin") ??
+    rfid: findNode(topology, "altiair-node-b") ?? findNodeByCapability(topology, "rfid"),
+    audio: findNode(topology, "altiair-orin") ?? findNodeByCapability(topology, "microphone") ?? findNodeByCapability(topology, "audio"),
+    camera: findNode(topology, "altiair-hub") ??
+      findNode(topology, "altiair-orin") ??
       topology.nodes.find((node) => node.roles.includes("accelerated_inference")) ??
       findNodeByCapability(topology, "camera"),
   };

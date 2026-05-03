@@ -11,70 +11,96 @@ const postUrl = argValue("--post-url") ?? process.env.ALTIAIR_SENSOR_POST_URL;
 const replay = hasFlag("--replay") || postUrl !== undefined;
 const delayMs = numberArg("--delay-ms", replay ? 250 : 0);
 const missionId = argValue("--mission") ?? process.env.ALTIAIR_MISSION_ID ?? "mission-live-edge";
-const startAt = dateArg("--start-at") ?? undefined;
+const liveClock = hasFlag("--live-clock");
+const startAt = liveClock ? new Date() : dateArg("--start-at") ?? undefined;
 const format = outputFormat(argValue("--format") ?? (replay ? "summary" : "steps"));
+const includePi5Hub = hasFlag("--include-pi5");
+const includeFailureStep = hasFlag("--include-failure-step");
+const loop = hasFlag("--loop");
+const cycles = integerArg("--cycles", loop ? Number.POSITIVE_INFINITY : 1);
 
 const scenario = buildCaskDemoMockScenario({
   missionId,
   startAt,
+  includePi5Hub,
+  includeFailureStep,
 });
 
 if (replay) {
   if (postUrl === undefined) {
     throw new Error("--replay requires --post-url or ALTIAIR_SENSOR_POST_URL.");
   }
-  await replayScenario(scenario, postUrl, delayMs);
+  await replayScenario(postUrl, delayMs);
 } else {
   printScenario(scenario, format);
 }
 
-async function replayScenario(scenario: MockScenario, url: string, delayMs: number): Promise<void> {
-  const summaries: unknown[] = [];
-  for (const [index, step] of scenario.steps.entries()) {
-    if (index > 0 && delayMs > 0) {
+async function replayScenario(url: string, delayMs: number): Promise<void> {
+  let cycle = 0;
+  while (cycle < cycles) {
+    const cycleScenario = buildCaskDemoMockScenario({
+      missionId,
+      startAt: liveClock ? new Date() : startAt,
+      includePi5Hub,
+      includeFailureStep,
+    });
+    const summaries: unknown[] = [];
+    for (const [index, step] of cycleScenario.steps.entries()) {
+      if (index > 0 && delayMs > 0) {
+        await sleep(delayMs);
+      }
+
+      const response = await fetch(url, {
+        method: "POST",
+        headers: {
+          "content-type": "application/json",
+          ...authorizationHeader(),
+        },
+        body: JSON.stringify({
+          scenarioId: cycleScenario.id,
+          stepId: step.id,
+          cycle,
+          missionId: cycleScenario.missionId,
+          sourceNodeId: "altiair-orin",
+          bundleId: `bundle-${cycleScenario.missionId}-${step.id}-${cycle}`,
+          createdAt: latestObservedAt(step.events) ?? cycleScenario.generatedAt,
+          events: step.events,
+        }),
+      });
+      const bodyText = await response.text();
+      if (!response.ok) {
+        throw new Error(`POST ${url} failed at ${step.id} with HTTP ${response.status}: ${bodyText}`);
+      }
+      const body = JSON.parse(bodyText) as Record<string, unknown>;
+      summaries.push({
+        cycle,
+        stepId: step.id,
+        title: step.title,
+        status: response.status,
+        bundleId: body.bundleId,
+        accepted: body.accepted,
+        tagPlan: body.tagPlan,
+        localInstructionCount: localInstructionCount(body.localInstructions),
+        localLlm: body.localLlm,
+      });
+    }
+
+    console.log(JSON.stringify({
+      replayed: true,
+      postUrl: url,
+      scenarioId: cycleScenario.id,
+      stepCount: cycleScenario.steps.length,
+      cycle,
+      includePi5Hub,
+      includeFailureStep,
+      summaries,
+    }, null, 2));
+
+    cycle += 1;
+    if (cycle < cycles && delayMs > 0) {
       await sleep(delayMs);
     }
-
-    const response = await fetch(url, {
-      method: "POST",
-      headers: {
-        "content-type": "application/json",
-        ...authorizationHeader(),
-      },
-      body: JSON.stringify({
-        scenarioId: scenario.id,
-        stepId: step.id,
-        missionId: scenario.missionId,
-        sourceNodeId: "altiair-hub",
-        bundleId: `bundle-${scenario.missionId}-${step.id}`,
-        createdAt: latestObservedAt(step.events) ?? scenario.generatedAt,
-        events: step.events,
-      }),
-    });
-    const bodyText = await response.text();
-    if (!response.ok) {
-      throw new Error(`POST ${url} failed at ${step.id} with HTTP ${response.status}: ${bodyText}`);
-    }
-    const body = JSON.parse(bodyText) as Record<string, unknown>;
-    summaries.push({
-      stepId: step.id,
-      title: step.title,
-      status: response.status,
-      bundleId: body.bundleId,
-      accepted: body.accepted,
-      tagPlan: body.tagPlan,
-      localInstructionCount: localInstructionCount(body.localInstructions),
-      localLlm: body.localLlm,
-    });
   }
-
-  console.log(JSON.stringify({
-    replayed: true,
-    postUrl: url,
-    scenarioId: scenario.id,
-    stepCount: scenario.steps.length,
-    summaries,
-  }, null, 2));
 }
 
 function printScenario(scenario: MockScenario, format: OutputFormat): void {
@@ -178,6 +204,18 @@ function numberArg(name: string, fallback: number): number {
   const parsed = Number(value);
   if (!Number.isFinite(parsed) || parsed < 0) {
     throw new Error(`${name} must be a non-negative number.`);
+  }
+  return parsed;
+}
+
+function integerArg(name: string, fallback: number): number {
+  const value = argValue(name);
+  if (value === undefined) {
+    return fallback;
+  }
+  const parsed = Number(value);
+  if (!Number.isInteger(parsed) || parsed < 1) {
+    throw new Error(`${name} must be a positive integer.`);
   }
   return parsed;
 }

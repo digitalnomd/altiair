@@ -42,6 +42,7 @@ export interface CameraEvent extends BaseSensorEvent {
   kind: "camera";
   cameraId: string;
   detectionClass: string;
+  metadata?: Record<string, unknown>;
   boundingRegion?: {
     x: number;
     y: number;

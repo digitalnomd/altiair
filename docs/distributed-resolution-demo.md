@@ -15,18 +15,18 @@ Sources:
 - https://www.darpa.mil/research/programs/decentralized-artificial-intelligence-through-controlled-emergence
 - https://www.darpa.mil/research/programs/secure-handhelds
 
-There is no permanent central authority. `altiair-hub` is the Pi 5 local mission LAN host and preferred display/coordinator when online, but Raft-style election makes the coordinator LLM singleton for only the current term. Replicated evidence and cached mission context allow any surviving three-node quorum to elect or retain a coordinator if one node fails. Foundry/CASK can enrich or reconcile later, but the live demo must still work with no venue Wi-Fi or internet.
+There is no permanent central authority. Today `altiair-orin` is the Jetson local mission LAN host and preferred online/mock Hawkeye feed host; tomorrow `altiair-hub` is the Pi 5 camera/display/hub node when Ben adds it. Raft-style election makes the coordinator LLM singleton for only the current term. Replicated evidence and cached mission context allow any surviving three-node quorum to elect or retain a coordinator if one node fails. Foundry/CASK can enrich or reconcile later, but the live demo must still work with no venue Wi-Fi or internet.
 
-The field version is multi-cell. A drone, Hawkeye kit, vehicle, or operator computer can host or join whatever local LAN is practical, then the overlay treats it as another reachable node or bridge. The demo's Pi 5 AP is the smallest concrete version of that pattern.
+The field version is multi-cell. A drone, Hawkeye kit, vehicle, or operator computer can host or join whatever local LAN is practical, then the overlay treats it as another reachable node or bridge. The current Jetson AP and tomorrow's Pi 5 AP are the smallest concrete versions of that pattern.
 
 ## Four Partial Views
 
 | Node | What It Sees | Why It Cannot Resolve Alone |
 | --- | --- | --- |
-| `altiair-node-a` | RFID read for a tagged training subject or tagged asset in the zone. | RFID proves presence/identity, but not visual class, activity, or mission relevance. |
-| `altiair-node-b` | Audio or micro-observation in the same time window. | Audio is ambiguous and needs identity plus visual/context corroboration. |
-| `altiair-orin` | Visual inference from an authorized training drone marker, prop, or controlled test cue. | Vision sees an object/marker but cannot connect it to the RFID tag or policy gate. |
-| `altiair-hub` | Replicated CASK/Foundry ontology context, mission lane, tag-to-training-entity map, policy rules, and display/coordinator role. | Context is not a fresh observation until the edge nodes provide evidence, and this node is not authoritative. |
+| `altiair-node-a` | Deployable peer health, replicated records, and local instructions. | It proves the mesh can task an extra edge node, but health alone does not identify or classify the cue. |
+| `altiair-node-b` | RFID read for a tagged training subject or tagged asset in the zone. | RFID proves presence/identity, but not visual class, activity, or mission relevance. |
+| `altiair-orin` | Jetson USB microphone context plus Hawkeye-style visual/track input. | Audio/visual context is useful, but cannot connect the cue to the RFID tag or policy gate alone. |
+| `altiair-hub` | Reserved Pi 5 camera/display/hub node. | When added, it supplies camera/display capacity and mission context, but still is not authoritative by itself. |
 
 Each node's local confidence stays below the resolution threshold. The fused view crosses threshold when at least three surviving nodes contribute replicated evidence. Full four-node operation gives the strongest confidence; one-node failure gives a degraded but still resolvable cue; two-node failure stays below quorum. After quorum resolution, each node publishes a signed intent ping with requested role and a short lease so the display, observation, safety, and tag-confirmation roles do not conflict.
 
@@ -34,12 +34,12 @@ The live system decides ownership pragmatically. The singleton coordinator LLM i
 
 ## Demo Flow
 
-1. Start the no-router proof path: run logical nodes on the Pi 5/laptop first, then make the Pi 5 broadcast `Altiair-LAN`.
-2. Join both Pi 4B nodes to `Altiair-LAN`; join the Jetson by Wi-Fi if possible or Ethernet if needed.
-3. Start the Pi 5 display/coordinator candidate and local node APIs.
-4. Trigger the RFID read on `altiair-node-a`.
-5. Trigger an audio/motion event on `altiair-node-b`.
-6. Trigger the Jetson visual event from a camera frame, marker, toy/static prop, or prerecorded clip.
+1. Start the current no-router proof path on the Jetson-hosted `Altiair-LAN`.
+2. Join both Pi 4B nodes to `Altiair-LAN`.
+3. Start the Jetson node API, Hawkeye-style online/mock feed, and local UI proxy.
+4. Trigger or mock the RFID read on `altiair-node-b`.
+5. Trigger or mock a Jetson USB microphone window.
+6. Trigger the Hawkeye-style visual/track event from OpenSky/public online state or deterministic fallback; when Ben adds Pi 5, replace that path with the Pi 5 camera adapter.
 7. The current Raft-elected singleton coordinator correlates the edge observations with replicated CASK/Foundry mission context.
 8. The surviving quorum publishes peer intent pings and assigns supporting roles.
 9. The display shows a policy-gated cue with evidence IDs, confidence, uncertainty, source nodes, peer intents, and required next checks.

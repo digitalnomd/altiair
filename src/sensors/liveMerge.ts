@@ -35,6 +35,7 @@ export interface LiveCameraDetectionInput extends BaseLiveSensorInput {
   kind: "camera_detection";
   cameraId: string;
   detectionClass: string;
+  metadata?: Record<string, unknown>;
   boundingRegion?: {
     x: number;
     y: number;
@@ -196,6 +197,7 @@ function cameraEvent(
     isTestFixture: input.isTestFixture,
     cameraId: input.cameraId,
     detectionClass: input.detectionClass,
+    metadata: input.metadata,
     boundingRegion: input.boundingRegion,
     frameRef: input.frameRef,
     thumbnailRef: input.thumbnailRef,

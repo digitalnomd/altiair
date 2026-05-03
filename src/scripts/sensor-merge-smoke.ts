@@ -5,16 +5,16 @@ const observedAt = new Date("2026-05-03T12:00:00.000Z").toISOString();
 const inputs: LiveSensorInput[] = [
   {
     kind: "rfid_read",
-    sourceNodeId: "altiair-node-a",
+    sourceNodeId: "altiair-node-b",
     observedAt,
     zoneId: "training-zone-alpha",
-    readerId: "rfid-reader-a",
+    readerId: "node-b-rfid",
     tagId: "training-tag-001",
-    antennaId: "antenna-a",
+    antennaId: "rfid-antenna-b",
     rssi: -48,
     readCount: 4,
     providerStyle: {
-      sourceId: "l3harris-style-lte-mock-from-rfid-a",
+      sourceId: "l3harris-style-lte-mock-from-rfid-b",
       precisionRadiusMeters: 35,
       providerName: "L3Harris-style tactical LTE mock",
       emulationProfile: "l3harris_tactical_lte_mock",
@@ -29,10 +29,10 @@ const inputs: LiveSensorInput[] = [
   },
   {
     kind: "audio_window",
-    sourceNodeId: "altiair-node-b",
+    sourceNodeId: "altiair-orin",
     observedAt,
     zoneId: "training-zone-alpha",
-    microphoneId: "usb-mic-b",
+    microphoneId: "jetson-usb-mic",
     vadWindowMs: [0, 2800],
     acousticClass: "small_rotor_noise",
     confidence: 0.46,

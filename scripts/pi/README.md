@@ -12,10 +12,13 @@ These scripts are the prepared Pi-side entry points for the CASK edge node runti
 | `ssh-tunnel-to-node.sh` | Opens local SSH forwards to a remote node API and UI server. |
 | `post-sensor-events.sh` | Posts live adapter JSON to `POST /sensor-events`. |
 | `camera-event-adapter.py` | Captures a real camera frame and posts a `camera_detection` event after capture succeeds. |
+| `audio-event-adapter.py` | Captures a USB microphone window and posts an `audio_window` event. |
 | `rfid-event-adapter.py` | Reads serial or keyboard-wedge RFID readers and posts `rfid_read` events. |
-| `install-sensor-adapter-services.sh` | Installs camera/RFID adapters as systemd services on the matching Pi node. |
+| `install-sensor-adapter-services.sh` | Installs camera/audio/RFID adapters as systemd services on the matching node. |
 | `install-sensor-adapters-sd.sh` | Writes a one-shot SD-card boot installer for the sensor adapter services. |
 | `replay-mock-scenario.sh` | Replays the deterministic CASK mock sensor scenario into the local node API. |
+| `start-hawkeye-feed.sh` | Starts the Hawkeye-style online/mock visual-track feed into the node API. |
+| `install-hawkeye-feed-service.sh` | Installs the Hawkeye-style feed as a persistent systemd service. |
 | `watch-local-instructions.sh` | Polls `GET /instructions/latest` for the current node's local CASK tag-plan assignment. |
 | `sample-live-events.json` | Smoke payload for RFID, microphone, and camera merge. |
 | `env/*.env` | Per-node starter env files for the two Pi 4Bs, Pi 5 hub, and Jetson Orin Nano. |
@@ -82,20 +85,25 @@ curl -sS http://127.0.0.1:8080/insights/latest
 curl -sS http://127.0.0.1:8080/dashboard
 ```
 
-For attached peripherals on the two Pi 4B nodes:
+For attached peripherals:
 
 ```bash
-ALTIAIR_NODE_ID=altiair-node-a ALTIAIR_API_PORT=8081 \
-  scripts/pi/camera-event-adapter.py --once --camera-id node-a-camera --zone-id field-zone-alpha
+ALTIAIR_NODE_ID=altiair-orin ALTIAIR_API_PORT=8080 \
+  scripts/pi/audio-event-adapter.py --once --microphone-id jetson-usb-mic --zone-id field-zone-alpha
 
 ALTIAIR_NODE_ID=altiair-node-b ALTIAIR_API_PORT=8082 \
   scripts/pi/rfid-event-adapter.py --once --reader-id node-b-rfid --zone-id field-zone-alpha
+
+ALTIAIR_NODE_ID=altiair-hub ALTIAIR_API_PORT=8080 \
+  scripts/pi/camera-event-adapter.py --once --camera-id pi5-camera --zone-id field-zone-alpha
 ```
 
-The camera adapter emits only after a frame is actually captured. The RFID
-adapter auto-detects serial readers under `/dev/ttyUSB*` or `/dev/ttyACM*` and
-keyboard-wedge readers under `/dev/input/event*`; pass `--device` or
-`--input-event` if the reader exposes a non-obvious path.
+The camera adapter emits only after a frame is actually captured. The audio
+adapter captures a USB microphone window and posts RMS/peak-derived acoustic
+metadata; by default it can keep the demo alive with mock audio if ALSA is not
+ready. The RFID adapter auto-detects serial readers under `/dev/ttyUSB*` or
+`/dev/ttyACM*` and keyboard-wedge readers under `/dev/input/event*`; pass
+`--device` or `--input-event` if the reader exposes a non-obvious path.
 
 To make this persistent for the demo, run on each Pi after the node API is
 installed:
@@ -104,9 +112,24 @@ installed:
 scripts/pi/install-sensor-adapter-services.sh scripts/pi
 ```
 
-With `ALTIAIR_SENSOR_ADAPTERS=auto`, node-a installs the camera service and
-node-b installs the RFID service. The adapters post to the local node API and do
-not require the Mac USB connection to remain attached.
+With `ALTIAIR_SENSOR_ADAPTERS=auto`, the Jetson installs audio and node-b
+installs RFID. The Pi 5 camera is installed explicitly with
+`ALTIAIR_SENSOR_ADAPTERS=camera` once `altiair-hub` is added. The adapters post
+to the local node API and do not require the Mac USB connection to remain
+attached.
+
+For the current three-node demo, start the Hawkeye-style online/mock feed on the
+Jetson:
+
+```bash
+scripts/pi/start-hawkeye-feed.sh --interval-ms 10000
+```
+
+Install it persistently:
+
+```bash
+scripts/pi/install-hawkeye-feed-service.sh
+```
 
 If SSH is unavailable, apply the same service install through a mounted SD card:
 

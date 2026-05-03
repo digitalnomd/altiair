@@ -81,7 +81,7 @@ if [[ ! -f "$cmdline" ]]; then
   exit 1
 fi
 
-for file in camera-event-adapter.py rfid-event-adapter.py install-sensor-adapter-services.sh; do
+for file in camera-event-adapter.py audio-event-adapter.py rfid-event-adapter.py install-sensor-adapter-services.sh; do
   if [[ ! -f "${SOURCE_DIR}/${file}" ]]; then
     echo "Missing source file: ${SOURCE_DIR}/${file}" >&2
     exit 1
@@ -101,6 +101,7 @@ LOG="\$BOOT/altiair-sensor-adapters.log"
   echo "sensor adapter firstboot start \$(date -Iseconds)"
   install -d -m 0755 /tmp/altiair-sensor-adapters
   install -m 0755 "\$BOOT/altiair-camera-event-adapter.py" /tmp/altiair-sensor-adapters/camera-event-adapter.py
+  install -m 0755 "\$BOOT/altiair-audio-event-adapter.py" /tmp/altiair-sensor-adapters/audio-event-adapter.py
   install -m 0755 "\$BOOT/altiair-rfid-event-adapter.py" /tmp/altiair-sensor-adapters/rfid-event-adapter.py
   install -m 0755 "\$BOOT/altiair-install-sensor-adapter-services.sh" /tmp/altiair-sensor-adapters/install-sensor-adapter-services.sh
 

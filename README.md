@@ -72,6 +72,7 @@ The deeper decision brief is here:
 - [DARPA Opportunity Alignment](docs/darpa-opportunity-alignment.md)
 - [Teammate Remote Pi and Frontend Handoff](docs/teammate-remote-pi-frontend-handoff.md)
 - [Mock CASK Demo Data](docs/mock-cask-demo-data.md)
+- [Ben Three-Node Demo Runbook](docs/ben-three-node-demo-runbook.md)
 - [Photo Booth Requirements Capture - 2026-05-02](docs/photo-booth-requirements-2026-05-02.md)
 
 Shared data ideas and LLM context drop:
@@ -167,18 +168,18 @@ The CASK-backed omni-model should fuse the sensor streams into a local, evidence
 
 - RFID provides the primary identity or presence signal.
 - RFID reads provide real tag identity/proximity from the reader; the demo mocks the upstream LTE/RF-provider location layer by converting reader ID, zone, RSSI, and optional coordinates into a coarse provider-style location fix with `isCarrierGrade=false`.
-- Camera events provide visual confirmation, movement, zone, and scene context.
-- Microphone events provide transcripts, acoustic events, and local context.
+- Camera or Hawkeye-style visual/track events provide visual confirmation, movement, zone, and scene context. Today this can be Jetson virtual/online track input; when Ben adds the Pi 5, `altiair-hub` takes the camera path.
+- Jetson USB microphone events provide transcripts or acoustic windows and local context.
 - Foundry/OSDK provides governed mission context, asset/person/tag mappings, permissions, and writeback.
 - The local LLM explains the fused picture, calls out uncertainty, and recommends non-kinetic coordination steps such as coverage, search, deconfliction, sensor repositioning, and next verification checks.
 - The coordinator and role assignment logic prefer the best connected or best positioned viable node: connectivity/load/role drive coordinator election, while task proximity/evidence ownership drive field role assignment.
 
 The demo should be a distributed evidence puzzle. No single node is allowed to resolve the event alone, and no node is authoritative:
 
-- `altiair-node-a` has RFID identity/presence, but not visual class or mission relevance.
-- `altiair-node-b` has audio or micro-observation context, but not identity.
-- `altiair-orin` has visual inference from an authorized training drone marker, prop, or controlled test cue, but not tag context.
-- `altiair-hub` has replicated CASK/Foundry ontology and policy context, but not fresh observation by itself.
+- `altiair-node-a` is a deployable Pi 4B peer with health, replication, and local instructions, proving the mesh can task an additional edge node.
+- `altiair-node-b` has RFID identity/presence, but not visual class or mission relevance.
+- `altiair-orin` has USB microphone context plus Hawkeye-style visual/track inference, but not tag context.
+- `altiair-hub` is the reserved Pi 5 fourth node; when present it adds camera/display/hub capacity, but it is not authoritative by itself.
 
 Any surviving three-node quorum can produce the fused review cue. Full four-node operation gives the strongest confidence; one-node failure stays degraded but operational; two-node failure stays below quorum and keeps collecting evidence. After quorum resolution, nodes publish peer intents with role, confidence, estimated distance to the objective zone, and a short lease so support roles can be deconflicted. The output remains a policy-gated review cue rather than an autonomous action.
 
@@ -279,13 +280,13 @@ flowchart LR
   end
 
   subgraph Edge["Tier 1: Raspberry Pi 4B edge nodes"]
-    NodeA["altiair-node-a\ncamera + mic + RFID"]
-    NodeB["altiair-node-b\ncamera + mic + RFID"]
+    NodeA["altiair-node-a\ndeployable peer + health"]
+    NodeB["altiair-node-b\nRFID"]
     LocalStore["local bundle store"]
   end
 
   subgraph Accel["Tier 1.5: Jetson Orin Nano"]
-    Orin["altiair-orin\nvision/media inference"]
+    Orin["altiair-orin\nUSB mic + Hawkeye feed"]
     SecondaryGateway["secondary gateway"]
   end
 
@@ -314,33 +315,33 @@ flowchart LR
   Uploader -.-> Lattice
 ```
 
-Pi 5 local mission LAN topology:
+Current local mission LAN topology:
 
 - No external router, phone hotspot, or internet path is assumed.
-- `altiair-hub` / Pi 5 creates the private Wi-Fi AP `Altiair-LAN`.
+- Today `altiair-orin` / Jetson creates or supports the private Wi-Fi AP `Altiair-LAN`.
+- Tomorrow Ben adds `altiair-hub` / Pi 5 as the fourth node, with camera/display/hub capacity and the option to host or join `Altiair-LAN`.
 - `altiair-node-a` and `altiair-node-b` join `Altiair-LAN`.
-- `altiair-orin` joins `Altiair-LAN` if Wi-Fi works, otherwise it uses Ethernet if available.
-- Prove the software path first through process-level nodes on one machine or the Pi 5: `altiair-hub`, `altiair-node-a`, `altiair-node-b`, and `altiair-orin` run as separate API instances.
-- To prove physical distribution and preservation across separate devices, bring up the Pi 5 AP before the controlled node-loss test so a bundle can replicate off the node that later goes down.
+- Prove the software path first on the current three physical nodes: `altiair-orin`, `altiair-node-a`, and `altiair-node-b`.
+- To prove physical distribution and preservation across separate devices, keep the three-node LAN up before the controlled node-loss test so a bundle can replicate off the node that later goes down.
 - Loopback emulation proves the contracts, queueing, gateway scoring, and UI flow; it does not prove that evidence was physically replicated off a device before that device went down.
 - The node-loss demo should generate an event, replicate the signed evidence bundle to at least one peer, then power down or isolate one node and show the surviving peer still has the bundle and mission-continuity state.
 - If a node is destroyed or powered off before its bundle replicates, only that node's durable queue had the data; the system can preserve already-replicated evidence, not recover unreplicated data.
 - `altiair-node-a` and `altiair-node-b` are Pi 4B edge nodes.
-- `altiair-hub` is the Pi 5 preferred display/coordinator and gateway candidate; queues and mission context should replicate so it is not authoritative.
-- `altiair-orin` is the Jetson Orin Nano inference accelerator and secondary CASK/Foundry gateway.
+- `altiair-hub` is the reserved Pi 5 camera/display/coordinator and gateway candidate; queues and mission context should replicate so it is not authoritative.
+- `altiair-orin` is the Jetson Orin Nano LAN host, USB microphone node, Hawkeye-style feed host, inference accelerator, and secondary CASK/Foundry gateway.
 - Use static node identity under a narrow WireGuard overlay when multiple devices are connected: `10.77.0.10` hub, `10.77.0.11` node A, `10.77.0.12` node B, `10.77.0.20` Orin.
-- Use the Pi 5 AP LAN as the underlay; use the `10.77.0.x` overlay as the stable app identity contract.
+- Use the Jetson-hosted `Altiair-LAN` as the current underlay; when the Pi 5 arrives it can host or join that LAN. Use the `10.77.0.x` overlay as the stable app identity contract.
 - The primary operator display is built off the Pi: attached screen, kiosk browser, or chest-worn compute/display rig that resembles EagleEye cueing.
 - Phones and tablets are fallback viewers only.
 - Use static peer configuration first; NATS JetStream leaf nodes, libp2p GossipSub, Wi-Fi Direct, LoRa/Meshtastic, or MANET behavior are stretch goals after the local proof is stable.
 
-Pi 5 AP baseline command:
+AP baseline command for Jetson now or Pi 5 later:
 
 ```bash
 sudo nmcli device wifi hotspot ifname wlan0 con-name altiair-lan ssid Altiair-LAN password "change-this-demo-password"
 ```
 
-If the Pi 5 uses its Wi-Fi radio as the AP, do not depend on that same Wi-Fi radio for internet. The local mesh still works; Foundry/CASK sync queues until any gateway gets internet later.
+If the AP host uses its Wi-Fi radio as the AP, do not depend on that same Wi-Fi radio for internet. The local mesh still works; Foundry/CASK sync queues until any gateway gets internet later.
 
 Field deployment pattern:
 
@@ -689,15 +690,15 @@ Runtime tests:
 1. Prepare the Pis.
    - Verify Raspberry Pi OS on both Pi 4B nodes and the Pi 5; verify Jetson Linux on the Orin Nano.
    - Set hostnames: `altiair-node-a`, `altiair-node-b`, `altiair-hub`, and `altiair-orin`.
-   - Enable SSH, camera support, microphone access, and RFID interfaces.
+   - Enable SSH, Jetson USB microphone access, Pi 5 camera support, and node-b RFID interfaces.
    - Install Rust toolchain, SQLite tooling, camera utilities, networking tools, WireGuard tools, and `llama.cpp`.
 
 2. Bring up the local execution path.
-   - Start without assuming an external router, phone hotspot, or internet path: run logical nodes on one host or the Pi 5.
-   - Make the Pi 5 the local mission LAN by creating `Altiair-LAN` with `nmcli`.
-   - Join both Pi 4B nodes to `Altiair-LAN`; join the Jetson by Wi-Fi if available, otherwise by Ethernet if available.
+   - Start without assuming an external router, phone hotspot, or internet path: run the current three-node path on Jetson plus the two Pi 4Bs.
+   - Use Jetson as the current local mission LAN host; move or mirror that role to the Pi 5 when Ben adds it.
+   - Join both Pi 4B nodes to `Altiair-LAN`; keep the Jetson as the current LAN host.
    - Use venue Wi-Fi only as an optional internet/uplink path later; do not depend on it for node-to-node traffic.
-   - Connect the Pi-hosted operator display shell to the Pi 5 local LAN.
+   - Connect the operator display shell to the Jetson UI now; move or mirror it to the Pi 5 when Ben adds it.
    - Verify the bundle exists on a surviving peer before powering down or isolating a node; unreplicated data on the failed node cannot be preserved by the mesh.
    - Generate static peer/WireGuard templates with `npm run mesh:plan`.
    - Verify `GET /health`, `GET /peers`, `GET /mission-continuity`, and `GET /congestion` across devices.
