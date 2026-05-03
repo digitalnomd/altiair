@@ -1,6 +1,8 @@
-# Altiair: Resilient Edge Intelligence for Contested Operations
+# DarkMesh: Resilient Edge Intelligence for Contested Operations
 
-Altiair coordinates low-cost soldier-carried sensors into meaningful intelligence when bandwidth, cloud access, and compute are limited.
+DarkMesh coordinates low-cost soldier-carried sensors into meaningful intelligence when bandwidth, cloud access, and compute are limited.
+> "DarkMesh turns scattered sensors into one coherent intelligence picture — and keeps that picture alive even when bandwidth, cloud access in limited or the command node is destroyed."
+
 
 DDIL means **Degraded, Denied, Intermittent, and Limited** connectivity. In plain English: the network is unreliable, the cloud may be gone, and the squad still has to understand what is happening.
 
@@ -16,7 +18,7 @@ One soldier has a camera. Another has a microphone. Another has RFID, RF, or loc
 
 Today, that fusion often depends on a leader, a vehicle, a cloud service, or an expensive integrated kit. If that node drops, the picture fragments. If bandwidth is limited, raw sensor data cannot all be shipped upstream. If the hardware is too heavy or too expensive, it will not scale to every squad member.
 
-Altiair solves the missing middle: lightweight, easily procurable edge nodes that filter locally, share only useful evidence, and coordinate with each other to produce a human-reviewable operating picture.
+DarkMesh solves the missing middle: lightweight, easily procurable edge nodes that filter locally, share only useful evidence, and coordinate with each other to produce a human-reviewable operating picture.
 
 ---
 
@@ -38,9 +40,9 @@ Our hackathon bill of materials is intentionally commodity-class: Pi/Jetson node
 
 ## What We Built
 
-![Altiair fusion flow](assets/pitch/altiair-fusion-flow.svg)
+![DarkMesh fusion flow](assets/pitch/DarkMesh-fusion-flow.svg)
 
-Altiair turns disconnected squad-carried sensors into a resilient edge mesh:
+DarkMesh turns disconnected squad-carried sensors into a resilient edge mesh:
 
 1. Each node filters its own sensor feed locally using lightweight edge compute and local LLM-assisted extraction.
 2. Nodes exchange compact evidence records instead of streaming every raw feed.
@@ -106,7 +108,7 @@ Narration:
 
 Punchline:
 
-> Altiair does not depend on a single command node. If a node fails, the squad does not lose the mission picture.
+> DarkMesh does not depend on a single command node. If a node fails, the squad does not lose the mission picture.
 
 ---
 
@@ -122,7 +124,7 @@ When any node regains secure connectivity, the full mission record syncs to Pala
 - operator acknowledgements
 - after-action replay records
 
-Offline, Altiair keeps the Foundry/CASK-shaped data contract at the edge. Online, Foundry becomes the command echelon, audit layer, and long-term system of record.
+Offline, DarkMesh keeps the Foundry/CASK-shaped data contract at the edge. Online, Foundry becomes the command echelon, audit layer, and long-term system of record.
 
 ---
 
@@ -154,4 +156,4 @@ The SVG drafts are in `assets/pitch/` and can be dropped into slides or the READ
 
 ## Close
 
-Altiair gives every squad member's sensor a voice in the operating picture without requiring every raw feed to reach the cloud. It is cheap enough to distribute, local enough to survive DDIL conditions, and structured enough to plug into Palantir Foundry when the link returns.
+DarkMesh gives every squad member's sensor a voice in the operating picture without requiring every raw feed to reach the cloud. It is cheap enough to distribute, local enough to survive DDIL conditions, and structured enough to plug into Palantir Foundry when the link returns.
