@@ -1,21 +1,22 @@
 """
-gossip/listener.py
+Gossip listener.
 
-ZeroMQ SUB socket.
-Connects to every other node's PUB socket and writes received
-states into WorldState. This is how every node always has a full
-picture of what every other node is seeing.
-
-If a node dies, its gossip stops arriving — WorldState.get_active_nodes()
-will automatically exclude it after NODE_TIMEOUT seconds.
+Subscribes to peer node publishers and writes every received fused state into
+WorldState. If a node goes dark, WorldState marks it inactive after the timeout.
 """
 
+from __future__ import annotations
+
 import json
-import threading
 import logging
+import threading
+
 import zmq
 
-from state.world_state import WorldState
+try:
+    from world_state import WorldState
+except ImportError:  # pragma: no cover
+    from .world_state import WorldState  # type: ignore
 
 logger = logging.getLogger(__name__)
 
@@ -24,7 +25,7 @@ class GossipListener:
     def __init__(
         self,
         node_id: str,
-        node_ips: dict,  # {node_id: ip_address}
+        node_ips: dict[str, str],
         port: int,
         world_state: WorldState,
     ):
@@ -34,39 +35,43 @@ class GossipListener:
 
         self._context = zmq.Context()
         self._socket = self._context.socket(zmq.SUB)
-        self._socket.setsockopt_string(zmq.SUBSCRIBE, "")  # receive everything
-        self._socket.setsockopt(zmq.RCVTIMEO, 200)  # non-blocking with 200ms timeout
+        self._socket.setsockopt_string(zmq.SUBSCRIBE, "")
+        self._socket.setsockopt(zmq.RCVTIMEO, 200)
 
-        for nid, ip in node_ips.items():
-            if nid != node_id:
-                addr = f"tcp://{ip}:{port}"
-                self._socket.connect(addr)
-                logger.info(f"[Gossip] Subscribed to {nid} @ {addr}")
+        for peer_id, ip_address in node_ips.items():
+            if peer_id == node_id:
+                continue
+            address = f"tcp://{ip_address}:{port}"
+            self._socket.connect(address)
+            logger.info("[Gossip] Subscribed to %s at %s", peer_id, address)
 
     def start(self) -> None:
         self._running = True
-        t = threading.Thread(target=self._loop, daemon=True)
-        t.start()
+        threading.Thread(target=self._loop, daemon=True).start()
 
     def _loop(self) -> None:
         while self._running:
             try:
-                msg = self._socket.recv_string()
-                data = json.loads(msg)
-
+                message = self._socket.recv_string()
+                data = json.loads(message)
                 sender = data.get("node_id")
-                state = data.get("state", {})
+                payload = data.get("state", data)
 
-                if sender and sender != self._node_id:
-                    self._world_state.update_node_state(sender, state)
-                    logger.debug(f"[Gossip] Got state from {sender}")
+                if isinstance(sender, str) and sender and sender != self._node_id:
+                    self._world_state.ingest_gossip(sender, payload)
+                    logger.debug("[Gossip] Got state from %s", sender)
 
             except zmq.Again:
-                pass  # timeout — no message this cycle, totally fine
-            except (json.JSONDecodeError, KeyError):
-                logger.warning("[Gossip] Malformed message — skipping")
-            except Exception as e:
-                logger.error(f"[Gossip] Listener error: {e}")
+                continue
+            except json.JSONDecodeError:
+                logger.warning("[Gossip] Malformed JSON message")
+            except Exception as error:
+                logger.warning("[Gossip] Listener error: %s", error)
 
     def stop(self) -> None:
         self._running = False
+        try:
+            self._socket.close(0)
+            self._context.term()
+        except Exception:
+            pass

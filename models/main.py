@@ -1,61 +1,51 @@
 """
-main.py — Entry point for each mesh node.
+Entry point for one Altiair mesh node.
 
-Startup order:
-  1. WorldState          — shared memory
-  2. Sensors             — camera, audio, RF (start collecting)
-  3. Fusion LLM          — loads model (slowest step)
-  4. Gossip              — start broadcasting + listening
-  5. Raft                — connect to peers, elect leader
-  6. Coordinator LLM     — loads model, starts leader loop
-  7. Dashboard           — Flask server for iPad
-  8. Main loop           — fuse sensors → update state → broadcast
+Flow on every node:
+  camera/audio/RF -> FusionLLM -> local fused state -> gossip
 
-Run with:
-  python main.py
+Flow on elected leader only:
+  world state from gossip + mission objective -> CoordinatorLLM -> instructions
 
-Make sure config.py has the correct NODE_ID for this device.
+Dashboard:
+  Flask serves the UI and /api/dashboard for the browser.
 """
 
-import time
+from __future__ import annotations
+
 import logging
 import threading
+import time
 
 import config
-from state.world_state import WorldState
-from gossip.broadcaster import GossipBroadcaster
-from gossip.listener import GossipListener
-from raft.node import MeshRaftNode
-from raft.coordinator import CoordinatorLLM
-from sensors.camera import CameraSensor
-from sensors.audio import AudioSensor
-from sensors.rf import RFSensor
-from fusion.llm import FusionLLM
-from dashboard.server import create_dashboard
+from audio import AudioSensor
+from broadcaster import GossipBroadcaster
+from camera import CameraSensor
+from coordinator import CoordinatorLLM
+from listener import GossipListener
+from llm import FusionLLM
+from node import MeshRaftNode
+from rf import RFSensor
+from server import create_dashboard
+from world_state import WorldState
 
 logging.basicConfig(
     level=logging.INFO,
-    format="%(asctime)s  [%(name)-18s]  %(levelname)-8s  %(message)s",
+    format="%(asctime)s [%(name)-18s] %(levelname)-8s %(message)s",
     datefmt="%H:%M:%S",
 )
 logger = logging.getLogger("main")
 
 
-def main():
+def main() -> None:
     logger.info("=" * 60)
-    logger.info(f"  MESH NODE STARTING: {config.NODE_ID}")
-    logger.info(f"  IP: {config.MY_IP}")
-    logger.info(f"  MISSION: {config.MISSION_OBJECTIVE[:60]}...")
+    logger.info("MESH NODE STARTING: %s", config.NODE_ID)
+    logger.info("IP: %s", config.MY_IP)
+    logger.info("MISSION: %s", config.MISSION_OBJECTIVE)
     logger.info("=" * 60)
 
-    # ----------------------------------------------------------
-    # 1. Shared world state
-    # ----------------------------------------------------------
     world_state = WorldState(config.NODE_ID)
 
-    # ----------------------------------------------------------
-    # 2. Sensors  (start data collection immediately)
-    # ----------------------------------------------------------
     camera = CameraSensor(config.CAMERA_INDEX, config.YOLO_MODEL)
     audio = AudioSensor(config.AUDIO_SAMPLE_RATE, config.AUDIO_CHUNK_SECONDS)
     rf = RFSensor(config.RF_CENTER_FREQ, config.RF_SAMPLE_RATE)
@@ -63,21 +53,35 @@ def main():
     camera.start()
     audio.start()
     rf.start()
-    logger.info("Sensors started")
+    logger.info("Sensor adapters started")
 
-    # ----------------------------------------------------------
-    # 3. Fusion LLM  (model load — takes 10-30s on Jetson Nano)
-    # ----------------------------------------------------------
     fusion = FusionLLM(
         node_id=config.NODE_ID,
         model_path=config.FUSION_MODEL_PATH,
         position=f"grid_{config.NODE_ID}",
     )
 
-    # ----------------------------------------------------------
-    # 4. Gossip
-    # ----------------------------------------------------------
-    broadcaster = GossipBroadcaster(config.NODE_ID, config.GOSSIP_PUB_PORT)
+    my_raft_addr = f"{config.MY_IP}:{config.RAFT_PORT}"
+    partner_raft_addrs = [
+        f"{ip_address}:{config.RAFT_PORT}"
+        for node_id, ip_address in config.NODES.items()
+        if node_id != config.NODE_ID
+    ]
+    raft_node = MeshRaftNode(
+        my_raft_addr,
+        partner_raft_addrs,
+        node_id=config.NODE_ID,
+        world_state=world_state,
+    )
+
+    broadcaster = GossipBroadcaster(
+        config.NODE_ID,
+        config.GOSSIP_PUB_PORT,
+        payload_factory=lambda: world_state.build_gossip_payload(
+            leader_id=getattr(raft_node, "get_leader_id", lambda: None)(),
+            is_leader=raft_node.is_leader(),
+        ),
+    )
     listener = GossipListener(
         config.NODE_ID,
         config.NODES,
@@ -88,25 +92,10 @@ def main():
     listener.start()
     logger.info("Gossip layer started")
 
-    # ----------------------------------------------------------
-    # 5. Raft
-    # ----------------------------------------------------------
-    my_raft_addr = f"{config.MY_IP}:{config.RAFT_PORT}"
-    partner_raft_addrs = [
-        f"{ip}:{config.RAFT_PORT}"
-        for nid, ip in config.NODES.items()
-        if nid != config.NODE_ID
-    ]
-    raft_node = MeshRaftNode(my_raft_addr, partner_raft_addrs)
+    logger.info("Waiting briefly for leader election...")
+    time.sleep(2.0)
+    logger.info("Leader: %s", raft_node.get_leader_address())
 
-    # Give Raft time to connect to peers and hold an election
-    logger.info("Waiting for Raft election...")
-    time.sleep(3.0)
-    logger.info(f"Raft ready — leader: {raft_node.get_leader_address()}")
-
-    # ----------------------------------------------------------
-    # 6. Coordinator LLM
-    # ----------------------------------------------------------
     coordinator = CoordinatorLLM(
         node_id=config.NODE_ID,
         world_state=world_state,
@@ -114,12 +103,14 @@ def main():
         mission=config.MISSION_OBJECTIVE,
     )
     coordinator.start(raft_node, config.COORDINATOR_INTERVAL)
-    logger.info("Coordinator LLM started")
 
-    # ----------------------------------------------------------
-    # 7. Dashboard
-    # ----------------------------------------------------------
-    dashboard_app = create_dashboard(config.NODE_ID, world_state, raft_node)
+    dashboard_app = create_dashboard(
+        config.NODE_ID,
+        world_state,
+        raft_node,
+        mission_name=config.MISSION_NAME,
+        mission_objective=config.MISSION_OBJECTIVE,
+    )
     threading.Thread(
         target=lambda: dashboard_app.run(
             host="0.0.0.0",
@@ -129,51 +120,41 @@ def main():
         ),
         daemon=True,
     ).start()
-    logger.info(f"Dashboard at http://{config.MY_IP}:{config.DASHBOARD_PORT}")
+    logger.info("Dashboard/UI at http://%s:%s", config.MY_IP, config.DASHBOARD_PORT)
 
-    # ----------------------------------------------------------
-    # 8. Main fusion loop
-    # ----------------------------------------------------------
-    logger.info("Entering fusion loop — Ctrl+C to stop")
+    logger.info("Entering fusion loop; press Ctrl+C to stop")
     cycle = 0
 
     try:
         while True:
             cycle += 1
-
-            # Pull latest sensor outputs (these run in background threads)
             visual = camera.get_output()
             audio_out = audio.get_output()
             rf_out = rf.get_output()
 
-            # Fuse into structured JSON
             fused = fusion.fuse(visual, audio_out, rf_out)
-
-            # Store our own state in world state
             world_state.update_node_state(config.NODE_ID, fused)
 
-            # Broadcast to all other nodes via gossip
-            broadcaster.update_state(fused)
-
-            # Log status
-            is_leader = raft_node.is_leader()
+            leader = raft_node.is_leader()
             active_nodes = world_state.get_active_nodes()
             my_orders = world_state.get_my_instruction()
 
             logger.info(
-                f"[cycle {cycle:04d}] "
-                f"{'★ LEADER' if is_leader else '  follower'} | "
-                f"active={active_nodes} | "
-                f"threat={fused.get('threat_detected')} | "
-                f"{fused.get('summary','')[:50]}"
+                "[cycle %04d] %s | active=%s | confidence=%s | %s",
+                cycle,
+                "LEADER" if leader else "follower",
+                active_nodes,
+                fused.get("confidence"),
+                str(fused.get("summary", ""))[:90],
             )
             if my_orders:
-                logger.info(f"  ▶ MY ORDERS: {my_orders}")
+                logger.info("MY INSTRUCTION: %s", my_orders)
 
             time.sleep(config.FUSION_INTERVAL)
 
     except KeyboardInterrupt:
-        logger.info("Shutting down...")
+        logger.info("Shutting down")
+    finally:
         camera.stop()
         audio.stop()
         rf.stop()

@@ -1,59 +1,61 @@
 """
-sensors/camera.py
+Camera sensor adapter.
 
-Runs YOLOv8n on the Jetson Nano's GPU continuously.
-Detects objects, estimates rough bearing from frame position,
-and formats a string for the fusion LLM.
-
-YOLOv8n is ~6MB and runs at 15-30fps on Jetson Nano with CUDA.
+Uses YOLO when OpenCV, ultralytics, and a camera are available. Otherwise it
+emits realistic simulated detections so the fusion, gossip, coordinator, and UI
+paths remain runnable on a laptop or partially configured Pi.
 """
 
-import threading
+from __future__ import annotations
+
 import logging
-import cv2
+import random
+import threading
+import time
 
 logger = logging.getLogger(__name__)
 
-# Classes we care about for threat assessment
 THREAT_CLASSES = {"drone", "airplane", "bird", "person", "car", "truck", "motorcycle"}
-
-# Assume ~60° horizontal field of view
 CAMERA_FOV_DEG = 60.0
 
 
 class CameraSensor:
     def __init__(self, camera_index: int = 0, model_path: str = "yolov8n.pt"):
-        from ultralytics import YOLO
-
-        logger.info("[Camera] Loading YOLO model...")
-        self._model = YOLO(model_path)
-        self._cap = cv2.VideoCapture(camera_index)
         self._output = "VISUAL: initializing"
         self._lock = threading.Lock()
         self._running = False
+        self._simulated = True
+        self._model = None
+        self._cap = None
 
-        if not self._cap.isOpened():
-            logger.warning("[Camera] Camera not found — using simulated output")
-            self._simulated = True
-        else:
-            self._simulated = False
+        try:
+            import cv2
+            from ultralytics import YOLO
 
-        logger.info("[Camera] Ready")
+            logger.info("[Camera] Loading YOLO model %s", model_path)
+            self._model = YOLO(model_path)
+            self._cap = cv2.VideoCapture(camera_index)
+            if self._cap.isOpened():
+                self._simulated = False
+                logger.info("[Camera] Camera ready")
+            else:
+                logger.warning("[Camera] Camera not found; using simulation")
+        except Exception as error:
+            logger.warning("[Camera] YOLO/OpenCV unavailable; using simulation: %s", error)
 
     def start(self) -> None:
         self._running = True
-        t = threading.Thread(target=self._loop, daemon=True)
-        t.start()
+        threading.Thread(target=self._loop, daemon=True).start()
 
     def _loop(self) -> None:
-        import random
-
         while self._running:
             if self._simulated:
                 output = self._simulate()
+                time.sleep(0.5)
             else:
                 ret, frame = self._cap.read()
                 if not ret:
+                    time.sleep(0.05)
                     continue
                 output = self._process(frame)
 
@@ -62,32 +64,33 @@ class CameraSensor:
 
     def _process(self, frame) -> str:
         results = self._model(frame, verbose=False)
-        h, w = frame.shape[:2]
-        detections = []
+        height, width = frame.shape[:2]
+        detections: list[str] = []
 
-        for r in results:
-            for box in r.boxes:
-                conf = float(box.conf)
-                if conf < 0.45:
+        for result in results:
+            for box in result.boxes:
+                confidence = float(box.conf)
+                if confidence < 0.45:
                     continue
 
-                cls = r.names[int(box.cls)]
+                cls = result.names[int(box.cls)]
+                if cls not in THREAT_CLASSES:
+                    continue
+
                 x1, y1, x2, y2 = box.xyxy[0].tolist()
-                cx = (x1 + x2) / 2
+                center_x = (x1 + x2) / 2
+                bearing_offset = ((center_x / width) - 0.5) * CAMERA_FOV_DEG
 
-                # Convert pixel x-position to bearing offset from center
-                bearing_offset = ((cx / w) - 0.5) * CAMERA_FOV_DEG
-
-                size = ((x2 - x1) * (y2 - y1)) / (w * h)
+                size = ((x2 - x1) * (y2 - y1)) / (width * height)
                 if size > 0.15:
-                    est_dist = "near (<50m)"
+                    est_dist = "near"
                 elif size > 0.03:
-                    est_dist = "mid (50-200m)"
+                    est_dist = "mid"
                 else:
-                    est_dist = "far (>200m)"
+                    est_dist = "far"
 
                 detections.append(
-                    f"{cls} conf={conf:.2f} bearing_offset={bearing_offset:+.0f}° {est_dist}"
+                    f"{cls} conf={confidence:.2f} bearing_offset={bearing_offset:+.0f}deg {est_dist}"
                 )
 
         if detections:
@@ -95,12 +98,14 @@ class CameraSensor:
         return "VISUAL: no threats detected in frame"
 
     def _simulate(self) -> str:
-        import random, time
-
-        if random.random() > 0.5:
-            bearing = random.uniform(-25, 25)
-            conf = random.uniform(0.72, 0.96)
-            return f"VISUAL: drone conf={conf:.2f} bearing_offset={bearing:+.0f}° far (>200m)"
+        if random.random() > 0.48:
+            bearing = random.uniform(-18, 18)
+            confidence = random.uniform(0.72, 0.96)
+            distance = random.choice(["mid", "far", "far"])
+            return f"VISUAL: drone conf={confidence:.2f} bearing_offset={bearing:+.0f}deg {distance}"
+        if random.random() > 0.78:
+            bearing = random.uniform(120, 230)
+            return f"VISUAL: person conf=0.67 bearing={bearing:.0f}deg mid"
         return "VISUAL: no threats detected in frame"
 
     def get_output(self) -> str:
@@ -109,5 +114,8 @@ class CameraSensor:
 
     def stop(self) -> None:
         self._running = False
-        if not self._simulated:
-            self._cap.release()
+        if self._cap is not None:
+            try:
+                self._cap.release()
+            except Exception:
+                pass
