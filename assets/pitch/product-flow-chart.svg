@@ -8,12 +8,9 @@
     <marker id="softArrow" markerWidth="12" markerHeight="12" refX="10" refY="6" orient="auto">
       <path d="M2,2 L10,6 L2,10 Z" fill="#9aa8b7"/>
     </marker>
-    <marker id="greenArrow" markerWidth="12" markerHeight="12" refX="10" refY="6" orient="auto">
-      <path d="M2,2 L10,6 L2,10 Z" fill="#5fff87"/>
-    </marker>
     <style>
       .bg { fill: #0f1720; }
-      .title { font: 700 36px Arial, Helvetica, sans-serif; fill: #f5f7fa; }
+      .title { font: 700 36px Arial, Helvetica, sans-serif; fill: #6ee7a8; }
       .subtitle { font: 18px Arial, Helvetica, sans-serif; fill: #b8c4cf; }
       .section { font: 700 16px Arial, Helvetica, sans-serif; fill: #d6dee7; text-transform: uppercase; }
       .box { fill: #1c2631; stroke: #657383; stroke-width: 2; rx: 12; }
@@ -32,10 +29,10 @@
       .text { font: 700 18px Arial, Helvetica, sans-serif; fill: #f5f7fa; }
       .small { font: 14px Arial, Helvetica, sans-serif; fill: #c7d1dc; }
       .tiny { font: 12px Arial, Helvetica, sans-serif; fill: #aeb9c5; }
-      .linkLabel { font: 700 12px Arial, Helvetica, sans-serif; fill: #5fff87; }
+      .linkLabel { font: 700 12px Arial, Helvetica, sans-serif; fill: #c7d1dc; }
       .line { stroke: #c0cad5; stroke-width: 2.6; fill: none; marker-end: url(#arrow); }
-      .greenLine { stroke: #5fff87; stroke-width: 2.8; fill: none; marker-end: url(#greenArrow); }
-      .greenDash { stroke: #5fff87; stroke-width: 2.4; stroke-dasharray: 8 8; fill: none; marker-end: url(#greenArrow); }
+      .greenLine { stroke: #9fb3c8; stroke-width: 2.8; fill: none; marker-end: url(#arrow); }
+      .greenDash { stroke: #8b98a6; stroke-width: 2.4; stroke-dasharray: 8 8; fill: none; marker-end: url(#softArrow); }
       .ring { stroke: #87a9ca; stroke-width: 3.2; fill: none; marker-end: url(#arrow); }
       .soft { stroke: #9aa8b7; stroke-width: 2.3; fill: none; marker-end: url(#softArrow); }
       .dash { stroke: #8b98a6; stroke-width: 2.4; stroke-dasharray: 8 8; fill: none; marker-end: url(#softArrow); }
@@ -152,14 +149,14 @@
   <text x="1273" y="694" class="small">governed context</text>
   <text x="1279" y="714" class="small">sync when online</text>
 
-  <path d="M1175 305 C1192 305 1207 305 1230 305" class="greenLine"/>
-  <text x="1185" y="288" class="linkLabel">filtered evidence uplink</text>
-  <path d="M1175 460 C1197 460 1205 499 1230 499" class="greenLine"/>
-  <text x="1185" y="444" class="linkLabel">fused mission record</text>
+  <path d="M1175 260 C1198 230 1208 230 1230 260" class="greenLine"/>
+  <text x="1188" y="220" class="linkLabel">filtered evidence uplink</text>
+  <path d="M1175 468 C1195 388 1208 388 1230 468" class="greenLine"/>
+  <text x="1188" y="382" class="linkLabel">fused mission record</text>
   <path d="M1340 365 L1340 440" class="line"/>
   <path d="M1340 558 L1340 630" class="line"/>
-  <path d="M1230 690 C1180 690 1180 525 1175 485" class="greenDash"/>
-  <text x="1185" y="526" class="linkLabel">governed context back</text>
+  <path d="M1230 690 C1205 625 1200 540 1175 495" class="greenDash"/>
+  <text x="1194" y="608" class="linkLabel">governed context back</text>
 
   <rect x="925" y="875" width="525" height="70" class="legend"/>
   <text x="955" y="904" class="small">Darkmesh boundary: local edge devices keep operating in DDIL conditions.</text>
