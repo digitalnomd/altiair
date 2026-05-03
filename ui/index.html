@@ -82,66 +82,31 @@
 
     <div class="app-shell" data-view="fusion">
       <header class="titlebar">
-        <div class="brand-lockup">
-          <span class="brand-mark">HK</span>
-          <div>
-            <p class="eyebrow">DARPA field prototype / Altiair local mesh</p>
-            <h1>HAWKEYE Mission Copilot</h1>
+        <div class="titlebar-main">
+          <div class="titlebar-top">
+            <div class="brand-lockup">
+              <span class="brand-mark">HK</span>
+              <div>
+                <p class="eyebrow">DARPA field prototype / Altiair local mesh</p>
+                <h1>HAWKEYE Mission Copilot</h1>
+              </div>
+            </div>
+            <div class="command-readout" aria-label="Runtime telemetry">
+              <span>
+                <b id="missionClock">--:--:--</b>
+                <small>Local clock</small>
+              </span>
+              <span>
+                <b id="readinessScore">--</b>
+                <small>Mission readiness</small>
+              </span>
+              <span>
+                <b id="lastUpdate">--</b>
+                <small>Last fusion</small>
+              </span>
+            </div>
           </div>
-        </div>
-        <div class="command-readout" aria-label="Runtime telemetry">
-          <span>
-            <b id="missionClock">--:--:--</b>
-            <small>Local clock</small>
-          </span>
-          <span>
-            <b id="readinessScore">--</b>
-            <small>Mission readiness</small>
-          </span>
-          <span>
-            <b id="lastUpdate">--</b>
-            <small>Last fusion</small>
-          </span>
-        </div>
-        <div class="source-controls" aria-label="Dashboard controls">
-          <span id="sourceStatus" class="source-status" title="Current data source">
-            <span class="status-dot"></span>
-            <span>Loading</span>
-          </span>
-          <button id="refreshButton" class="icon-button" type="button" title="Refresh now" aria-label="Refresh now">
-            <svg><use href="#icon-refresh"></use></svg>
-          </button>
-          <button id="pauseButton" class="icon-button" type="button" title="Pause polling" aria-label="Pause polling">
-            <svg><use href="#icon-pause"></use></svg>
-          </button>
-        </div>
-      </header>
-
-      <nav class="viewport-tabs" aria-label="Map mode">
-        <button class="view-mode-button is-active" type="button" data-view-mode="fusion">
-          <svg><use href="#icon-radar"></use></svg>
-          Fusion
-        </button>
-        <button class="view-mode-button" type="button" data-view-mode="spectrum">
-          <svg><use href="#icon-wave"></use></svg>
-          Spectrum
-        </button>
-        <button class="view-mode-button" type="button" data-view-mode="command">
-          <svg><use href="#icon-cpu"></use></svg>
-          Command
-        </button>
-      </nav>
-
-      <section class="ops-grid" aria-label="Hawkeye operations workspace">
-        <main class="map-panel" aria-label="Mission map">
-          <div class="map-system-bar" aria-label="Map status">
-            <span>Sector NW-07</span>
-            <strong id="currentViewMode">Fusion</strong>
-            <span id="mapFeedLabel">Map feed pending</span>
-            <span id="scanCadence">5s poll / passive observe</span>
-          </div>
-
-          <section class="mission-strip" aria-label="Mission summary">
+          <section class="mission-strip header-strip" aria-label="Mission summary">
             <article class="summary-cell">
               <svg class="summary-icon"><use href="#icon-crosshair"></use></svg>
               <div>
@@ -170,15 +135,27 @@
                 <strong id="latestEvent">-</strong>
               </div>
             </article>
-            <article class="summary-cell">
-              <svg class="summary-icon"><use href="#icon-chevrons"></use></svg>
-              <div>
-                <p>Recommended next action</p>
-                <strong id="recommendedAction">-</strong>
-              </div>
-            </article>
           </section>
+        </div>
+      </header>
 
+      <nav class="viewport-tabs" aria-label="Map mode">
+        <button class="view-mode-button is-active" type="button" data-view-mode="fusion">
+          <svg><use href="#icon-radar"></use></svg>
+          Fusion
+        </button>
+        <button class="view-mode-button" type="button" data-view-mode="spectrum">
+          <svg><use href="#icon-wave"></use></svg>
+          Spectrum
+        </button>
+        <button class="view-mode-button" type="button" data-view-mode="command">
+          <svg><use href="#icon-cpu"></use></svg>
+          Command
+        </button>
+      </nav>
+
+      <section class="ops-grid" aria-label="Hawkeye operations workspace">
+        <main class="map-panel" aria-label="Mission map">
           <div class="legend" aria-label="Map legend">
             <div><span class="legend-mark node-friendly"></span>Friendly Node</div>
             <div><span class="legend-mark node-degraded"></span>Degraded Node</div>
@@ -223,50 +200,61 @@
           </div>
         </main>
 
-        <aside class="target-panel" aria-label="Track dossier">
-          <div class="target-header">
-            <span class="target-kicker">Track dossier</span>
-            <strong id="targetCallsign">HK-FUSED-01</strong>
-          </div>
-          <div class="confidence-dial" aria-label="Confidence score">
-            <div class="dial-ring" id="confidenceDial"></div>
-            <div>
-              <b id="targetConfidenceScore">--%</b>
-              <span id="targetConfidenceLabel">Confidence</span>
+        <aside class="target-panel" aria-label="Track and node orders">
+          <section class="track-section" aria-label="Track">
+            <div class="target-header">
+              <span class="target-kicker">Track</span>
+              <strong id="targetCallsign">HK-UAS-TRACK-01</strong>
             </div>
-          </div>
-          <dl class="target-facts">
-            <div>
-              <dt>Bearing</dt>
-              <dd id="targetBearing">--</dd>
+            <div class="confidence-dial" aria-label="Track confidence score">
+              <div class="dial-ring" id="confidenceDial"></div>
+              <div>
+                <b id="targetConfidenceScore">--%</b>
+                <span id="targetConfidenceLabel">Track confidence</span>
+              </div>
             </div>
-            <div>
-              <dt>Grid</dt>
-              <dd id="targetGrid">--</dd>
+            <dl class="target-facts">
+              <div>
+                <dt>Bearing</dt>
+                <dd id="targetBearing">--</dd>
+              </div>
+              <div>
+                <dt>Grid</dt>
+                <dd id="targetGrid">--</dd>
+              </div>
+              <div>
+                <dt>Type</dt>
+                <dd id="targetType">--</dd>
+              </div>
+              <div>
+                <dt>Last seen</dt>
+                <dd id="targetLastSeen">--</dd>
+              </div>
+            </dl>
+          </section>
+
+          <section class="node-orders-section" aria-label="Node orders">
+            <p class="panel-label">Node orders</p>
+            <div class="coordinator-readout">
+              <span>Active coordinator: <b id="coordinatorLeader">NODE 1</b></span>
+              <span class="coordinator-star" aria-hidden="true">&#9733;</span>
             </div>
-            <div>
-              <dt>Policy</dt>
-              <dd id="targetPolicy">--</dd>
+            <div class="order-divider order-divider-top" aria-hidden="true"></div>
+            <div id="nodeOrders" class="node-orders-list"></div>
+            <div class="order-divider order-divider-bottom" aria-hidden="true"></div>
+            <div class="failover-row">
+              <span>Coordinator failover:</span>
+              <b id="failoverState">ARMED</b>
             </div>
-            <div>
-              <dt>Map feed</dt>
-              <dd id="targetMapFeed">--</dd>
-            </div>
-          </dl>
-          <div class="sensor-stack">
-            <p class="panel-label">Sensor stack</p>
-            <div id="sensorStack" class="sensor-bars"></div>
-          </div>
-          <div class="cue-chain">
-            <p class="panel-label">Cue chain</p>
-            <div id="cueChain" class="cue-steps"></div>
-          </div>
+            <div class="handoff-row">Last handoff: <span id="lastHandoff">&mdash;</span></div>
+          </section>
+
         </aside>
       </section>
 
-      <section class="team-pulse" aria-label="Team pulse">
-        <span class="pulse-title">Team pulse</span>
-        <div id="teamPulseItems" class="pulse-items"></div>
+      <section class="cue-chain-row" aria-label="Cue chain">
+        <p class="panel-label">Cue chain</p>
+        <div id="cueChain" class="cue-steps"></div>
       </section>
 
       <section class="dashboard-bottom" aria-label="Operator decisions and evidence">
@@ -286,21 +274,6 @@
             <span id="policyGate" class="policy-pill">-</span>
           </div>
           <div id="evidenceMetrics" class="evidence-grid"></div>
-        </article>
-      </section>
-
-      <section class="detail-row" aria-label="Cue details">
-        <article class="detail-panel">
-          <p class="panel-label">Fusion feed</p>
-          <div id="fusionFeed" class="feed-list"></div>
-        </article>
-        <article class="detail-panel">
-          <p class="panel-label">Coordinator intent</p>
-          <div id="coordinatorFeed" class="feed-list"></div>
-        </article>
-        <article class="detail-panel">
-          <p class="panel-label">Gossip mesh</p>
-          <div id="gossipFeed" class="feed-list"></div>
         </article>
       </section>
     </div>

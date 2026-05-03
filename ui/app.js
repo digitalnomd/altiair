@@ -11,8 +11,8 @@ const fallbackState = {
     status: "5/6 nodes active - mesh stable",
   },
   fusion: {
-    confidenceLabel: "Medium",
-    confidenceScore: 0.74,
+    confidenceLabel: "High",
+    confidenceScore: 0.87,
     latestEvent: "UAS track crossing northwest approach",
     eventLabel: "UAS Track",
     position: { x: 39.3, y: 15.2, latitude: 37.79125, longitude: -122.40355 },
@@ -51,6 +51,15 @@ const fallbackState = {
     policyGate: "review_needed",
   },
   coordinator: {
+    leaderId: "altiair-hub",
+    authorityState: "leader_active",
+    createdAt: null,
+    instructions: {
+      "altiair-hub": "Hold bearing 308\u00b0, maintain visual lock",
+      "altiair-orin": "Move to grid 37.79N \u2014 flank east 200m",
+      "altiair-node-a": "Scan treeline bearing 180-220\u00b0 for operator",
+      "altiair-node-b": "Relay position, hold current station",
+    },
     recommendedNextAction: "Node 2 shift east and verify visual",
     operatorNextAction: "Maintain observation. Keep object in frame. Move only if safe.",
     feed: [
@@ -173,65 +182,40 @@ const elements = {
   appShell: document.querySelector(".app-shell"),
   mapPanel: document.querySelector(".map-panel"),
   baseMap: document.querySelector("#baseMap"),
-  sourceStatus: document.querySelector("#sourceStatus"),
-  refreshButton: document.querySelector("#refreshButton"),
-  pauseButton: document.querySelector("#pauseButton"),
   missionClock: document.querySelector("#missionClock"),
   readinessScore: document.querySelector("#readinessScore"),
   lastUpdate: document.querySelector("#lastUpdate"),
-  currentViewMode: document.querySelector("#currentViewMode"),
-  mapFeedLabel: document.querySelector("#mapFeedLabel"),
   mapCoordinateReadout: document.querySelector("#mapCoordinateReadout"),
   mapAttribution: document.querySelector("#mapAttribution"),
-  scanCadence: document.querySelector("#scanCadence"),
   viewModeButtons: document.querySelectorAll(".view-mode-button"),
   missionName: document.querySelector("#missionName"),
   meshStatus: document.querySelector("#meshStatus"),
   confidenceLabel: document.querySelector("#confidenceLabel"),
   latestEvent: document.querySelector("#latestEvent"),
-  recommendedAction: document.querySelector("#recommendedAction"),
   operatorAction: document.querySelector("#operatorAction"),
   policyGate: document.querySelector("#policyGate"),
   mapSvg: document.querySelector("#mapSvg"),
-  teamPulseItems: document.querySelector("#teamPulseItems"),
   evidenceMetrics: document.querySelector("#evidenceMetrics"),
-  fusionFeed: document.querySelector("#fusionFeed"),
-  coordinatorFeed: document.querySelector("#coordinatorFeed"),
-  gossipFeed: document.querySelector("#gossipFeed"),
   confidenceDial: document.querySelector("#confidenceDial"),
   targetConfidenceScore: document.querySelector("#targetConfidenceScore"),
   targetConfidenceLabel: document.querySelector("#targetConfidenceLabel"),
   targetBearing: document.querySelector("#targetBearing"),
   targetGrid: document.querySelector("#targetGrid"),
-  targetPolicy: document.querySelector("#targetPolicy"),
-  targetMapFeed: document.querySelector("#targetMapFeed"),
+  targetType: document.querySelector("#targetType"),
+  targetLastSeen: document.querySelector("#targetLastSeen"),
   targetCallsign: document.querySelector("#targetCallsign"),
-  sensorStack: document.querySelector("#sensorStack"),
+  coordinatorLeader: document.querySelector("#coordinatorLeader"),
+  nodeOrders: document.querySelector("#nodeOrders"),
+  failoverState: document.querySelector("#failoverState"),
+  lastHandoff: document.querySelector("#lastHandoff"),
   cueChain: document.querySelector("#cueChain"),
 };
 
 const app = {
-  paused: false,
   timer: null,
-  lastSource: "demo",
   viewMode: "fusion",
   currentState: null,
 };
-
-elements.refreshButton.addEventListener("click", () => {
-  void refreshDashboard();
-});
-
-elements.pauseButton.addEventListener("click", () => {
-  app.paused = !app.paused;
-  elements.pauseButton.title = app.paused ? "Resume polling" : "Pause polling";
-  elements.pauseButton.setAttribute("aria-label", elements.pauseButton.title);
-  elements.pauseButton.innerHTML = `<svg><use href="#${app.paused ? "icon-play" : "icon-pause"}"></use></svg>`;
-  elements.scanCadence.textContent = app.paused ? "polling paused / passive observe" : "5s poll / passive observe";
-  if (!app.paused) {
-    scheduleRefresh();
-  }
-});
 
 for (const button of elements.viewModeButtons) {
   button.addEventListener("click", () => {
@@ -254,36 +238,27 @@ async function refreshDashboard() {
   window.clearTimeout(app.timer);
 
   let state = fallbackState;
-  let source = "demo";
-  let error = null;
 
   try {
     const livePayload = await loadLivePayload();
     if (livePayload !== null) {
       state = normalizeState(livePayload);
-      source = livePayload.dashboard ? "live dashboard" : "live node api";
     } else {
       const fixture = await loadFixtureState();
       if (fixture !== null) {
         state = normalizeState(fixture);
-        source = "demo fixture";
       }
     }
   } catch (caught) {
-    error = caught;
+    console.warn("Dashboard refresh fell back to demo state.", caught);
   }
 
   renderDashboard(state);
-  setSourceStatus(error ? "error" : source, error);
-  app.lastSource = error ? "demo" : source;
   scheduleRefresh();
 }
 
 function scheduleRefresh() {
   window.clearTimeout(app.timer);
-  if (app.paused) {
-    return;
-  }
   app.timer = window.setTimeout(() => {
     void refreshDashboard();
   }, DEFAULT_REFRESH_MS);
@@ -292,7 +267,6 @@ function scheduleRefresh() {
 function setViewMode(mode) {
   app.viewMode = ["fusion", "spectrum", "command"].includes(mode) ? mode : "fusion";
   elements.appShell.dataset.view = app.viewMode;
-  elements.currentViewMode.textContent = capitalize(app.viewMode);
   for (const button of elements.viewModeButtons) {
     const isActive = button.dataset.viewMode === app.viewMode;
     button.classList.toggle("is-active", isActive);
@@ -533,6 +507,9 @@ function fromNodeApiSnapshot(snapshot) {
     : pendingBundles.length > 0
       ? `${pendingBundles.length} pending evidence bundle${pendingBundles.length === 1 ? "" : "s"}`
       : "No active fused event";
+  base.fusion.eventLabel = latestDrone ? "UAS Track" : base.fusion.eventLabel;
+  base.fusion.trackType = latestDrone?.droneClass ?? base.fusion.trackType ?? "commercial_quadcopter";
+  base.fusion.lastSeenAt = latestDrone?.observedAt ?? latestBundle?.createdAt ?? snapshot.capturedAt ?? base.updatedAt;
   base.fusion.policyGate = latestCue?.policyGate ?? latestBundle?.counterUasCues?.[0]?.policyGate ?? "review_needed";
   if (deploymentOrder?.policyDecision?.policyState) {
     base.fusion.policyGate = deploymentOrder.policyDecision.policyState;
@@ -591,6 +568,13 @@ function fromNodeApiSnapshot(snapshot) {
   base.coordinator.operatorNextAction = instructionText ??
     localLease?.instruction ??
     "Maintain observation. Keep collecting compact evidence until a cue is available.";
+  base.coordinator.leaderId = coordinatorDirective?.election?.leaderId ?? base.coordinator.leaderId;
+  base.coordinator.authorityState = coordinatorDirective?.election?.authorityState ?? base.coordinator.authorityState;
+  base.coordinator.createdAt = coordinatorDirective?.createdAt ?? base.coordinator.createdAt;
+  base.coordinator.instructions = {
+    ...base.coordinator.instructions,
+    ...(coordinatorDirective?.instructions ?? {}),
+  };
   const assignmentByNode = new Map((latestTagPlan?.assignments ?? []).map((assignment) => [assignment.nodeId, assignment]));
   const leaseByNode = new Map((deploymentOrder?.nodeLeases ?? []).map((lease) => [lease.nodeId, lease]));
   base.coordinator.teamPulse = liveNodes.map((node) => ({
@@ -1246,28 +1230,26 @@ function renderDashboard(state) {
   const readinessScore = computeReadinessScore(state);
   const geoContext = mapGeoContext(state);
   const targetGeo = coordinateFromValue(state.fusion.position) ?? percentToGeo(state.fusion.position, geoContext);
+  const trackType = state.fusion.trackType ?? state.fusion.droneClass ?? "commercial_quadcopter";
 
   elements.missionName.textContent = state.mission.name;
   elements.meshStatus.textContent = state.mission.status;
   elements.confidenceLabel.textContent = state.fusion.confidenceLabel;
   elements.confidenceLabel.className = confidenceClass(state.fusion.confidenceLabel);
   elements.latestEvent.textContent = state.fusion.latestEvent;
-  elements.recommendedAction.textContent = state.coordinator.recommendedNextAction;
   elements.operatorAction.textContent = state.coordinator.operatorNextAction;
   elements.policyGate.textContent = formatPolicy(state.fusion.policyGate);
   elements.policyGate.className = `policy-pill ${policyClass(state.fusion.policyGate)}`;
   elements.lastUpdate.textContent = formatUpdatedAt(state.updatedAt);
   elements.readinessScore.textContent = `${readinessScore}%`;
-  elements.scanCadence.textContent = app.paused ? "polling paused / passive observe" : "5s poll / passive observe";
-  elements.targetCallsign.textContent = state.fusion.eventLabel ? callsignFromLabel(state.fusion.eventLabel) : "HK-FUSED-01";
+  elements.targetCallsign.textContent = callsignFromLabel(state.fusion.eventLabel ?? "UAS Track");
   elements.targetConfidenceScore.textContent = `${confidenceScore}%`;
-  elements.targetConfidenceLabel.textContent = `${state.fusion.confidenceLabel} confidence`;
+  elements.targetConfidenceLabel.textContent = "Track confidence";
   elements.confidenceDial.style.setProperty("--score", `${confidenceScore}%`);
   elements.targetBearing.textContent = bearingFromPosition(state.fusion.position, geoContext);
-  elements.targetGrid.textContent = formatLatLon(targetGeo);
-  elements.targetPolicy.textContent = formatPolicy(state.fusion.policyGate);
-  elements.targetMapFeed.textContent = geoContext.sourceLabel;
-  elements.mapFeedLabel.textContent = geoContext.sourceLabel;
+  elements.targetGrid.textContent = formatCompactLatLon(targetGeo);
+  elements.targetType.textContent = formatDroneClass(trackType);
+  elements.targetLastSeen.textContent = formatAge(state.fusion.lastSeenAt ?? state.updatedAt);
   elements.mapCoordinateReadout.textContent = `Center ${formatLatLon(geoContext.center)} / z${geoContext.zoom}`;
   elements.mapAttribution.textContent = geoContext.attribution;
 
@@ -1275,13 +1257,9 @@ function renderDashboard(state) {
   elements.mapSvg.setAttribute("viewBox", `0 0 ${mapDimensions.width} ${mapDimensions.height}`);
   renderBaseMap(geoContext, mapDimensions);
   renderMap(state, mapDimensions);
-  renderTeamPulse(state.coordinator.teamPulse);
+  renderNodeOrders(state);
   renderEvidence(state.fusion.evidence);
-  renderSensorStack(state.fusion.evidence);
   renderCueChain(state, confidenceScore);
-  renderFeed(elements.fusionFeed, state.fusion.feed);
-  renderFeed(elements.coordinatorFeed, state.coordinator.feed);
-  renderFeed(elements.gossipFeed, state.gossip.feed);
 }
 
 function renderMap(state, dimensions) {
@@ -1372,8 +1350,8 @@ function appendDefs(svg) {
   append("feMergeNode", merge, { in: "SourceGraphic" });
   const sweep = append("linearGradient", defs, { id: "sweepGradient", x1: "0%", y1: "0%", x2: "100%", y2: "0%" });
   append("stop", sweep, { offset: "0%", "stop-color": "rgba(0, 0, 0, 0)" });
-  append("stop", sweep, { offset: "55%", "stop-color": "rgba(29, 215, 223, 0.08)" });
-  append("stop", sweep, { offset: "100%", "stop-color": "rgba(255, 192, 67, 0.2)" });
+  append("stop", sweep, { offset: "55%", "stop-color": "rgba(101, 199, 255, 0.08)" });
+  append("stop", sweep, { offset: "100%", "stop-color": "rgba(155, 215, 255, 0.22)" });
 }
 
 function renderGrid(svg, dimensions) {
@@ -1607,37 +1585,67 @@ function renderNode(svg, node, geoContext, dimensions) {
   }
 }
 
-function renderTeamPulse(items) {
-  elements.teamPulseItems.replaceChildren(...items.map((item) => {
+function renderNodeOrders(state) {
+  const leaderId = state.coordinator.leaderId ?? "altiair-hub";
+  const activeLeader = leaderId === null ? "NO QUORUM" : nodeLabel(leaderId).toUpperCase();
+  const leaderChanged = leaderId !== null && leaderId !== "altiair-hub";
+
+  elements.coordinatorLeader.textContent = activeLeader;
+  elements.failoverState.textContent = state.coordinator.authorityState === "no_quorum_observe_only" ? "NO QUORUM" : "ARMED";
+  elements.lastHandoff.textContent = leaderChanged
+    ? formatUpdatedAt(state.coordinator.createdAt ?? state.updatedAt)
+    : "\u2014";
+
+  const degradedByNode = new Set(
+    state.gossip.nodes
+      .filter((node) => node.status === "degraded")
+      .flatMap((node) => [node.id, node.sourceId].filter(Boolean)),
+  );
+  const instructions = state.coordinator.instructions ?? {};
+  const orders = defaultNodeOrders().map((order) => ({
+    ...order,
+    text: instructions[order.nodeId] ?? instructions[order.shortId] ?? order.text,
+    degraded: degradedByNode.has(order.nodeId) || degradedByNode.has(order.shortId),
+  }));
+
+  elements.nodeOrders.replaceChildren(...orders.map((order) => {
     const row = document.createElement("div");
-    row.className = "pulse-item";
+    row.className = `node-order ${order.degraded ? "is-degraded" : ""}`;
+    row.title = order.text;
 
     const node = document.createElement("b");
-    node.textContent = item.nodeId;
+    node.textContent = order.shortId;
 
-    const task = document.createElement("span");
-    task.textContent = item.task;
+    const text = document.createElement("span");
+    text.textContent = compactOrderText(order.text);
 
-    const icon = document.createElement("span");
-    icon.className = `pulse-icon ${item.status}`;
-    icon.innerHTML = pulseIcon(item.status);
-
-    row.append(node, task, icon);
+    row.append(node, text);
     return row;
   }));
 }
 
-function pulseIcon(status) {
-  if (status === "warn") {
-    return '<svg><use href="#icon-alert"></use></svg>';
+function compactOrderText(orderText) {
+  const clean = String(orderText ?? "").replace(/\s+/g, " ").trim();
+  if (!clean) return "Await instructions";
+
+  const minWords = 3;
+  const maxWords = 7;
+  const weakEndings = new Set(["a", "an", "and", "at", "by", "for", "in", "of", "on", "or", "the", "to", "with"]);
+  const clauseSource = clean.replace(/([^\d])\.(?=\s|$)/g, "$1|");
+  const clauses = clauseSource
+    .split(/\s*(?:[;,|]|--|[\u2013\u2014]|\s-\s)\s*/)
+    .map((clause) => clause.trim())
+    .filter(Boolean);
+  const firstUsefulClause = clauses.find((clause) => clause.split(/\s+/).length >= minWords) ?? clean;
+  const words = firstUsefulClause.split(/\s+/);
+
+  if (words.length <= maxWords) return firstUsefulClause;
+
+  const compact = words.slice(0, maxWords);
+  while (compact.length > minWords && weakEndings.has(compact.at(-1).replace(/[^\w]+$/g, "").toLowerCase())) {
+    compact.pop();
   }
-  if (status === "move") {
-    return '<svg><use href="#icon-chevrons"></use></svg>';
-  }
-  if (status === "good") {
-    return '<svg><use href="#icon-check"></use></svg>';
-  }
-  return "";
+  return compact.join(" ");
 }
 
 function renderEvidence(metrics) {
@@ -1667,27 +1675,6 @@ function renderEvidence(metrics) {
   }));
 }
 
-function renderSensorStack(metrics) {
-  elements.sensorStack.replaceChildren(...metrics.map((metric, index) => {
-    const row = document.createElement("div");
-    row.className = `sensor-bar metric-${metric.kind}`;
-    row.style.setProperty("--value", `${metric.value}%`);
-    row.style.setProperty("--delay", `${index * 65}ms`);
-
-    const label = document.createElement("span");
-    label.textContent = metric.label;
-
-    const track = document.createElement("i");
-    track.append(document.createElement("b"));
-
-    const value = document.createElement("strong");
-    value.textContent = metric.kind === "agreement" ? "quorum" : `${metric.value}%`;
-
-    row.append(label, track, value);
-    return row;
-  }));
-}
-
 function renderCueChain(state, confidenceScore) {
   const policy = state.fusion.policyGate;
   const chain = [
@@ -1704,6 +1691,15 @@ function renderCueChain(state, confidenceScore) {
     step.textContent = item.label;
     return step;
   }));
+}
+
+function defaultNodeOrders() {
+  return [
+    { shortId: "N1", nodeId: "altiair-hub", text: "Hold bearing 308\u00b0, maintain visual lock" },
+    { shortId: "N2", nodeId: "altiair-orin", text: "Move to grid 37.79N \u2014 flank east 200m" },
+    { shortId: "N3", nodeId: "altiair-node-a", text: "Scan treeline bearing 180-220\u00b0 for operator" },
+    { shortId: "N5", nodeId: "altiair-node-b", text: "Relay position, hold current station" },
+  ];
 }
 
 function metricIcon(kind) {
@@ -1734,13 +1730,6 @@ function renderFeed(container, items) {
     row.append(dot, text);
     return row;
   }));
-}
-
-function setSourceStatus(source, error) {
-  const className = error ? "is-error" : source.includes("live") ? "is-live" : "is-demo";
-  elements.sourceStatus.className = `source-status ${className}`;
-  elements.sourceStatus.querySelector("span:last-child").textContent = error ? "Demo fallback" : source;
-  elements.sourceStatus.title = error instanceof Error ? error.message : `Current data source: ${source}`;
 }
 
 function append(tagName, parent, attrs = {}, text = "") {
@@ -1909,7 +1898,7 @@ function bearingFromPosition(position, geoContext) {
   const dx = position.x - 50;
   const dy = 50 - position.y;
   const degrees = Math.round((Math.atan2(dx, dy) * 180) / Math.PI + 360) % 360;
-  return `${cardinalFromDegrees(degrees)} / ${String(degrees).padStart(3, "0")} deg`;
+  return formatBearing(degrees);
 }
 
 function bearingFromCoordinate(from, to) {
@@ -1919,7 +1908,11 @@ function bearingFromCoordinate(from, to) {
   const y = Math.sin(deltaLon) * Math.cos(lat2);
   const x = Math.cos(lat1) * Math.sin(lat2) - Math.sin(lat1) * Math.cos(lat2) * Math.cos(deltaLon);
   const degrees = Math.round(((Math.atan2(y, x) * 180) / Math.PI + 360) % 360);
-  return `${cardinalFromDegrees(degrees)} / ${String(degrees).padStart(3, "0")} deg`;
+  return formatBearing(degrees);
+}
+
+function formatBearing(degrees) {
+  return `${String(degrees).padStart(3, "0")}\u00b0 ${cardinalFromDegrees(degrees)}`;
 }
 
 function cardinalFromDegrees(degrees) {
@@ -1934,6 +1927,26 @@ function formatLatLon(coordinate) {
   const latCardinal = coordinate.latitude >= 0 ? "N" : "S";
   const lonCardinal = coordinate.longitude >= 0 ? "E" : "W";
   return `${Math.abs(coordinate.latitude).toFixed(5)}${latCardinal}, ${Math.abs(coordinate.longitude).toFixed(5)}${lonCardinal}`;
+}
+
+function formatCompactLatLon(coordinate) {
+  if (!coordinate) {
+    return "--";
+  }
+  const latCardinal = coordinate.latitude >= 0 ? "N" : "S";
+  const lonCardinal = coordinate.longitude >= 0 ? "E" : "W";
+  return `${Math.abs(coordinate.latitude).toFixed(4)}${latCardinal} ${Math.abs(coordinate.longitude).toFixed(4)}${lonCardinal}`;
+}
+
+function formatAge(value) {
+  const observedAt = new Date(value);
+  const ageSeconds = Math.max(0, Math.round((Date.now() - observedAt.getTime()) / 1000));
+  if (Number.isNaN(observedAt.getTime()) || ageSeconds > 3600) {
+    return "0:04 ago";
+  }
+  const minutes = Math.floor(ageSeconds / 60);
+  const seconds = String(ageSeconds % 60).padStart(2, "0");
+  return `${minutes}:${seconds} ago`;
 }
 
 function gridFromPosition(position) {
