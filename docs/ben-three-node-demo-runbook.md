@@ -58,6 +58,7 @@ node-b ... ok
 - Local LLM insight path: mock by default, Ollama-compatible when configured
 - Mesh/gateway/coordinator/replication: `/dashboard`, `/coordinator/latest`, `/replication/latest`, `/mission-continuity`
 - Always-on stream spine: `/stream/topics`, `/stream/status`, `/stream/records`
+- Full mocked workflow smoke: `npm run workflow:smoke`
 - Mock/online Hawkeye-style feed: `npm run hawkeye:feed`
 - Jetson USB microphone adapter: `scripts/pi/audio-event-adapter.py`
 - Pi 5 camera adapter: `scripts/pi/camera-event-adapter.py`

@@ -35,6 +35,7 @@
     "sensor:merge:smoke": "tsx src/scripts/sensor-merge-smoke.ts",
     "stream:smoke": "tsx src/scripts/stream-smoke.ts",
     "tag:smoke": "tsx src/scripts/tag-smoke.ts",
+    "workflow:smoke": "bash scripts/workflow-smoke.sh",
     "smoke:mock": "tsx src/scripts/smoke.ts",
     "smoke:foundry": "FOUNDRY_MODE=osdk tsx src/scripts/smoke.ts --foundry"
   },

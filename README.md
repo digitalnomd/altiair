@@ -145,6 +145,7 @@ npm run build
 npm run agent:test
 npm run agent:smoke
 npm run smoke:mock
+npm run workflow:smoke
 npm run security:smoke
 npm run stream:smoke
 ```
