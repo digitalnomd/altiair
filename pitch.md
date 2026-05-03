@@ -5,11 +5,6 @@ We built the tactical intelligence layer that keeps a squad operational after th
 
 ---
 
-
-At the tactical edge, teams do not suffer from lack of data. They suffer from disconnected data. One soldier sees something. Another hears something. Another node loses an RFID or RF signal. In a jammed or cloud-denied environment, there is no reliable cloud system to fuse that into a shared picture.”
-
-
-
 Opening - the PAIN:
 >  A squad in a jammed or cloud-denied battlefield has multiple sensors seeing different things. One soldier sees a drone. Another hears a sniper. A third gets an RF ping. Right now, the squad leader mentally stitches that together under fire. And if the central command node goes down — the whole unit fails. DARPA just issued a $50M program two weeks ago because this is unsolved. We solved it on $200 of hardware."
 
@@ -60,8 +55,10 @@ Punchline: "That is the architectural difference. Centralized systems die when t
 
 ---
 Palantir - After Action
-> When any node regains secure connectivity, the full mission record — every sensor event, every fusion decision, every coordinator directive — syncs to Palantir Foundry. Nothing is lost. Commanders get full after-action replay. The edge is ephemeral. The intelligence is permanent.
+> When any node regains secure connectivity, the full mission record — every sensor event, every fusion decision, every coordinator directive — syncs to Palantir Foundry. 
 
+
+Offline, we're running CASK on edge — think of it as Foundry's local brain, operating on the nodes themselves when cloud access is gone. Same ontology, same data contracts, no internet required. 
 ---
 
 What 1st place does: Makes the judges feel the operational pain, then solves it live in front of them with a moment they can't forget.
