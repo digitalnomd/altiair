@@ -16,6 +16,7 @@
     "coordinator:smoke": "tsx src/scripts/coordinator-smoke.ts",
     "cask:ontology": "tsx src/scripts/cask-ontology.ts",
     "demo:bootstrap": "tsx src/scripts/demo-bootstrap.ts",
+    "demo:start": "bash scripts/demo-start.sh",
     "foundry:direct:intel": "bash -lc 'set -a; source .env; set +a; FOUNDRY_MODE=osdk tsx src/scripts/foundry-intelligence-smoke.ts'",
     "foundry:direct:smoke": "bash -lc 'set -a; source .env; set +a; FOUNDRY_MODE=osdk tsx src/scripts/smoke.ts --foundry'",
     "foundry:intel:smoke": "tsx src/scripts/foundry-intelligence-smoke.ts",

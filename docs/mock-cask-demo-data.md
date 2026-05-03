@@ -50,6 +50,24 @@ npm run mock:scenario -- --format summary
 
 ## Replay Against A Running Node
 
+For the one-command local demo path, start the API, seed the scenario, start the UI proxy, verify the runtime products, and keep the demo running:
+
+```bash
+npm run demo:start
+```
+
+Then open:
+
+```text
+http://127.0.0.1:4173/
+```
+
+To rehearse node-loss continuity in the same flow:
+
+```bash
+npm run demo:start -- --include-failure-step
+```
+
 Start the node API:
 
 ```bash
