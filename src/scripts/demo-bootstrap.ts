@@ -1,4 +1,5 @@
 import { buildCaskDemoMockScenario } from "../mock/caskDemoScenario.js";
+import { jsonRequestBody } from "./encryptedJson.js";
 
 const baseUrl = stripTrailingSlash(argValue("--base-url") ?? process.env.ALTIAIR_DEMO_BASE_URL ?? "http://127.0.0.1:8080");
 const missionId = argValue("--mission") ?? process.env.ALTIAIR_MISSION_ID ?? "mission-live-edge";
@@ -96,7 +97,7 @@ async function postJson(path: string, body: unknown): Promise<any> {
       "content-type": "application/json",
       ...authorizationHeader(),
     },
-    body: JSON.stringify(body),
+    body: jsonRequestBody(path, body),
   });
   const text = await response.text();
   if (!response.ok) {

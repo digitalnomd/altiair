@@ -1,4 +1,5 @@
 import type { LiveSensorInput } from "../sensors/liveMerge.js";
+import { jsonRequestBody } from "./encryptedJson.js";
 
 interface OpenSkyResponse {
   time?: number;
@@ -36,22 +37,23 @@ const openSkyUrl = argValue("--opensky-url") ?? process.env.ALTIAIR_OPENSKY_URL 
 let cycle = 0;
 while (true) {
   const events = await buildEvents();
+  const body = {
+    scenarioId: "hawkeye-style-live-feed",
+    stepId: "hawkeye-feed",
+    cycle,
+    missionId,
+    sourceNodeId: cameraNodeId,
+    bundleId: `bundle-${missionId}-hawkeye-${Date.now()}`,
+    createdAt: new Date().toISOString(),
+    events,
+  };
   const response = await fetch(postUrl, {
     method: "POST",
     headers: {
       "content-type": "application/json",
       ...authorizationHeader(),
     },
-    body: JSON.stringify({
-      scenarioId: "hawkeye-style-live-feed",
-      stepId: "hawkeye-feed",
-      cycle,
-      missionId,
-      sourceNodeId: cameraNodeId,
-      bundleId: `bundle-${missionId}-hawkeye-${Date.now()}`,
-      createdAt: new Date().toISOString(),
-      events,
-    }),
+    body: jsonRequestBody(postUrl, body),
   });
   const text = await response.text();
   if (!response.ok) {

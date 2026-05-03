@@ -42,6 +42,12 @@ import {
   toKafkaMessage,
   type CaskStreamRecord,
 } from "../stream/alwaysOn.js";
+import {
+  appEncryptionFromEnv,
+  appEncryptionStatus,
+  maybeDecryptJsonRequestBody,
+  type AppEncryptionContext,
+} from "../security/appEnvelope.js";
 
 interface RuntimeState {
   node: NodeDescriptor;
@@ -68,6 +74,7 @@ interface RuntimeState {
   coordinatorTerm: number;
   coordinatorIndex: number;
   apiToken?: string;
+  appEncryption: AppEncryptionContext;
 }
 
 interface LiveSensorPost {
@@ -120,6 +127,7 @@ const state: RuntimeState = {
   coordinatorTerm: Number(process.env.ALTIAIR_COORDINATOR_TERM ?? 0),
   coordinatorIndex: 0,
   apiToken,
+  appEncryption: appEncryptionFromEnv(),
 };
 
 const server = createServer((request, response) => {
@@ -148,6 +156,7 @@ server.listen(port, host, () => {
         stream: "/stream/status",
         frontendCors: corsOrigin === undefined ? "disabled" : corsOrigin,
         protectedRoutes: apiToken === undefined ? "disabled" : "bearer",
+        appEncryption: appEncryptionStatus(state.appEncryption),
       },
       null,
       2,
@@ -429,7 +438,10 @@ async function handleRequest(
       return;
     }
 
-    const rawBody = await readBody(request, defaultDdilMeshTopology.policy.maxBundleSizeBytes);
+    const rawBody = await readJsonRequestBodyResponse(request, state, path, response);
+    if (rawBody === undefined) {
+      return;
+    }
     const bundle = parseBundleResponse(rawBody, response);
     if (bundle === undefined) {
       return;
@@ -447,7 +459,10 @@ async function handleRequest(
       return;
     }
 
-    const rawBody = await readBody(request, defaultDdilMeshTopology.policy.maxBundleSizeBytes);
+    const rawBody = await readJsonRequestBodyResponse(request, state, path, response);
+    if (rawBody === undefined) {
+      return;
+    }
     const livePost = parseLiveSensorPostResponse(rawBody, response);
     if (livePost === undefined) {
       return;
@@ -473,7 +488,10 @@ async function handleRequest(
       return;
     }
 
-    const rawBody = await readBody(request, defaultDdilMeshTopology.policy.maxBundleSizeBytes);
+    const rawBody = await readJsonRequestBodyResponse(request, state, path, response);
+    if (rawBody === undefined) {
+      return;
+    }
     const input = parseMissionInstructionInputResponse(rawBody, response);
     if (input === undefined) {
       return;
@@ -499,7 +517,10 @@ async function handleRequest(
       return;
     }
 
-    const rawBody = await readBody(request, defaultDdilMeshTopology.policy.maxBundleSizeBytes);
+    const rawBody = await readJsonRequestBodyResponse(request, state, path, response);
+    if (rawBody === undefined) {
+      return;
+    }
     const deployment = parseAndBuildDeploymentResponse(rawBody, state, response);
     if (deployment === undefined) {
       return;
@@ -625,6 +646,28 @@ function isAuthorized(request: IncomingMessage, state: RuntimeState): boolean {
 function isJsonRequest(request: IncomingMessage): boolean {
   const contentType = request.headers["content-type"];
   return typeof contentType === "string" && contentType.toLowerCase().includes("application/json");
+}
+
+async function readJsonRequestBodyResponse(
+  request: IncomingMessage,
+  state: RuntimeState,
+  path: string,
+  response: ServerResponse,
+): Promise<string | undefined> {
+  try {
+    const rawBody = await readBody(request, defaultDdilMeshTopology.policy.maxBundleSizeBytes);
+    return maybeDecryptJsonRequestBody(rawBody, state.appEncryption, {
+      method: request.method ?? "POST",
+      path,
+      purpose: "node_api_request",
+    });
+  } catch (error: unknown) {
+    writeJson(response, 400, {
+      error: "Invalid encrypted request body.",
+      message: error instanceof Error ? error.message : "Request body could not be read or decrypted.",
+    });
+    return undefined;
+  }
 }
 
 function parseBundle(rawBody: string): CaskBundle {
@@ -1165,6 +1208,7 @@ function buildHealth(state: RuntimeState): NodeHealth {
     networkReachable: localObservation?.internetReachable ?? false,
     foundryReachable: localObservation?.foundryReachable ?? false,
     modelStatus: "ready",
+    appEncryption: appEncryptionStatus(state.appEncryption) as NodeHealth["appEncryption"],
   };
 }
 

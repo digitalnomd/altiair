@@ -9,6 +9,10 @@ import type {
   SensorEvent,
   UploadAck,
 } from "../cask/types.js";
+import {
+  appEncryptionFromEnv,
+  maybeEncryptJsonForTransport,
+} from "../security/appEnvelope.js";
 import { createFoundryOsdkRuntime, type FoundryOsdkRuntime } from "./osdkClient.js";
 
 export interface FoundryUploader {
@@ -21,6 +25,8 @@ export function createFoundryUploader(config: FoundryConfig): FoundryUploader {
   }
   return new OsdkFoundryUploader(config);
 }
+
+const appEncryption = appEncryptionFromEnv();
 
 class MockFoundryUploader implements FoundryUploader {
   constructor(private readonly config: FoundryConfig) {}
@@ -175,7 +181,12 @@ class OsdkFoundryUploader implements FoundryUploader {
         (item as Partial<LocationFix>).policyState ??
         maybeInsight.policyState ??
         maybeCue.policyGate,
-      payloadJson: JSON.stringify(item),
+      payloadJson: JSON.stringify(
+        maybeEncryptJsonForTransport(item, appEncryption, {
+          purpose: "foundry_upload_payload",
+          senderNodeId: maybeEvent.sourceNodeId,
+        }),
+      ),
     };
   }
 

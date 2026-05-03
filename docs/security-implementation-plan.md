@@ -80,6 +80,7 @@ sudo ufw enable
 - Use WireGuard as the mission overlay with per-device keys and narrow `/32` `AllowedIPs`.
 - Bind the Altiair API to the node overlay address or an explicit host using `ALTIAIR_API_HOST`.
 - Set `ALTIAIR_API_TOKEN` for every demo. The prototype requires this token for all non-health routes when configured.
+- Set `ALTIAIR_APP_ENCRYPTION_SECRET` or `ALTIAIR_APP_ENCRYPTION_KEY` on nodes that exchange TypeScript demo/API POST traffic when app-level payload encryption is required. The app envelope uses AES-256-GCM and binds method/path/purpose metadata as authenticated data.
 - Local node API and UI responses set `no-store`, `nosniff`, no-referrer, frame denial, restrictive permissions policy, and a restrictive content security policy. Keep these defaults unless a route has a documented need to expand them.
 - Prefer mTLS or SPIFFE/SPIRE-style workload identity for a production service; bearer tokens are a demo control, not the final identity layer.
 - Keep Foundry/CASK credentials only on nodes with `foundry_gateway` role.
@@ -91,6 +92,7 @@ sudo ufw enable
 - Raw camera/audio should stay local unless policy allows a bounded thumbnail, transcript, or short clip.
 - Store RFID tag IDs as pseudonymous IDs where possible. Keep the tag-to-person or tag-to-asset mapping in Foundry or a protected local file, not in logs.
 - Use content hashes for bundle dedupe and tamper evidence.
+- TypeScript node API POST clients encrypt JSON request bodies when app-level encryption is configured. Foundry bundle-action uploads keep routing metadata clear but store the protected item in encrypted `payloadJson`; narrow GPS-position profile uploads remain field-level ontology writes.
 - The Rust agent encrypts queued payloads with AES-256-GCM. Demo defaults are derived locally so smoke tests can run without secrets; real deployments must set `ALTIAIR_AGENT_SIGNING_KEY` and `ALTIAIR_AGENT_ENCRYPTION_KEY` or their `*_SECRET` variants from local secret storage.
 - Keep policy state attached to every observation, insight, cue, and upload attempt.
 

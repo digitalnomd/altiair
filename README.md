@@ -55,7 +55,7 @@ Canonical decisions:
 | Local models | No Chinese-origin model families. Do not use Qwen, DeepSeek, Yi, MiniCPM, Baichuan, ChatGLM, InternLM, or derivatives. |
 | Counter-UAS scope | Detection, attribution cueing, policy-gated review, and operator acknowledgement only. No target prosecution, engagement planning, or harmful action recommendations. |
 | Edge implementation | Rust-first for the durable node agent, queue, peer API, congestion guard, and uploader. Python scripts are acceptable for fast sensor prototypes behind stable JSON contracts. |
-| Security posture | Secure-by-design demo baseline: WireGuard overlay, explicit API token for protected routes, no committed secrets, least-privilege Foundry/CASK credentials, local-first retention, and policy-gated uploads. |
+| Security posture | Secure-by-design demo baseline: WireGuard overlay, optional AES-256-GCM app envelopes for node API POST payloads and Foundry `payloadJson`, explicit API token for protected routes, no committed secrets, least-privilege Foundry/CASK credentials, local-first retention, and policy-gated uploads. |
 | Live demo contract | Final demo paths are implemented live: real sensors, real local LAN, real heartbeat/replication, real local processing, and real queued/OSDK sync. Mock fixtures are for tests, CI, and missing-credential development only. |
 
 The deeper decision brief is here:

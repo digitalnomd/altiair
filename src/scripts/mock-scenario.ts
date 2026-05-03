@@ -4,6 +4,7 @@ import {
   latestMockScenarioEvents,
   type MockScenario,
 } from "../mock/caskDemoScenario.js";
+import { jsonRequestBody } from "./encryptedJson.js";
 
 type OutputFormat = "steps" | "latest-events" | "bundle" | "summary";
 
@@ -50,38 +51,39 @@ async function replayScenario(url: string, delayMs: number): Promise<void> {
         await sleep(delayMs);
       }
 
+      const requestBody = {
+        scenarioId: cycleScenario.id,
+        stepId: step.id,
+        cycle,
+        missionId: cycleScenario.missionId,
+        sourceNodeId: "altiair-orin",
+        bundleId: `bundle-${cycleScenario.missionId}-${step.id}-${cycle}`,
+        createdAt: latestObservedAt(step.events) ?? cycleScenario.generatedAt,
+        events: step.events,
+      };
       const response = await fetch(url, {
         method: "POST",
         headers: {
           "content-type": "application/json",
           ...authorizationHeader(),
         },
-        body: JSON.stringify({
-          scenarioId: cycleScenario.id,
-          stepId: step.id,
-          cycle,
-          missionId: cycleScenario.missionId,
-          sourceNodeId: "altiair-orin",
-          bundleId: `bundle-${cycleScenario.missionId}-${step.id}-${cycle}`,
-          createdAt: latestObservedAt(step.events) ?? cycleScenario.generatedAt,
-          events: step.events,
-        }),
+        body: jsonRequestBody(url, requestBody),
       });
       const bodyText = await response.text();
       if (!response.ok) {
         throw new Error(`POST ${url} failed at ${step.id} with HTTP ${response.status}: ${bodyText}`);
       }
-      const body = JSON.parse(bodyText) as Record<string, unknown>;
+      const responseBody = JSON.parse(bodyText) as Record<string, unknown>;
       summaries.push({
         cycle,
         stepId: step.id,
         title: step.title,
         status: response.status,
-        bundleId: body.bundleId,
-        accepted: body.accepted,
-        tagPlan: body.tagPlan,
-        localInstructionCount: localInstructionCount(body.localInstructions),
-        localLlm: body.localLlm,
+        bundleId: responseBody.bundleId,
+        accepted: responseBody.accepted,
+        tagPlan: responseBody.tagPlan,
+        localInstructionCount: localInstructionCount(responseBody.localInstructions),
+        localLlm: responseBody.localLlm,
       });
     }
 

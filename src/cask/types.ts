@@ -196,6 +196,12 @@ export interface NodeHealth {
   networkReachable: boolean;
   foundryReachable: boolean;
   modelStatus: "ready" | "unavailable" | "disabled";
+  appEncryption?: {
+    enabled: boolean;
+    algorithm: "aes-256-gcm";
+    keyMode: "disabled" | "configured_key" | "configured_secret";
+    keyId?: string;
+  };
 }
 
 export interface InsightDraft {

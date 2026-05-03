@@ -1,4 +1,5 @@
 import { buildCaskDemoMockScenario } from "../mock/caskDemoScenario.js";
+import { jsonRequestBody } from "./encryptedJson.js";
 
 interface TargetNode {
   id: string;
@@ -339,7 +340,7 @@ async function requestJson(method: "GET" | "POST", url: string, body?: unknown):
         ...(body === undefined ? {} : { "content-type": "application/json" }),
         ...authorizationHeader(),
       },
-      body: body === undefined ? undefined : JSON.stringify(body),
+      body: body === undefined ? undefined : jsonRequestBody(url, body),
     });
     const text = await response.text();
     const parsed = text.length > 0 ? safeJson(text) : {};

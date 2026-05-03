@@ -9,6 +9,12 @@ import {
   sampleMissionInstructionInput,
 } from "../cask/missionDeployment.js";
 import { defaultDdilMeshTopology, nominalMeshObservations } from "../mesh/defaultTopology.js";
+import {
+  appEncryptionFromEnv,
+  isAppEncryptedEnvelope,
+  maybeDecryptJsonRequestBody,
+  maybeEncryptJsonForTransport,
+} from "../security/appEnvelope.js";
 
 interface SecretScanRule {
   name: string;
@@ -65,6 +71,38 @@ assert(unsafeInstruction.policyState === "blocked", "Expected unsafe instruction
 assert(unsafeDeployment.state === "blocked", "Expected unsafe deployment to be blocked.");
 assert(unsafeDeployment.nodeLeases.length === 0, "Blocked deployment must not assign leases.");
 
+const appEncryption = appEncryptionFromEnv({
+  ...process.env,
+  ALTIAIR_APP_ENCRYPTION_SECRET: "test-app-envelope-secret",
+});
+const appEnvelope = maybeEncryptJsonForTransport(
+  { missionId: "mission-envelope-smoke", instruction: "hold for review" },
+  appEncryption,
+  { method: "POST", path: "/mission/deploy", purpose: "node_api_request" },
+);
+assert(isAppEncryptedEnvelope(appEnvelope), "Expected app encryption to produce an encrypted envelope.");
+assert(
+  !appEnvelope.ciphertext.includes("mission-envelope-smoke"),
+  "Ciphertext must not contain plaintext mission id.",
+);
+const decryptedEnvelope = JSON.parse(
+  maybeDecryptJsonRequestBody(JSON.stringify(appEnvelope), appEncryption, {
+    method: "POST",
+    path: "/mission/deploy",
+    purpose: "node_api_request",
+  }),
+) as { missionId?: string };
+assert(decryptedEnvelope.missionId === "mission-envelope-smoke", "Encrypted app envelope did not round-trip.");
+assertThrows(
+  () =>
+    maybeDecryptJsonRequestBody(JSON.stringify(appEnvelope), appEncryption, {
+      method: "POST",
+      path: "/sensor-events",
+      purpose: "node_api_request",
+    }),
+  "Expected app envelope AAD path mismatch to fail.",
+);
+
 const secretFindings = scanTrackedFilesForSecrets();
 assert(
   secretFindings.length === 0,
@@ -82,6 +120,12 @@ console.log(JSON.stringify({
     safeLeaseCount: safeDeployment.nodeLeases.length,
     unsafeState: unsafeDeployment.state,
     unsafeBlockedReasons: unsafeInstruction.policyDecision.blockedReasons,
+  },
+  appEnvelope: {
+    enabled: appEncryption.enabled,
+    algorithm: appEncryption.algorithm,
+    keyMode: appEncryption.keyMode,
+    aadMismatchRejected: true,
   },
   secretScan: {
     trackedFilesScanned: trackedFiles().length,
@@ -154,7 +198,7 @@ function assertThrows(fn: () => void, message: string): void {
   throw new Error(message);
 }
 
-function assert(condition: boolean, message: string): void {
+function assert(condition: boolean, message: string): asserts condition {
   if (!condition) {
     throw new Error(message);
   }

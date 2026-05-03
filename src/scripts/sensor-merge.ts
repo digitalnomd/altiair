@@ -1,5 +1,6 @@
 import { readFile } from "node:fs/promises";
 import { buildCaskBundleFromLiveInputs, type LiveSensorInput } from "../sensors/liveMerge.js";
+import { jsonRequestBody } from "./encryptedJson.js";
 
 const inputPath = argValue("--input");
 const postUrl = argValue("--post-url") ?? process.env.ALTIAIR_SENSOR_POST_URL;
@@ -14,16 +15,14 @@ const bundle = buildCaskBundleFromLiveInputs(inputs, {
 });
 
 if (postUrl !== undefined) {
-  const body = postUrl.endsWith("/sensor-events")
-    ? JSON.stringify({ events: inputs })
-    : JSON.stringify(bundle);
+  const body = postUrl.endsWith("/sensor-events") ? { events: inputs } : bundle;
   const response = await fetch(postUrl, {
     method: "POST",
     headers: {
       "content-type": "application/json",
       ...authorizationHeader(),
     },
-    body,
+    body: jsonRequestBody(postUrl, body),
   });
   const text = await response.text();
   if (!response.ok) {
