@@ -1,0 +1,202 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>Altiair Mission Copilot</title>
+    <link rel="stylesheet" href="./styles.css">
+  </head>
+  <body>
+    <svg aria-hidden="true" class="icon-sprite" focusable="false">
+      <symbol id="icon-crosshair" viewBox="0 0 24 24">
+        <path d="M12 2v4M12 18v4M2 12h4M18 12h4"></path>
+        <circle cx="12" cy="12" r="7"></circle>
+        <circle cx="12" cy="12" r="2.2"></circle>
+      </symbol>
+      <symbol id="icon-wave" viewBox="0 0 24 24">
+        <path d="M2 12h3l2-7 4 14 3-10 2 5h6"></path>
+      </symbol>
+      <symbol id="icon-shield" viewBox="0 0 24 24">
+        <path d="M12 3l7 3v5c0 4.8-2.9 8.2-7 10-4.1-1.8-7-5.2-7-10V6l7-3z"></path>
+        <path d="M12 8v5M12 16h.01"></path>
+      </symbol>
+      <symbol id="icon-antenna" viewBox="0 0 24 24">
+        <path d="M12 18v4M8.2 14.2a5.4 5.4 0 1 1 7.6 0M5.4 11.4a9.3 9.3 0 1 1 13.2 0"></path>
+        <circle cx="12" cy="10" r="1.7"></circle>
+      </symbol>
+      <symbol id="icon-chevrons" viewBox="0 0 24 24">
+        <path d="M7 7l5 5-5 5M13 7l5 5-5 5"></path>
+      </symbol>
+      <symbol id="icon-eye" viewBox="0 0 24 24">
+        <path d="M2.5 12s3.5-6 9.5-6 9.5 6 9.5 6-3.5 6-9.5 6-9.5-6-9.5-6z"></path>
+        <circle cx="12" cy="12" r="2.8"></circle>
+      </symbol>
+      <symbol id="icon-radio" viewBox="0 0 24 24">
+        <path d="M6 14a6 6 0 0 1 12 0M3 14a9 9 0 0 1 18 0M9 14a3 3 0 0 1 6 0"></path>
+        <path d="M12 14v7M8 21h8"></path>
+      </symbol>
+      <symbol id="icon-audio" viewBox="0 0 24 24">
+        <path d="M4 12h2l2-6 4 12 3-9 2 3h3"></path>
+      </symbol>
+      <symbol id="icon-team" viewBox="0 0 24 24">
+        <path d="M16 11a3 3 0 1 0-2.7-4.3M8 11a3 3 0 1 0 0-6 3 3 0 0 0 0 6z"></path>
+        <path d="M2.5 20a5.5 5.5 0 0 1 11 0M13.5 20a4.8 4.8 0 0 1 8 0"></path>
+      </symbol>
+      <symbol id="icon-check" viewBox="0 0 24 24">
+        <path d="M20 6L9 17l-5-5"></path>
+      </symbol>
+      <symbol id="icon-alert" viewBox="0 0 24 24">
+        <path d="M12 3l10 18H2L12 3z"></path>
+        <path d="M12 9v5M12 17h.01"></path>
+      </symbol>
+      <symbol id="icon-compass" viewBox="0 0 24 24">
+        <circle cx="12" cy="12" r="9"></circle>
+        <path d="M16.2 7.8l-2.7 6-5.7 2.4 2.7-6 5.7-2.4z"></path>
+      </symbol>
+      <symbol id="icon-refresh" viewBox="0 0 24 24">
+        <path d="M20 11a8 8 0 0 0-14.9-3M4 5v5h5M4 13a8 8 0 0 0 14.9 3M20 19v-5h-5"></path>
+      </symbol>
+      <symbol id="icon-pause" viewBox="0 0 24 24">
+        <path d="M8 5v14M16 5v14"></path>
+      </symbol>
+      <symbol id="icon-play" viewBox="0 0 24 24">
+        <path d="M8 5l11 7-11 7V5z"></path>
+      </symbol>
+    </svg>
+
+    <div class="app-shell">
+      <header class="titlebar">
+        <div>
+          <p class="eyebrow">Altiair local mesh</p>
+          <h1>Option 1 - Mission Copilot</h1>
+        </div>
+        <div class="source-controls" aria-label="Dashboard controls">
+          <span id="sourceStatus" class="source-status" title="Current data source">
+            <span class="status-dot"></span>
+            <span>Loading</span>
+          </span>
+          <button id="refreshButton" class="icon-button" type="button" title="Refresh now" aria-label="Refresh now">
+            <svg><use href="#icon-refresh"></use></svg>
+          </button>
+          <button id="pauseButton" class="icon-button" type="button" title="Pause polling" aria-label="Pause polling">
+            <svg><use href="#icon-pause"></use></svg>
+          </button>
+        </div>
+      </header>
+
+      <section class="mission-strip" aria-label="Mission summary">
+        <article class="summary-cell">
+          <svg class="summary-icon"><use href="#icon-crosshair"></use></svg>
+          <div>
+            <p>Mission</p>
+            <strong id="missionName">-</strong>
+          </div>
+        </article>
+        <article class="summary-cell">
+          <svg class="summary-icon"><use href="#icon-wave"></use></svg>
+          <div>
+            <p>Status</p>
+            <strong id="meshStatus">-</strong>
+          </div>
+        </article>
+        <article class="summary-cell">
+          <svg class="summary-icon"><use href="#icon-shield"></use></svg>
+          <div>
+            <p>Confidence</p>
+            <strong id="confidenceLabel" class="metric-warning">-</strong>
+          </div>
+        </article>
+        <article class="summary-cell">
+          <svg class="summary-icon"><use href="#icon-antenna"></use></svg>
+          <div>
+            <p>Latest fused event</p>
+            <strong id="latestEvent">-</strong>
+          </div>
+        </article>
+        <article class="summary-cell">
+          <svg class="summary-icon"><use href="#icon-chevrons"></use></svg>
+          <div>
+            <p>Recommended next action</p>
+            <strong id="recommendedAction">-</strong>
+          </div>
+        </article>
+      </section>
+
+      <main class="map-panel" aria-label="Mission map">
+        <div class="legend" aria-label="Map legend">
+          <div><span class="legend-mark node-friendly"></span>Friendly Node</div>
+          <div><span class="legend-mark node-degraded"></span>Degraded Node</div>
+          <div><span class="legend-line mesh-link"></span>Mesh Link</div>
+          <div><span class="legend-mark fov-mark"></span>Camera FOV</div>
+          <div><span class="legend-line rf-line"></span>RF Bearing</div>
+          <div><span class="legend-mark fused-mark"></span>Fused Detection</div>
+          <div><span class="legend-mark objective-mark"></span>Objective Area</div>
+          <div><span class="legend-line trail-line"></span>Track Trail</div>
+        </div>
+
+        <svg id="mapSvg" class="map-svg" viewBox="0 0 1200 390" role="img" aria-labelledby="mapTitle mapDesc">
+          <title id="mapTitle">Mission mesh map</title>
+          <desc id="mapDesc">Nodes, mesh links, sensor fields of view, objective area, and fused event estimate.</desc>
+        </svg>
+
+        <div class="compass" aria-hidden="true">
+          <span>N</span>
+          <svg viewBox="0 0 24 24">
+            <path d="M12 2l4.8 19L12 17.8 7.2 21 12 2z"></path>
+          </svg>
+        </div>
+
+        <div class="scale" aria-hidden="true">
+          <span>0</span>
+          <span>500m</span>
+          <span>1km</span>
+          <div class="scale-bar">
+            <i></i><i></i><i></i>
+          </div>
+        </div>
+      </main>
+
+      <section class="team-pulse" aria-label="Team pulse">
+        <span class="pulse-title">Team pulse</span>
+        <div id="teamPulseItems" class="pulse-items"></div>
+      </section>
+
+      <section class="dashboard-bottom" aria-label="Operator decisions and evidence">
+        <article class="next-action-card">
+          <div class="action-glyph">
+            <svg><use href="#icon-compass"></use></svg>
+          </div>
+          <div>
+            <p>Your next action</p>
+            <strong id="operatorAction">-</strong>
+          </div>
+        </article>
+
+        <article class="evidence-card">
+          <div class="card-header">
+            <p>Evidence summary</p>
+            <span id="policyGate" class="policy-pill">-</span>
+          </div>
+          <div id="evidenceMetrics" class="evidence-grid"></div>
+        </article>
+      </section>
+
+      <section class="detail-row" aria-label="Cue details">
+        <article class="detail-panel">
+          <p class="panel-label">Fusion feed</p>
+          <div id="fusionFeed" class="feed-list"></div>
+        </article>
+        <article class="detail-panel">
+          <p class="panel-label">Coordinator intent</p>
+          <div id="coordinatorFeed" class="feed-list"></div>
+        </article>
+        <article class="detail-panel">
+          <p class="panel-label">Gossip mesh</p>
+          <div id="gossipFeed" class="feed-list"></div>
+        </article>
+      </section>
+    </div>
+
+    <script type="module" src="./app.js"></script>
+  </body>
+</html>
