@@ -6,6 +6,30 @@ export const defaultDdilMeshTopology: MeshTopology = {
   defaultApSsid: "Altiair-LAN",
   defaultLanCidr: "192.168.42.0/24",
   defaultGatewayAddress: "192.168.42.10",
+  underlayCells: [
+    {
+      id: "pi5-demo-mission-lan",
+      role: "demo_mission_lan",
+      hostNodeId: "altiair-hub",
+      ssid: "Altiair-LAN",
+      cidr: "192.168.42.0/24",
+      gatewayAddress: "192.168.42.10",
+      preferredLinkClass: "wifi_ap",
+      purpose: "Hackathon physical baseline: Pi 5 hosts the private local LAN and the Pi 4Bs plus Jetson join it.",
+    },
+    {
+      id: "field-drone-lan-template",
+      role: "field_drone_lan",
+      preferredLinkClass: "wifi_ap",
+      purpose: "Field pattern: a drone or drone-support payload may host or join a local LAN cell; overlay identity and ledger replication remain the app contract.",
+    },
+    {
+      id: "field-hawkeye-lan-template",
+      role: "field_vehicle_or_hawkeye_lan",
+      preferredLinkClass: "ethernet",
+      purpose: "Field pattern: Hawkeye, vehicle, or operator compute can host or bridge a local network cell when that underlay fits the deployment.",
+    },
+  ],
   transports: [
     "loopback_emulation",
     "direct_ethernet",

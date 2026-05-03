@@ -106,6 +106,12 @@ sudo nmcli device wifi hotspot ifname wlan0 con-name altiair-lan ssid Altiair-LA
 
 If the Pi 5 uses its Wi-Fi radio as the AP, do not depend on that same Wi-Fi radio for internet. The local mesh works without internet; Foundry/CASK sync queues until any gateway gets an uplink later.
 
+Field pattern after the hackathon:
+
+- `Altiair-LAN` is one local cell.
+- A drone, Hawkeye/vehicle kit, operator compute node, or gateway payload can host or bridge another local cell if that fits the deployment.
+- Nodes keep their stable overlay identities and replicated ledger behavior regardless of which local cell carries the packets.
+
 Example Wi-Fi customization, only when a normal SSID is available:
 
 ```bash

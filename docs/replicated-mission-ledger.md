@@ -29,6 +29,10 @@ The limitation is:
 
 The demo should therefore create the event, wait for all-reachable-node replication acknowledgement, then isolate or power down a node and show that the surviving nodes still hold the full ledger.
 
+## Multi-Cell Field Pattern
+
+The Pi 5 `Altiair-LAN` is the hackathon's first local network cell. In the field, drones, Hawkeye/vehicle kits, operator compute, or gateway payloads can host, join, or bridge additional LAN cells. The ledger rule does not change: when cells can reach each other, they exchange compact records and ACKs; when cells are partitioned, each cell keeps its local queue and reconciles when contact returns.
+
 ## Rust Contract
 
 The production Rust agent should implement:

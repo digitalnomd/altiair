@@ -17,6 +17,8 @@ Sources:
 
 There is no single central authority. `altiair-hub` is the Pi 5 local mission LAN host and preferred display/coordinator when online, but replicated evidence and cached mission context allow any surviving three-node quorum to continue if one node fails. Foundry/CASK can enrich or reconcile later, but the live demo must still work with no venue Wi-Fi or internet.
 
+The field version is multi-cell. A drone, Hawkeye kit, vehicle, or operator computer can host or join whatever local LAN is practical, then the overlay treats it as another reachable node or bridge. The demo's Pi 5 AP is the smallest concrete version of that pattern.
+
 ## Four Partial Views
 
 | Node | What It Sees | Why It Cannot Resolve Alone |

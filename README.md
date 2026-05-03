@@ -257,6 +257,14 @@ sudo nmcli device wifi hotspot ifname wlan0 con-name altiair-lan ssid Altiair-LA
 
 If the Pi 5 uses its Wi-Fi radio as the AP, do not depend on that same Wi-Fi radio for internet. The local mesh still works; Foundry/CASK sync queues until any gateway gets internet later.
 
+Field deployment pattern:
+
+- The Pi 5 `Altiair-LAN` is the hackathon's first local network cell, not the only possible cell.
+- In a field deployment, drones, Hawkeye/vehicle kits, operator compute, or gateway payloads can each host or bridge their own local LAN cell when that underlay makes sense.
+- A drone does not have to present its own LAN if it can join a stronger local cell. The rule is: host, join, or bridge whichever local network keeps the node reachable.
+- The app does not bind mission identity to the Wi-Fi SSID. It binds identity to the `10.77.0.x` overlay node and replicated mission ledger.
+- When two local cells can see each other, they exchange compact evidence bundles and ACKs. When they cannot, each cell keeps its local queue and reconciles when contact returns.
+
 Mesh implementation helpers:
 
 ```bash

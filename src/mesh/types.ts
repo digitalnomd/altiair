@@ -88,12 +88,30 @@ export interface NodeDescriptor {
   gatewayPriority: number;
 }
 
+export type UnderlayCellRole =
+  | "demo_mission_lan"
+  | "field_drone_lan"
+  | "field_vehicle_or_hawkeye_lan"
+  | "uplink_lan";
+
+export interface UnderlayCell {
+  id: string;
+  role: UnderlayCellRole;
+  hostNodeId?: string;
+  ssid?: string;
+  cidr?: string;
+  gatewayAddress?: string;
+  preferredLinkClass: LinkClass;
+  purpose: string;
+}
+
 export interface MeshTopology {
   missionNetworkId: string;
   overlayCidr: string;
   defaultApSsid?: string;
   defaultLanCidr: string;
   defaultGatewayAddress?: string;
+  underlayCells: UnderlayCell[];
   transports: TransportLayer[];
   interopBoundaries: InteropBoundary[];
   policy: MeshPolicy;

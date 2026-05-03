@@ -84,7 +84,11 @@ function renderSummary(topology: MeshTopology): string {
     `WireGuard overlay: ${topology.overlayCidr}`,
     "Pi 5 private AP is the default physical underlay; no external router, phone hotspot, or internet path is required.",
     "Pi 4B nodes join the Pi 5 AP; Jetson joins by Wi-Fi if available or Ethernet if needed.",
+    "Field deployments can add drone, Hawkeye, vehicle, or operator-compute LAN cells under the same overlay.",
     "Loopback emulation proves the software contracts; it does not prove physical replication before node loss.",
+    "",
+    "Underlay cells:",
+    ...topology.underlayCells.map(renderUnderlayCell),
     "",
     "Node              Platform            LAN              Overlay       Roles",
     "----              --------            ---              -------       -----",
@@ -96,6 +100,14 @@ function renderSummary(topology: MeshTopology): string {
     "Generate per-node WireGuard template without secrets:",
     "  npm run mesh:plan -- --node altiair-hub --format wireguard",
   ].join("\n");
+}
+
+function renderUnderlayCell(cell: MeshTopology["underlayCells"][number]): string {
+  const host = cell.hostNodeId === undefined ? "deployment-selected host" : cell.hostNodeId;
+  const address = cell.cidr === undefined
+    ? ""
+    : ` ${cell.cidr}${cell.gatewayAddress === undefined ? "" : ` via ${cell.gatewayAddress}`}`;
+  return `- ${cell.id}: ${cell.role} hosted by ${host}${address}; ${cell.purpose}`;
 }
 
 function renderEnv(node: NodeDescriptor, topology: MeshTopology): string {
