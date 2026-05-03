@@ -7,3 +7,4 @@ dist/
 .secrets/
 npm-debug.log*
 *.tsbuildinfo
+models\__pycache__
