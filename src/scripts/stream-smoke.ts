@@ -26,7 +26,7 @@ const append = buildBundleStreamRecords({
   insight: {
     id: "insight-stream-smoke",
     bundleId: bundle.id,
-    model: "gemma3:1b",
+    model: "gemma4:e2b",
     createdAt: bundle.createdAt,
     summary: "Stream smoke insight over CASK evidence.",
     confidence: 0.7,
@@ -103,7 +103,7 @@ function buildFallbackCoordinatorDirective(
     undefined,
     {
       localNodeId: "altiair-hub",
-      model: "gemma3:1b",
+      model: "gemma4:e2b",
       mode: "mock",
       createdAt: new Date(bundle.createdAt),
     },

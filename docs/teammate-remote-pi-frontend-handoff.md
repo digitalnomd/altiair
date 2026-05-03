@@ -74,7 +74,7 @@ The local LLM profile is Gemma by default through Ollama-compatible config:
 ```text
 LOCAL_LLM_MODE=ollama
 LOCAL_LLM_BASE_URL=http://127.0.0.1:11434
-LOCAL_LLM_MODEL=gemma3:1b
+LOCAL_LLM_MODEL=gemma4:e2b
 ```
 
 For the hackathon demo, the simplest reliable configuration is to run Ollama/Gemma on the Mac and point the Pi/Jetson node APIs at the Mac's `Altiair-LAN` IP:
@@ -82,7 +82,7 @@ For the hackathon demo, the simplest reliable configuration is to run Ollama/Gem
 ```text
 LOCAL_LLM_MODE=ollama
 LOCAL_LLM_BASE_URL=http://<mac-altiair-lan-ip>:11434
-LOCAL_LLM_MODEL=gemma3:1b
+LOCAL_LLM_MODEL=gemma4:e2b
 ```
 
 Keep `LOCAL_LLM_MODE=mock` until the approved local runtime is installed on that node. Do not use Qwen, DeepSeek, Yi, MiniCPM, Baichuan, ChatGLM, InternLM, or derivatives.

@@ -151,7 +151,7 @@ export function assertAllowedLocalModel(model: string): void {
 }
 
 export function loadConfig(): AppConfig {
-  const llmModel = env("LOCAL_LLM_MODEL", "gemma3:1b")!;
+  const llmModel = env("LOCAL_LLM_MODEL", "gemma4:e2b")!;
   assertAllowedLocalModel(llmModel);
 
   return {

@@ -62,7 +62,7 @@ Web-checked implementation fit on 2026-05-03:
 - Palantir Streams are structured, low-latency records with hot/cold storage, per-row processing, partitioning, and checkpointing: https://www.palantir.com/docs/foundry/data-integration/streams
 - Palantir's Kafka connector reads Kafka queues into Foundry streams in realtime and preserves key/value message shape: https://www.palantir.com/docs/foundry/available-connectors/kafka
 - Apache Kafka's event model is a topic-organized stream of events with key, value, timestamp, and optional headers: https://kafka.apache.org/intro/
-- Google Gemma docs list local/edge execution paths including Ollama and llama.cpp; keep `gemma3:1b` as the stable Pi/Mac demo default unless the installed runtime has a newer approved Gemma build: https://ai.google.dev/gemma/docs
+- Google Gemma docs list local/edge execution paths including Ollama and llama.cpp; keep `gemma4:e2b` as the stable Pi/Mac demo default unless the installed runtime has a newer approved Gemma build: https://ai.google.dev/gemma/docs
 
 Run:
 
@@ -263,7 +263,7 @@ Example:
 ```bash
 export LOCAL_LLM_MODE=ollama
 export LOCAL_LLM_BASE_URL=http://127.0.0.1:11434
-export LOCAL_LLM_MODEL=gemma3:1b
+export LOCAL_LLM_MODEL=gemma4:e2b
 npm run smoke:mock
 ```
 

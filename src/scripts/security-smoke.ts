@@ -22,7 +22,7 @@ interface SecretFinding {
 }
 
 const createdAt = new Date("2026-05-03T06:30:00.000Z");
-const allowedModel = "gemma3:1b";
+const allowedModel = "gemma4:e2b";
 const bannedModels = [
   "qwen2.5:0.5b",
   "deepseek-r1:1.5b",

@@ -42,7 +42,7 @@ const directive = buildCoordinatorDirective(
   undefined,
   {
     localNodeId: "altiair-hub",
-    model: "gemma3:1b",
+    model: "gemma4:e2b",
     mode: "mock",
     createdAt: new Date("2026-05-03T05:00:45.000Z"),
   },
