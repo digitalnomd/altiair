@@ -18,7 +18,7 @@ Three-tier mission C2 for DDIL environments. Phones, a Pi 5 on a battery, and Pa
 ```
 TIER 3 — PALANTIR FOUNDRY            (Ontology + AIP Logic + Workshop)
         ▲ HTTPS bearer token (store-and-forward when offline)
-TIER 2 — RASPBERRY PI 5 (battery)    (FastAPI + SQLite + Ollama gemma3:1b
+TIER 2 — RASPBERRY PI 5 (battery)    (FastAPI + SQLite + Ollama gemma4:e2b
         ▲ wifi LAN                    + GBNF JSON + WebSocket fanout)
         │                              + Danti enrichment client
 TIER 1 — SQUAD PHONES                (PWA in mobile Chrome — Leaflet map,
@@ -34,7 +34,7 @@ Closed LAN via travel router (AP isolation OFF). mkcert TLS so mobile browsers a
 1. Project name: **Altair** (not Altiair)
 2. Repo: `~/code/altair/` → `github.com/<handle>/altair` public
 3. Demo phone OS: **Android** (Chrome WebGPU stable; iOS fragile)
-4. LLM on Pi: **gemma3:1b** primary, 4B fallback
+4. LLM on Pi: **gemma4:e2b** primary, e4b fallback
 5. Voice: **whisper.cpp on Pi** primary; browser Web Speech API fallback
 6. **Voice deferred to Sunday morning** for the 9 PM Saturday MVP cut — text + photo only first
 7. Foundry SDK: **raw REST API + bearer token** for v1 (skip OSDK code-gen)
@@ -172,7 +172,7 @@ Closed LAN via travel router (AP isolation OFF). mkcert TLS so mobile browsers a
 | Risk | Mitigation |
 |---|---|
 | Foundry token wrong scope | Verify with curl by 11 AM Saturday |
-| Ollama gemma3:1b too slow on Pi | Fallback: Ollama on Ben's MacBook on the LAN, framed as "edge compute node" |
+| Ollama gemma4:e2b too slow on Pi | Fallback: Ollama on Ben's MacBook on the LAN, framed as "edge compute node" |
 | AP isolation accidentally on at venue | Re-test at 9 AM Sat before commit |
 | WebSocket reconnect race during Faraday demo | 3 rehearsals, scripted recovery beat |
 | mkcert iOS trust fails | Android primary; iOS as Faraday-victim only |
@@ -184,7 +184,7 @@ Closed LAN via travel router (AP isolation OFF). mkcert TLS so mobile browsers a
 1. *"Adversaries on your local LAN?"* → mTLS-on-WS, CASK as PKI root, future work
 2. *"Why phones over a CASK alone?"* → Already in operators' hands. Lower signature. Replicator doctrine.
 3. *"How does this scale to a battalion?"* → Three-tier maps to squad/company/JADC2. Each Pi handles ~12 phones. Multi-Pi sync over MANET.
-4. *"What model is running?"* → gemma3:1b on Pi 5 CPU, GBNF for JSON. ~3-4s/extraction.
+4. *"What model is running?"* → gemma4:e2b on Pi 5 CPU, GBNF for JSON. ~3-4s/extraction.
 5. *"Where's the kill chain?"* → It doesn't live here. HITL on every actionable output.
 
 ---
