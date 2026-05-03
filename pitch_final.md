@@ -12,9 +12,8 @@
 **Goal: make the problem visceral before you mention your product**
 
 Imagine you have 4 soldiers in the field. One sees a drone. Another hears a rotor sound. A third gets an RF ping. 
-- How do you connect and make sense of these scattered signals, and fuse them under fire, degraded comms, and in real time.
-- The current solution either ships everything to cloud (which dies the moment the network is jammed) or relies on one central node device to coordinate the whole squad. Take out the leader, and the squad goes out.
-- squads lose their shared intelligence picture the moment their network or coordinator goes down."
+- How do you connect and make sense of these scattered signals, fuse them under fire, degraded comms, and in real time.
+- The current solution either relies on cloud (which dies the moment the network is jammed) or relies on one central piece to coordinate everything. But Take out the leader, and the mission goes down.
 
 ---
 
@@ -22,7 +21,7 @@ Imagine you have 4 soldiers in the field. One sees a drone. Another hears a roto
 **Goal: one clean architecture statement. No jargon overload.**
 
 - We built DarkMesh to solve this
-> DarkMesh turns a squad's scattered sensors into a single fused intelligence picture — locally, without cloud, without a central command node — and keeps the mission running even when nodes go dark.
+> DarkMesh turns a squad's scattered field sensors into a single fused picture — locally, without cloud, without a central command node — and uses intelligence to keep the mission running even when nodes go dark.
 
 - Each soldier is a node in the field: raspberry pi runing camera, microphone, RF sensors, and Jerson running a local lightweight AI model, catching what is being seen and heard in the field.
 - These signals get shared across an encrypted local WiFi mesh between every soldier's node, putting together a coherent, full picture of what's happening.
