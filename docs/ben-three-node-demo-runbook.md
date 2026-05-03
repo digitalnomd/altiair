@@ -24,6 +24,23 @@ Verified after the Jetson was accidentally power-interrupted on May 3, 2026:
 - `altiair-hub` / `192.168.42.10` is intentionally absent until the Pi 5 is added.
 - The Mac operator machine should keep its normal Wi-Fi default route; only the Jetson USB subnet `192.168.55.0/24` should be routed over `Linux for Tegra`.
 
+Do not switch the Mac off its normal internet Wi-Fi just to operate the demo.
+Use Jetson USB-C for admin access, or run verification from the Jetson where
+`altiair-node-a` and `altiair-node-b` are LAN-local.
+
+From the Mac, run the non-disruptive proof helper:
+
+```bash
+npm run mesh:proof -- --status
+```
+
+If Jetson USB is reachable but the Mac cannot directly reach `192.168.42.x`,
+run the full integration proof on the Jetson over USB instead:
+
+```bash
+npm run mesh:proof:remote
+```
+
 If Jetson power is interrupted, wait for `Linux for Tegra` to reappear on the Mac, then repair only the local USB route:
 
 ```bash
@@ -128,12 +145,28 @@ The target architecture is node-local inference on the two Pi 4Bs, the Jetson,
 and the Pi 5 when it arrives. The Mac may be used as a temporary bridge only
 when a node-local runtime is not ready; it is not the final demo target.
 
+Check the physical fleet from the Jetson or another machine that can SSH to the
+Altiair LAN nodes:
+
+```bash
+scripts/jetson/fleet-local-llm.sh --check
+```
+
 Install or repair Ollama/Gemma on each physical node:
 
 ```bash
 cd /opt/altiair
 scripts/pi/install-local-llm.sh
 ```
+
+To repair the current three-node fleet in one pass from the Jetson, use:
+
+```bash
+scripts/jetson/fleet-local-llm.sh --apply
+```
+
+This is intentionally an explicit `--apply` step because it installs Ollama and
+downloads local model weights if they are missing.
 
 Then run the live integration check from a machine that can reach `Altiair-LAN`:
 

@@ -17,6 +17,7 @@ These scripts are the prepared Pi-side entry points for the CASK edge node runti
 | `install-sensor-adapter-services.sh` | Installs camera/audio/RFID adapters as systemd services on the matching node. |
 | `install-local-llm.sh` | Installs/repairs Ollama on a Pi or Jetson node, pulls the approved local model, warms it, and switches the node env to `LOCAL_LLM_MODE=ollama`. |
 | `install-sensor-adapters-sd.sh` | Writes a one-shot SD-card boot installer for the sensor adapter services. |
+| `install-local-llm-sd.sh` | Writes a one-shot SD-card boot installer for the retrying Ollama/Gemma repair service. |
 | `replay-mock-scenario.sh` | Replays the deterministic CASK mock sensor scenario into the local node API. |
 | `start-hawkeye-feed.sh` | Starts the Hawkeye-style online/mock visual-track feed into the node API. |
 | `install-hawkeye-feed-service.sh` | Installs the Hawkeye-style feed as a persistent systemd service. |
@@ -141,6 +142,25 @@ scripts/pi/install-sensor-adapters-sd.sh \
   --api-port 8081 \
   --adapters camera
 ```
+
+For an SD-card repair of the local LLM target, keep the real node API image in
+place, then write the per-node env plus the retrying Ollama/Gemma boot hook:
+
+```bash
+scripts/pi/write-altiair-sd-env.sh \
+  --boot /Volumes/bootfs \
+  --env scripts/pi/env/altiair-node-b.env
+
+scripts/pi/install-local-llm-sd.sh \
+  --boot /Volumes/bootfs \
+  --model gemma4:e2b \
+  --fallback-model gemma3:1b
+```
+
+That does not re-image the card. On boot, it installs a systemd timer that
+keeps retrying until the node-local Ollama runtime and Gemma model are ready,
+then switches `/etc/altiair/altiair-node.env` to `LOCAL_LLM_MODE=ollama` and
+restarts `altiair-node`.
 
 Replay the full deterministic mock scenario:
 

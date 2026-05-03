@@ -121,10 +121,43 @@ exit 0
 EOF
 chmod +x "${BOOT_DIR}/altiair-sensor-adapters-firstboot.sh"
 
-if [[ -f "$BOOT_DIR/issue.txt" ]] && grep -Eq 'Raspberry Pi reference 202[3-9]|Debian GNU/Linux (12|13|14|15)' "$BOOT_DIR/issue.txt"; then
-  firstboot_target="/boot/firmware/altiair-sensor-adapters-firstboot.sh"
+adapter_hook='if [ -x /boot/firmware/altiair-sensor-adapters-firstboot.sh ]; then /boot/firmware/altiair-sensor-adapters-firstboot.sh || true; elif [ -x /boot/altiair-sensor-adapters-firstboot.sh ]; then /boot/altiair-sensor-adapters-firstboot.sh || true; fi'
+
+firstrun="${BOOT_DIR}/firstrun.sh"
+if [[ -f "$firstrun" ]]; then
+  if ! grep -q 'altiair-sensor-adapters-firstboot.sh' "$firstrun"; then
+    tmp_firstrun="$(mktemp)"
+    awk -v hook="$adapter_hook" '
+      /rm -f \/boot\/firstrun\.sh \/boot\/firmware\/firstrun\.sh/ && !done {
+        print hook
+        done=1
+      }
+      { print }
+      END {
+        if (!done) {
+          print hook
+        }
+      }
+    ' "$firstrun" > "$tmp_firstrun"
+    mv "$tmp_firstrun" "$firstrun"
+    chmod +x "$firstrun"
+  fi
 else
-  firstboot_target="/boot/altiair-sensor-adapters-firstboot.sh"
+  cat > "$firstrun" <<EOF
+#!/bin/bash
+set +e
+${adapter_hook}
+rm -f /boot/firstrun.sh /boot/firmware/firstrun.sh
+sed -i 's| systemd.run=[^ ]*||g; s| systemd.run_success_action=[^ ]*||g; s| systemd.unit=kernel-command-line.target||g' /boot/cmdline.txt /boot/firmware/cmdline.txt 2>/dev/null || true
+exit 0
+EOF
+  chmod +x "$firstrun"
+fi
+
+if [[ -f "$BOOT_DIR/issue.txt" ]] && grep -Eq 'Raspberry Pi reference 202[3-9]|Debian GNU/Linux (12|13|14|15)' "$BOOT_DIR/issue.txt"; then
+  firstboot_target="/boot/firmware/firstrun.sh"
+else
+  firstboot_target="/boot/firstrun.sh"
 fi
 
 tmp_cmdline="$(mktemp)"

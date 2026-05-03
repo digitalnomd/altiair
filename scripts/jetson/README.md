@@ -55,3 +55,35 @@ The watchdog runs every 30 seconds, brings the `altiair-lan` NetworkManager AP
 connection back up if needed, restarts `altiair-node` if it is down, and checks
 the Jetson plus node-a/node-b health endpoints from the LAN side. The Mac USB
 connection is a recovery path only; it is not required for normal demo runtime.
+
+## Non-Disruptive Operator Proof
+
+Do not switch the Mac off its normal internet Wi-Fi just to operate the mesh.
+From the Mac, check whichever routes already exist:
+
+```bash
+npm run mesh:proof -- --status
+```
+
+If Jetson USB is reachable but the Mac cannot directly reach the `192.168.42.x`
+LAN, run the full proof on the Jetson over USB:
+
+```bash
+npm run mesh:proof:remote
+```
+
+From the Jetson, check the physical fleet's node-local LLM state:
+
+```bash
+scripts/jetson/fleet-local-llm.sh --check
+```
+
+To repair the current three-node fleet from the Jetson, use the explicit apply
+mode:
+
+```bash
+scripts/jetson/fleet-local-llm.sh --apply
+```
+
+`--apply` installs or repairs Ollama/Gemma on each target node if missing, so
+use it only when physical node-local inference needs repair.
