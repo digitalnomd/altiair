@@ -172,7 +172,7 @@ export function buildSampleBundle(now = new Date()): CaskBundle {
         memoryUsedMb: 760,
         networkReachable: true,
         foundryReachable: false,
-        modelStatus: "disabled",
+        modelStatus: "ready",
       },
       {
         nodeId: "altiair-node-b",
@@ -184,7 +184,7 @@ export function buildSampleBundle(now = new Date()): CaskBundle {
         memoryUsedMb: 820,
         networkReachable: true,
         foundryReachable: false,
-        modelStatus: "disabled",
+        modelStatus: "ready",
       },
       {
         nodeId: "altiair-orin",

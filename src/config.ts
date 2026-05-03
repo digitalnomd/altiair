@@ -150,18 +150,18 @@ export function loadConfig(): AppConfig {
       actions: {
         createSensorObservation: env(
           "FOUNDRY_ACTION_CREATE_SENSOR_OBSERVATION",
-          "createSensorObservation",
+          "createCaskSensorObservation",
         )!,
-        createLocationFix: env("FOUNDRY_ACTION_CREATE_LOCATION_FIX", "createLocationFix")!,
+        createLocationFix: env("FOUNDRY_ACTION_CREATE_LOCATION_FIX", "createCaskLocationFix")!,
         createCounterUasCue: env(
           "FOUNDRY_ACTION_CREATE_COUNTER_UAS_CUE",
-          "createCounterUasCue",
+          "createCaskCounterUasCue",
         )!,
-        createInsightDraft: env("FOUNDRY_ACTION_CREATE_INSIGHT_DRAFT", "createInsightDraft")!,
-        upsertNodeHealth: env("FOUNDRY_ACTION_UPSERT_NODE_HEALTH", "upsertNodeHealth")!,
+        createInsightDraft: env("FOUNDRY_ACTION_CREATE_INSIGHT_DRAFT", "createCaskInsightDraft")!,
+        upsertNodeHealth: env("FOUNDRY_ACTION_UPSERT_NODE_HEALTH", "upsertCaskNodeHealth")!,
         createCaskGpsPosition: env(
           "FOUNDRY_ACTION_CREATE_CASK_GPS_POSITION",
-          "sampleCaskGpsPosition",
+          "createExampleCaskGpsPosition",
         )!,
       },
       caskGpsDefaults: {

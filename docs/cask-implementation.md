@@ -4,6 +4,7 @@ This repo now includes a runnable local scaffold for the CASK edge path:
 
 - Typed sensor, cue, node-health, and insight contracts in `src/cask/types.ts`.
 - A sample Pi sensor bundle in `src/cask/sampleBundle.ts`.
+- A live sensor merge boundary in `src/sensors/liveMerge.ts`.
 - A local insight adapter in `src/llm/localInsight.ts`.
 - A Foundry OSDK uploader in `src/foundry/uploader.ts`.
 - A smoke runner in `src/scripts/smoke.ts`.
@@ -14,6 +15,28 @@ The smoke runner defaults to mock Foundry and mock LLM mode for local tests, so 
 npm install
 npm run smoke:mock
 ```
+
+## Live Sensor Merge Boundary
+
+Camera, microphone, and RFID adapters should emit small JSON events instead of building full CASK bundles themselves. The node can merge live Pi/Nano adapter events through:
+
+```bash
+npm run sensor:merge -- --input ./local-sensor-events.json
+```
+
+or by posting directly to a running node:
+
+```bash
+curl -X POST http://127.0.0.1:8080/sensor-events \
+  -H 'content-type: application/json' \
+  --data @./local-sensor-events.json
+```
+
+Accepted event kinds are `camera_detection`, `audio_window`, `rfid_read`, and `node_health`. RFID reads automatically produce both a `RfidEvent` and a coarse `ProviderStyleLocationEvent`/`LocationFix` with `isCarrierGrade=false`. Drone-class camera detections produce `DroneObservation` records. Camera/RFID correlation produces a policy-gated cue for human review.
+
+`POST /sensor-events` and `POST /bundles` also run the configured local insight client on the receiving node. The response includes the local LLM mode/model, the generated `InsightDraft`, the CASK training tag objective summary, and this node's local instruction view. `GET /insights/latest`, `GET /tag-plan/latest`, and `GET /instructions/latest` return those latest runtime products.
+
+All four compute nodes are modeled as local-LLM capable: the two Pi 4B sensor nodes, the Pi 5 hub/display/gateway, and the Jetson Orin Nano inference node.
 
 ## Foundry OSDK Setup
 
@@ -30,12 +53,14 @@ export FOUNDRY_CLIENT_SECRET="<client-secret>"
 export FOUNDRY_OSDK_PACKAGE="<generated-osdk-package-name>"
 ```
 
-Install the generated OSDK package after configuring a local `.npmrc` from the Developer Console package registry. Keep tokens local:
+Install the generated OSDK package after configuring a local `.npmrc` from the Developer Console package registry. Keep tokens local, and avoid saving the generated package or private tarball path into Git:
 
 ```bash
 export FOUNDRY_TOKEN="<developer-console-token>"
-npm install <generated-osdk-package-name>@latest
+npm install --no-save <generated-osdk-package-name>@latest
 ```
+
+If Atlas provides a downloaded package tarball instead of registry install, use the same no-save pattern, for example `npm install --no-save ~/Downloads/@cask-edge-service_sdk-0.1.0.tgz`.
 
 Then run:
 
@@ -61,12 +86,12 @@ The current default action export names are:
 
 | Purpose | Env override | Default generated export |
 | --- | --- | --- |
-| Sensor events | `FOUNDRY_ACTION_CREATE_SENSOR_OBSERVATION` | `createSensorObservation` |
-| Location fixes | `FOUNDRY_ACTION_CREATE_LOCATION_FIX` | `createLocationFix` |
-| Counter-UAS cues | `FOUNDRY_ACTION_CREATE_COUNTER_UAS_CUE` | `createCounterUasCue` |
-| Insight drafts | `FOUNDRY_ACTION_CREATE_INSIGHT_DRAFT` | `createInsightDraft` |
-| Node health | `FOUNDRY_ACTION_UPSERT_NODE_HEALTH` | `upsertNodeHealth` |
-| CASK GPS Position smoke | `FOUNDRY_ACTION_CREATE_CASK_GPS_POSITION` | `sampleCaskGpsPosition` |
+| Sensor events | `FOUNDRY_ACTION_CREATE_SENSOR_OBSERVATION` | `createCaskSensorObservation` |
+| Location fixes | `FOUNDRY_ACTION_CREATE_LOCATION_FIX` | `createCaskLocationFix` |
+| Counter-UAS cues | `FOUNDRY_ACTION_CREATE_COUNTER_UAS_CUE` | `createCaskCounterUasCue` |
+| Insight drafts | `FOUNDRY_ACTION_CREATE_INSIGHT_DRAFT` | `createCaskInsightDraft` |
+| Node health | `FOUNDRY_ACTION_UPSERT_NODE_HEALTH` | `upsertCaskNodeHealth` |
+| CASK GPS Position smoke | `FOUNDRY_ACTION_CREATE_CASK_GPS_POSITION` | `createExampleCaskGpsPosition` |
 
 If the hackathon ontology already has action names with different API names, set the env overrides instead of changing code.
 

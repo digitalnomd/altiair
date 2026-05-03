@@ -126,8 +126,8 @@ export const defaultDdilMeshTopology: MeshTopology = {
           detail: "Camera, microphone, RFID, and RFID-derived provider-style location bundles.",
         },
         {
-          name: "local_filter",
-          detail: "Deterministic or small-model bundle triage before forwarding.",
+          name: "local_llm",
+          detail: "Pi 4B local LLM or deterministic fallback for compact bundle triage before forwarding.",
         },
       ],
       constraints: [
@@ -156,6 +156,10 @@ export const defaultDdilMeshTopology: MeshTopology = {
           name: "peer_relay",
           detail: "Emergency relay for compact bundles if the hub is unreachable.",
         },
+        {
+          name: "local_llm",
+          detail: "Pi 4B local LLM or deterministic fallback for compact bundle triage before forwarding.",
+        },
       ],
       constraints: [
         "Do not block local capture on cloud or hub reachability.",
@@ -178,6 +182,10 @@ export const defaultDdilMeshTopology: MeshTopology = {
         {
           name: "vision_inference",
           detail: "Accelerated local video/image inference and thumbnail generation.",
+        },
+        {
+          name: "local_llm",
+          detail: "Jetson-local LLM for multimodal evidence triage and higher-quality insight drafts.",
         },
         {
           name: "secondary_gateway",

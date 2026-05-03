@@ -62,6 +62,7 @@ The deeper decision brief is here:
 
 - [CASK OSDK and Local LLM Brief](docs/cask-osdk-local-llm-brief.md)
 - [CASK Edge Implementation](docs/cask-implementation.md)
+- [CASK Ontology Approach](docs/cask-ontology-approach.md)
 - [Foundry Atlas Status](docs/foundry-atlas-status.md)
 - [DDIL Edge Mesh Implementation](docs/ddil-edge-mesh-implementation.md)
 - [Distributed Resolution Demo](docs/distributed-resolution-demo.md)
@@ -93,6 +94,7 @@ Build a local CASK edge layer that can:
 The repo now includes a runnable TypeScript integration scaffold for the Foundry/CASK and local LLM path:
 
 - `src/cask/types.ts`: mission-critical CASK event schema for sensor observations, location fixes, node health, insight drafts, and policy-gated `CounterUasCue` records.
+- `src/cask/ontology.ts`: proposed Foundry-shaped `CASK` ontology object/action/link shape for the full mission data model.
 - `src/foundry/uploader.ts`: Foundry uploader with OSDK mode plus test-only mock mode.
 - `src/foundry/osdkClient.ts`: OSDK client creation through `@osdk/client` and confidential OAuth through `@osdk/oauth`.
 - `src/llm/localInsight.ts`: local LLM adapter with Ollama-compatible mode plus test-only mock mode.
@@ -100,7 +102,8 @@ The repo now includes a runnable TypeScript integration scaffold for the Foundry
 - `src/mesh/*`: four-node Pi/Jetson DDIL topology, gateway scoring, and congestion decisions.
 - `src/scripts/mesh-plan.ts`: per-node environment and WireGuard template generator with no committed secrets.
 - `src/scripts/mesh-smoke.ts`: gateway failover and congestion smoke simulation.
-- `src/scripts/node-api.ts`: dependency-free prototype node API exposing health, peer, gateway, congestion, bundle, replication, and ledger endpoints.
+- `src/scripts/node-api.ts`: dependency-free prototype node API exposing health, peer, gateway, congestion, live sensor merge, local LLM insight, tag-plan instruction, replication, and ledger endpoints.
+- `scripts/pi/`: Pi/Jetson deployment scripts, env templates, sensor-event poster, and local-instruction watcher.
 
 The current Atlas ontology has a narrow live path for `[Example] CASK GPS Position`. Use `FOUNDRY_UPLOAD_PROFILE=cask_gps_position` for the first live OSDK writeback smoke. Keep `FOUNDRY_UPLOAD_PROFILE=bundle_actions` for the full local CASK contract once matching ontology actions exist.
 
@@ -306,7 +309,7 @@ Use these workflows instead of separate competing workstream lists.
 | --- | --- | --- |
 | Edge node agent | Rust node service, health, peer status, queue, bundle API, local storage. | `GET /health`, `GET /peers`, SQLite bundle table, systemd launch path. |
 | Sensor ingest | Camera, microphone, RFID, and provider-style RFID location adapters. | Normalized `CameraEvent`, `AudioEvent`, `RfidEvent`, `ProviderStyleLocationEvent`. |
-| Filtering and congestion | Local LLM/rules filter, priority, dedupe, backpressure, gateway saturation checks. | `POST /bundles/{bundle_id}/decision`, `GET /congestion`, deterministic fallback. |
+| Filtering and congestion | Local LLM/rules filter on every Pi and the Nano, priority, dedupe, backpressure, gateway saturation checks. | `POST /bundles/{bundle_id}/decision`, `GET /congestion`, deterministic fallback. |
 | Foundry/CASK sync | OSDK app, ontology mapping, uploader, acknowledgement receipts, queued local fallback. | `POST /foundry/upload` returns OSDK ack or explicit pending-sync receipt. |
 | Pi-hosted EagleEye-style UI | Kiosk/display shell, cue overlay, evidence drawer, policy gate, acknowledgement. | Display renders mesh health, observations, `CounterUasCue`, policy state. |
 | Demo and evaluation | Scenario data, policy constraints, smoke tests, pitch beats. | End-to-end demo with local-only operation and queued sync recovery. |
@@ -349,6 +352,7 @@ Initial event contracts:
 Processing rules:
 
 - Extract local events before sending data across the mesh.
+- Pipe live adapter output into `npm run sensor:merge` or post JSON directly to `POST /sensor-events`; the node will merge Pi/Nano camera, microphone, RFID, provider-style location, health, and cue records into one CASK bundle.
 - Convert camera frames into detections, thumbnails, or short clips only when policy allows.
 - Convert microphone streams into voice-activity windows, transcripts, and acoustic labels.
 - Deduplicate RFID reads and join them to known tags.
@@ -357,7 +361,7 @@ Processing rules:
 
 ### Workflow 3: Filtering, Prioritization, And Congestion
 
-The local LLM is part of the networking control plane. It is not open-ended chat. It filters sensor bundles, summarizes bulky media, detects duplicates, assigns priority, and prevents the mesh from jamming the selected Foundry/CASK upload gateway.
+The local LLM is part of the networking control plane on all four compute nodes: both Pi 4Bs, the Pi 5 hub, and the Jetson Orin Nano. It is not open-ended chat. It filters sensor bundles, summarizes bulky media, detects duplicates, assigns priority, and prevents the mesh from jamming the selected Foundry/CASK upload gateway.
 
 Allowed Pi filtering decisions:
 
@@ -440,8 +444,12 @@ Every node or gateway should expose the same minimal API so the workflows can in
 | `GET /peers` | Returns known peers and last heartbeat status. |
 | `GET /gateway` | Returns current gateway candidate and score. |
 | `GET /congestion` | Returns queue depth, in-flight transfers, CPU, memory, network usage, and gateway saturation state. |
+| `POST /sensor-events` | Receives live adapter JSON from Pi/Nano camera, microphone, RFID, or health processes, merges it into a CASK bundle, and drafts a local LLM insight. |
 | `POST /bundles` | Receives a sensor bundle from local capture or another Pi. |
 | `GET /bundles/pending` | Lists bundles that still need forwarding or upload. |
+| `GET /insights/latest` | Returns the most recent local LLM insight drafted by this node. |
+| `GET /tag-plan/latest` | Returns the latest replicated CASK training tag objective and per-node assignments. |
+| `GET /instructions/latest` | Returns this node's local role, evidence IDs, fallback nodes, and policy-gated instruction text. |
 | `POST /bundles/{bundle_id}/decision` | Records local LLM/rules decision: send, summarize, hold, review, or drop duplicate. |
 | `POST /bundles/{bundle_id}/ack` | Records Foundry upload acknowledgement. |
 | `POST /foundry/upload` | Uploads when this node is the selected gateway, or records an explicit pending-sync state if Foundry is unavailable. |
@@ -607,11 +615,12 @@ Runtime tests:
 
 3. Capture sensor bundles.
    - Normalize camera, microphone, RFID, and provider-style location events.
+   - Use `npm run sensor:merge` for adapter output or `POST /sensor-events` for direct Pi/Nano ingestion.
    - Store bundle metadata in SQLite and blobs on disk.
    - Include timestamps, node id, sensor type, retention policy, confidence, and policy state.
 
 4. Add filtering and backpressure.
-   - Start the local model server or deterministic fallback.
+   - Start the local model server on each Pi and the Nano, with deterministic fallback only for missing-model development.
    - Classify bundles as `send_now`, `summarize_first`, `hold`, `drop_duplicate`, or `review_policy`.
    - Enforce queue watermarks, retry jitter, and peer rate limits.
 

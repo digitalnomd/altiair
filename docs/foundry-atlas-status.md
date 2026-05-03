@@ -23,8 +23,10 @@ The ontology currently exposes a narrow example CASK location path:
 - Object type: `[Example] CASK GPS Position`.
 - Object API name visible in Atlas: `sampleCaskGpsPosition`.
 - Relevant action type: `Create [Example] CASK GPS Position`.
-- Visible action parameters: `deviceID`, `latitude`, `longitude`, `altitudeM`, `speedKnots`, `courseDeg`, `fixQuality`, `numSatellites`, and `timestamp`.
-- The action shows ten parameters in Atlas; the likely primary-key parameter is represented locally as `positionID`.
+- Action API name visible in Atlas: `create-example-cask-gps-position`.
+- Generated TypeScript action export: `createExampleCaskGpsPosition`.
+- Generated action parameters: `deviceId`, `latitude`, `longitude`, `altitudeM`, `speedKnots`, `courseDeg`, `fixQuality`, `numSatellites`, `timestamp`, and optional `name`.
+- The generated object primary key is `positionId`; the create action does not accept it directly, so the uploader sends the local fix id as `name`.
 
 This is enough for a first live OSDK writeback smoke test for RFID-derived provider-style GPS/location fixes. It is not enough to write the full local CASK bundle contract yet.
 
@@ -39,22 +41,30 @@ For the current Atlas ontology, use:
 
 ```bash
 FOUNDRY_UPLOAD_PROFILE=cask_gps_position
-FOUNDRY_ACTION_CREATE_CASK_GPS_POSITION=sampleCaskGpsPosition
+FOUNDRY_ACTION_CREATE_CASK_GPS_POSITION=createExampleCaskGpsPosition
 ```
 
 Keep real runtime values in `.env` or shell exports only.
 
-## Pending Atlas Steps
+## Atlas Steps Completed
 
-These steps modify application/resource access and should be done deliberately:
+- Added `[Example] CASK GPS Position` to the Ontology SDK resource list.
+- Added `Create [Example] CASK GPS Position` to the Ontology SDK action list.
+- Saved the SDK resource changes for `cask-edge-service`.
+- Generated npm SDK version `0.1.0`.
+- Generated package name: `@cask-edge-service/sdk`.
+- Generated action exports confirmed locally: `createExampleCaskGpsPosition`.
+- Installed the generated package locally outside Git from the Atlas package tarball.
+- Configured local ignored `.env` values for the Foundry stack URL, ontology RID, backend-service client id, client secret, generated OSDK package, and CASK GPS action export.
+- Ran the live OSDK smoke successfully; Foundry accepted `createExampleCaskGpsPosition` and created an `[Example] CASK GPS Position` object.
 
-1. Add `[Example] CASK GPS Position` to the Ontology SDK resource list.
-2. Add `Create [Example] CASK GPS Position` to the Ontology SDK action list.
-3. Save the SDK resource changes.
-4. Generate the first SDK version.
-5. Share the selected resource/action with the `cask-edge-service` service user.
-6. Install the generated NPM package locally using private registry configuration outside Git.
-7. Run the live smoke with `FOUNDRY_MODE=osdk` and `FOUNDRY_UPLOAD_PROFILE=cask_gps_position`.
+## Remaining Foundry Work
+
+The current live connection is operational for the narrow GPS-position writeback profile. Remaining work is ontology expansion rather than connection setup:
+
+1. Add full CASK object/action types for sensor observations, drone observations, control-source estimates, counter-UAS cues, insight drafts, and node health.
+2. Regenerate the OSDK package after those resources are added.
+3. Switch `FOUNDRY_UPLOAD_PROFILE` from `cask_gps_position` to `bundle_actions` once matching actions exist.
 
 ## Full CASK Ontology Needed Later
 

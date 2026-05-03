@@ -185,7 +185,11 @@ function findContribution(
     const haystack = `${contribution.role} ${contribution.evidenceIds.join(" ")}`.toLowerCase();
     return haystack.includes(kind) ||
       (kind === "visual" && haystack.includes("jetson")) ||
-      (kind === "context" && haystack.includes("cask"));
+      (kind === "context" &&
+        (haystack.includes("cask") ||
+          haystack.includes("coordinator") ||
+          haystack.includes("display") ||
+          haystack.includes("hub")));
   });
 }
 

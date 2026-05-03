@@ -45,11 +45,11 @@ class MockFoundryUploader implements FoundryUploader {
       uploadedAt: new Date().toISOString(),
       status: "queued",
       appliedActions: [
-        "mock:createSensorObservation",
-        "mock:createLocationFix",
-        "mock:createCounterUasCue",
-        "mock:createInsightDraft",
-        "mock:upsertNodeHealth",
+        `mock:${this.config.actions.createSensorObservation}`,
+        `mock:${this.config.actions.createLocationFix}`,
+        `mock:${this.config.actions.createCounterUasCue}`,
+        `mock:${this.config.actions.createInsightDraft}`,
+        `mock:${this.config.actions.upsertNodeHealth}`,
       ],
       message: `Mock accepted ${bundle.sensorEvents.length} sensor events, ${bundle.locationFixes.length} location fixes, ${bundle.counterUasCues.length} cues, and insight ${insight.id}.`,
     };
@@ -186,8 +186,8 @@ class OsdkFoundryUploader implements FoundryUploader {
     };
 
     return {
-      positionID: fix.id,
-      deviceID: fix.entityId,
+      name: fix.id,
+      deviceId: fix.entityId,
       latitude: coordinates.latitude,
       longitude: coordinates.longitude,
       altitudeM: this.config.caskGpsDefaults.altitudeM,

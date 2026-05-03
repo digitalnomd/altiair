@@ -1,0 +1,33 @@
+{
+  "events": [
+    {
+      "kind": "rfid_read",
+      "sourceNodeId": "altiair-node-a",
+      "zoneId": "training-zone-alpha",
+      "readerId": "rfid-reader-a",
+      "tagId": "training-tag-001",
+      "rssi": -42,
+      "providerStyle": {
+        "sourceId": "arduino-rfid-kit-a",
+        "precisionRadiusMeters": 35
+      }
+    },
+    {
+      "kind": "audio_window",
+      "sourceNodeId": "altiair-node-b",
+      "zoneId": "training-zone-alpha",
+      "microphoneId": "usb-mic-b",
+      "acousticClass": "small_rotor_noise",
+      "confidence": 0.46
+    },
+    {
+      "kind": "camera_detection",
+      "sourceNodeId": "altiair-orin",
+      "zoneId": "training-zone-alpha",
+      "cameraId": "orin-camera-vision",
+      "detectionClass": "commercial_quadcopter",
+      "confidence": 0.92,
+      "retentionPolicy": "thumbnail_allowed"
+    }
+  ]
+}

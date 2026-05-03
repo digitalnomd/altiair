@@ -1,4 +1,5 @@
 import { createServer, type IncomingMessage, type ServerResponse } from "node:http";
+import { loadConfig } from "../config.js";
 import { defaultDdilMeshTopology, nominalMeshObservations } from "../mesh/defaultTopology.js";
 import {
   assessMissionContinuity,
@@ -8,19 +9,28 @@ import {
 import { buildDistributedResolutionReport } from "../cask/distributedResolution.js";
 import { buildTrainingTagPlan } from "../cask/trainingTag.js";
 import { buildReplicationReport } from "../mesh/replication.js";
-import type { CaskBundle, NodeHealth, PolicyState } from "../cask/types.js";
+import { buildCaskBundleFromLiveInputs, type LiveSensorInput } from "../sensors/liveMerge.js";
+import { createLocalInsightClient, type LocalInsightClient } from "../llm/localInsight.js";
+import type { CaskBundle, InsightDraft, NodeHealth, PolicyState } from "../cask/types.js";
+import type { TrainingTagPlan } from "../cask/trainingTag.js";
 import type { NodeDescriptor, PeerObservation, ReplicationReport } from "../mesh/types.js";
 
 interface RuntimeState {
   node: NodeDescriptor;
   observations: PeerObservation[];
   bundles: CaskBundle[];
+  insights: InsightDraft[];
+  tagPlans: TrainingTagPlan[];
   replicationReports: ReplicationReport[];
+  insightClient: LocalInsightClient;
+  llmMode: string;
+  llmModel: string;
   startedAt: number;
   currentGatewayId?: string;
   apiToken?: string;
 }
 
+const config = loadConfig();
 const nodeId = argValue("--node") ?? process.env.ALTIAIR_NODE_ID ?? "altiair-hub";
 const node = defaultDdilMeshTopology.nodes.find((candidate) => candidate.id === nodeId);
 if (node === undefined) {
@@ -39,7 +49,12 @@ const state: RuntimeState = {
   node,
   observations: nominalMeshObservations,
   bundles: [],
+  insights: [],
+  tagPlans: [],
   replicationReports: [],
+  insightClient: createLocalInsightClient(config.llm),
+  llmMode: config.llm.mode,
+  llmModel: config.llm.model,
   startedAt: Date.now(),
   currentGatewayId: process.env.ALTIAIR_CURRENT_GATEWAY_ID,
   apiToken,
@@ -61,6 +76,10 @@ server.listen(port, host, () => {
         hostname: state.node.hostname,
         listen: `${host}:${port}`,
         overlayAddress: state.node.overlayAddress,
+        localLlm: {
+          mode: state.llmMode,
+          model: state.llmModel,
+        },
         protectedRoutes: apiToken === undefined ? "disabled" : "bearer",
       },
       null,
@@ -207,34 +226,72 @@ async function handleRequest(
     if (bundle === undefined) {
       return;
     }
-    const gatewayDecision = selectGateway(defaultDdilMeshTopology, state.observations, {
-      currentGatewayId: state.currentGatewayId,
-    });
-    const gatewayObservation = state.observations.find(
-      (observation) => observation.nodeId === gatewayDecision.selectedGatewayId,
-    );
-    const congestion = gatewayObservation === undefined
-      ? null
-      : decideCongestion(
-          defaultDdilMeshTopology,
-          gatewayObservation,
-          Buffer.byteLength(rawBody),
-          0,
-          bundlePolicyGate(bundle),
-        );
+    await acceptBundleResponse(state, bundle, Buffer.byteLength(rawBody), response);
+    return;
+  }
 
-    state.bundles.push(bundle);
-    const replicationReport = buildBundleReplicationReport(state, bundle);
-    state.replicationReports.push(replicationReport);
+  if (request.method === "POST" && path === "/sensor-events") {
+    if (!isJsonRequest(request)) {
+      writeJson(response, 415, {
+        error: "Unsupported media type.",
+        message: "POST /sensor-events requires content-type application/json.",
+      });
+      return;
+    }
 
-    writeJson(response, 202, {
-      accepted: congestion?.acceptBundle ?? true,
-      storedLocal: true,
-      bundleId: bundle.id,
-      gatewayDecision,
-      congestion,
-      replication: summarizeReplicationReport(replicationReport),
+    const rawBody = await readBody(request, defaultDdilMeshTopology.policy.maxBundleSizeBytes);
+    const inputs = parseLiveSensorInputsResponse(rawBody, response);
+    if (inputs === undefined) {
+      return;
+    }
+
+    const bundle = buildCaskBundleFromLiveInputs(inputs, {
+      missionId: process.env.ALTIAIR_MISSION_ID,
+      sourceNodeId: state.node.id,
     });
+    await acceptBundleResponse(state, bundle, Buffer.byteLength(rawBody), response);
+    return;
+  }
+
+  if (request.method === "GET" && path === "/insights/latest") {
+    const latestInsight = latestInsightDraft(state);
+    if (latestInsight === undefined) {
+      writeJson(response, 404, {
+        error: "No local insights.",
+        message: "POST /sensor-events or POST /bundles first, then read /insights/latest.",
+      });
+      return;
+    }
+
+    writeJson(response, 200, latestInsight);
+    return;
+  }
+
+  if (request.method === "GET" && path === "/tag-plan/latest") {
+    const latestTagPlan = latestTrainingTagPlan(state);
+    if (latestTagPlan === undefined) {
+      writeJson(response, 404, {
+        error: "No training tag plan.",
+        message: "POST /sensor-events or POST /bundles first, then read /tag-plan/latest.",
+      });
+      return;
+    }
+
+    writeJson(response, 200, latestTagPlan);
+    return;
+  }
+
+  if (request.method === "GET" && path === "/instructions/latest") {
+    const latestTagPlan = latestTrainingTagPlan(state);
+    if (latestTagPlan === undefined) {
+      writeJson(response, 404, {
+        error: "No local instructions.",
+        message: "POST /sensor-events or POST /bundles first, then read /instructions/latest.",
+      });
+      return;
+    }
+
+    writeJson(response, 200, nodeInstructionView(state.node.id, latestTagPlan));
     return;
   }
 
@@ -251,6 +308,10 @@ async function handleRequest(
       "GET /replication/latest",
       "GET /ledger",
       "POST /bundles",
+      "POST /sensor-events",
+      "GET /insights/latest",
+      "GET /tag-plan/latest",
+      "GET /instructions/latest",
       "GET /bundles/pending",
     ],
   });
@@ -300,6 +361,86 @@ function parseBundleResponse(rawBody: string, response: ServerResponse): CaskBun
   }
 }
 
+function parseLiveSensorInputsResponse(rawBody: string, response: ServerResponse): LiveSensorInput[] | undefined {
+  try {
+    const parsed = JSON.parse(rawBody) as unknown;
+    if (Array.isArray(parsed)) {
+      return parsed as LiveSensorInput[];
+    }
+    if (isRecord(parsed) && Array.isArray(parsed.events)) {
+      return parsed.events as LiveSensorInput[];
+    }
+    return [parsed as LiveSensorInput];
+  } catch (error: unknown) {
+    writeJson(response, 400, {
+      error: "Invalid sensor input.",
+      message: error instanceof Error ? error.message : "Sensor input payload is invalid.",
+    });
+    return undefined;
+  }
+}
+
+async function acceptBundleResponse(
+  state: RuntimeState,
+  bundle: CaskBundle,
+  bundleSizeBytes: number,
+  response: ServerResponse,
+): Promise<void> {
+  const gatewayDecision = selectGateway(defaultDdilMeshTopology, state.observations, {
+    currentGatewayId: state.currentGatewayId,
+  });
+  const gatewayObservation = state.observations.find(
+    (observation) => observation.nodeId === gatewayDecision.selectedGatewayId,
+  );
+  const congestion = gatewayObservation === undefined
+    ? null
+    : decideCongestion(
+        defaultDdilMeshTopology,
+        gatewayObservation,
+        bundleSizeBytes,
+        0,
+        bundlePolicyGate(bundle),
+      );
+
+  state.bundles.push(bundle);
+  const products = buildBundleRuntimeProducts(state, bundle);
+  state.replicationReports.push(products.replicationReport);
+  state.tagPlans.push(products.tagPlan);
+  const insightResult = await draftLocalInsight(state, bundle);
+
+  writeJson(response, 202, {
+    accepted: congestion?.acceptBundle ?? true,
+    storedLocal: true,
+    bundleId: bundle.id,
+    gatewayDecision,
+    congestion,
+    replication: summarizeReplicationReport(products.replicationReport),
+    tagPlan: summarizeTagPlan(products.tagPlan),
+    localInstructions: nodeInstructionView(state.node.id, products.tagPlan),
+    localLlm: {
+      mode: state.llmMode,
+      model: state.llmModel,
+      status: insightResult.insight === undefined ? "error" : "ready",
+      error: insightResult.error,
+    },
+    insight: insightResult.insight,
+  });
+}
+
+async function draftLocalInsight(
+  state: RuntimeState,
+  bundle: CaskBundle,
+): Promise<{ insight?: InsightDraft; error?: string }> {
+  try {
+    const insight = await state.insightClient.draftInsight(bundle);
+    state.insights.push(insight);
+    return { insight };
+  } catch (error: unknown) {
+    const message = error instanceof Error ? error.message : "Unknown local LLM error.";
+    return { error: message };
+  }
+}
+
 function requireString(value: unknown, field: string): asserts value is string {
   if (typeof value !== "string" || value.length === 0) {
     throw new Error(`Bundle must include non-empty string ${field}.`);
@@ -310,6 +451,10 @@ function requireArray(value: unknown, field: string): asserts value is unknown[]
   if (!Array.isArray(value)) {
     throw new Error(`Bundle must include ${field} array.`);
   }
+}
+
+function isRecord(value: unknown): value is Record<string, unknown> {
+  return typeof value === "object" && value !== null;
 }
 
 function buildHealth(state: RuntimeState): NodeHealth {
@@ -325,9 +470,7 @@ function buildHealth(state: RuntimeState): NodeHealth {
     memoryUsedMb: Math.round((localObservation?.memoryPressure ?? 0) * 4096),
     networkReachable: localObservation?.internetReachable ?? false,
     foundryReachable: localObservation?.foundryReachable ?? false,
-    modelStatus: state.node.roles.includes("accelerated_inference") || state.node.roles.includes("mesh_hub")
-      ? "ready"
-      : "disabled",
+    modelStatus: "ready",
   };
 }
 
@@ -350,24 +493,81 @@ function bundlePolicyGate(bundle: CaskBundle): PolicyState {
   return eventPolicy ?? "review_needed";
 }
 
-function buildBundleReplicationReport(state: RuntimeState, bundle: CaskBundle): ReplicationReport {
+function buildBundleRuntimeProducts(
+  state: RuntimeState,
+  bundle: CaskBundle,
+): { tagPlan: TrainingTagPlan; replicationReport: ReplicationReport } {
   const offlineNodeIds = state.observations
     .filter((observation) => !observation.online)
     .map((observation) => observation.nodeId);
   const resolution = buildDistributedResolutionReport(bundle, { offlineNodeIds });
-  const tagPlan = buildTrainingTagPlan(bundle, resolution);
-  return buildReplicationReport(
-    defaultDdilMeshTopology,
-    bundle,
-    resolution,
+  const tagPlan = buildTrainingTagPlan(bundle, resolution, {
+    operatorAuthorized: parseBooleanEnv(process.env.ALTIAIR_OPERATOR_AUTHORIZED),
+  });
+  return {
     tagPlan,
-    state.observations,
-    { offlineNodeIds },
-  );
+    replicationReport: buildReplicationReport(
+      defaultDdilMeshTopology,
+      bundle,
+      resolution,
+      tagPlan,
+      state.observations,
+      { offlineNodeIds },
+    ),
+  };
 }
 
 function latestReplicationReport(state: RuntimeState): ReplicationReport | undefined {
   return state.replicationReports[state.replicationReports.length - 1];
+}
+
+function latestInsightDraft(state: RuntimeState): InsightDraft | undefined {
+  return state.insights[state.insights.length - 1];
+}
+
+function latestTrainingTagPlan(state: RuntimeState): TrainingTagPlan | undefined {
+  return state.tagPlans[state.tagPlans.length - 1];
+}
+
+function summarizeTagPlan(tagPlan: TrainingTagPlan): unknown {
+  return {
+    objectiveId: tagPlan.objectiveId,
+    subjectRef: tagPlan.subjectRef,
+    authorizedZoneId: tagPlan.authorizedZoneId,
+    policyGate: tagPlan.policyGate,
+    operatorAuthorized: tagPlan.operatorAuthorized,
+    nonContactOnly: tagPlan.nonContactOnly,
+    resolvedByPeerMesh: tagPlan.resolvedByPeerMesh,
+    selectedNodeId: tagPlan.selectedNodeId,
+    degraded: tagPlan.degraded,
+    executionState: tagPlan.executionState,
+  };
+}
+
+function nodeInstructionView(nodeId: string, tagPlan: TrainingTagPlan): unknown {
+  const localAssignments = tagPlan.assignments.filter((assignment) => assignment.nodeId === nodeId);
+  return {
+    nodeId,
+    objectiveId: tagPlan.objectiveId,
+    subjectRef: tagPlan.subjectRef,
+    authorizedZoneId: tagPlan.authorizedZoneId,
+    executionState: tagPlan.executionState,
+    policyGate: tagPlan.policyGate,
+    operatorAuthorized: tagPlan.operatorAuthorized,
+    selectedNodeId: tagPlan.selectedNodeId,
+    degraded: tagPlan.degraded,
+    nonContactOnly: tagPlan.nonContactOnly,
+    localAssignments,
+    standby:
+      localAssignments.length === 0
+        ? "No primary local assignment; remain available as a fallback relay and preserve replicated mission records."
+        : undefined,
+    prohibitedActions: tagPlan.prohibitedActions,
+  };
+}
+
+function parseBooleanEnv(value: string | undefined): boolean {
+  return value === "1" || value?.toLowerCase() === "true" || value?.toLowerCase() === "yes";
 }
 
 function summarizeReplicationReport(report: ReplicationReport | undefined): unknown {
