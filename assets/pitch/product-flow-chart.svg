@@ -51,10 +51,10 @@
   <text x="227" y="159" class="badgeText">Raspberry Pi</text>
   <rect x="344" y="138" width="112" height="32" class="badgeJetson"/>
   <text x="366" y="159" class="badgeText">Jetson</text>
-  <rect x="472" y="138" width="182" height="32" class="badgeAnduril"/>
-  <text x="491" y="159" class="badgeText">Anduril Hawkeye/EagleEye</text>
-  <rect x="670" y="138" width="142" height="32" class="badge"/>
-  <text x="688" y="159" class="badgeText">Palantir Foundry</text>
+  <rect x="472" y="138" width="222" height="32" class="badgeAnduril"/>
+  <text x="490" y="159" class="badgeText">Anduril Hawkeye/EagleEye</text>
+  <rect x="730" y="138" width="142" height="32" class="badge"/>
+  <text x="748" y="159" class="badgeText">Palantir Foundry</text>
 
   <text x="80" y="215" class="section">Squad Edge Ring</text>
   <rect x="70" y="235" width="805" height="600" class="ringArea"/>
@@ -150,7 +150,7 @@
   <text x="1279" y="714" class="small">sync when online</text>
 
   <path d="M1175 260 C1198 230 1208 230 1230 260" class="greenLine"/>
-  <text x="1188" y="220" class="linkLabel">filtered evidence uplink</text>
+  <text x="1188" y="242" class="linkLabel">filtered evidence uplink</text>
   <path d="M1175 468 C1195 388 1208 388 1230 468" class="greenLine"/>
   <text x="1188" y="382" class="linkLabel">fused mission record</text>
   <path d="M1340 365 L1340 440" class="line"/>
