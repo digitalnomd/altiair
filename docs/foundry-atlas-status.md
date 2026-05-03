@@ -26,7 +26,7 @@ The ontology currently exposes a narrow example CASK location path:
 - Visible action parameters: `deviceID`, `latitude`, `longitude`, `altitudeM`, `speedKnots`, `courseDeg`, `fixQuality`, `numSatellites`, and `timestamp`.
 - The action shows ten parameters in Atlas; the likely primary-key parameter is represented locally as `positionID`.
 
-This is enough for a first live OSDK writeback smoke test for mock provider-style GPS/RFID location fixes. It is not enough to write the full local CASK bundle contract yet.
+This is enough for a first live OSDK writeback smoke test for RFID-derived provider-style GPS/location fixes. It is not enough to write the full local CASK bundle contract yet.
 
 ## Local Runtime Profiles
 

@@ -1,6 +1,6 @@
 # Security Implementation Plan
 
-This is the security baseline for the Altiair DDIL edge mesh demo. It is written for an unclassified, authorized training environment using tagged training subjects, tagged assets, and simulated adversary entities. Do not use this repo to process classified information. If a customer brings Controlled Unclassified Information into scope, treat that as a new authorization boundary and map the environment to NIST SP 800-171 and the applicable CMMC level before ingesting that data.
+This is the security baseline for the Altiair DDIL edge mesh demo. It is written for an unclassified, authorized training environment using consenting tagged training subjects, tagged assets, and controlled training objects. Do not use this repo to process classified information. If a customer brings Controlled Unclassified Information into scope, treat that as a new authorization boundary and map the environment to NIST SP 800-171 and the applicable CMMC level before ingesting that data.
 
 ## Source Baseline
 
@@ -46,7 +46,7 @@ This is the security baseline for the Altiair DDIL edge mesh demo. It is written
 - Return generic errors to callers; write detailed diagnostic context only to local protected logs.
 - Do not log secrets, bearer tokens, private keys, Foundry URLs, OAuth client secrets, raw RFID identifiers, or raw media paths.
 - Add tests for blocked policy states, oversize bundles, stale peer observations, gateway failover, malformed input, and node failure.
-- Run `npm run build`, `npm run smoke:mock`, `npm run mesh:smoke`, and `npm audit --omit=dev` before demos.
+- Run `npm run build`, `npm run smoke:mock`, `npm run mesh:smoke`, and `npm audit --omit=dev` before demos; `smoke:mock` is a test harness, not the final live data path.
 
 ## Node Hardening
 
@@ -97,7 +97,7 @@ sudo ufw enable
 - Use a least-privilege Developer Console backend-service app.
 - Separate read scopes from writeback action scopes.
 - Keep OAuth secrets in environment variables or the platform secret store, not `.env` files committed to git.
-- Keep mock mode as the default when secrets are absent.
+- Keep mock mode as the default for local tests when secrets are absent; final live demos should show queued sync if real Foundry credentials/actions are not loaded.
 - Write back evidence, insight drafts, acknowledgements, and node health only after policy checks pass.
 - Record upload attempts locally with bundle ID, node ID, selected gateway, policy state, and success/failure, but not secrets or raw content.
 
@@ -117,6 +117,6 @@ sudo ufw enable
 - Protected routes require `Authorization: Bearer <token>`.
 - One Pi can fail and `/mission-continuity` reports `degraded_one_node_failed`.
 - Lost-node revocation is demonstrated by removing its WireGuard peer and marking it offline.
-- RFID events include `isMock`, freshness, precision/confidence, and a policy state.
-- Foundry/CASK upload is disabled or mocked unless real scopes and secrets are intentionally loaded on a gateway node.
+- RFID/provider-style location events include freshness, precision/confidence, `isCarrierGrade=false` where applicable, and a policy state.
+- Foundry/CASK upload is disabled or queued unless real scopes and secrets are intentionally loaded on a gateway node.
 - No repository file contains private keys, tokens, private Foundry URLs, credentials, or access details.

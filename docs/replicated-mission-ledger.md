@@ -7,7 +7,7 @@ Altiair should not keep mission state on only one node. Every reachable node sto
 Every reachable node stores:
 
 - Sensor events from every node.
-- Location fixes and RFID/mock-provider location records.
+- Location fixes and RFID-derived provider-style location records.
 - Visual/audio observations and derived detections.
 - Peer intent pings and short-lived role leases.
 - Selected-node and tag-plan state.

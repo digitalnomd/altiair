@@ -96,7 +96,7 @@ function buildFallbackInsight(bundle: CaskBundle, model: string): InsightDraft {
       "Local edge fusion produced a policy-gated cue that no single node can resolve alone: RFID, audio, Jetson visual inference, and cached mission context are all required. The cue should remain in human review until corroborated.",
     confidence,
     limitations: [
-      "Arduino RFID location is mock provider-style telemetry and is coarse by design.",
+      "Arduino RFID location is live RFID-derived provider-style telemetry and is coarse by design.",
       "Each node's local readout is intentionally below the resolution threshold without cross-node fusion.",
       "Camera and microphone observations require corroboration before sharing outside the local mesh.",
       "Foundry writeback may be queued when the CASK/Foundry uplink is unavailable.",
@@ -104,7 +104,7 @@ function buildFallbackInsight(bundle: CaskBundle, model: string): InsightDraft {
     evidenceIds,
     recommendedNextChecks: [
       "Confirm the cue with a second sensor or operator report.",
-      "Check freshness on RFID and mock provider-style location before escalation.",
+      "Check freshness on RFID and provider-style location before escalation.",
       "Keep the policy gate visible on the Pi-hosted display.",
     ],
     policyState,

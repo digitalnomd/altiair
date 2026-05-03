@@ -8,7 +8,7 @@ This repo now includes a runnable local scaffold for the CASK edge path:
 - A Foundry OSDK uploader in `src/foundry/uploader.ts`.
 - A smoke runner in `src/scripts/smoke.ts`.
 
-The smoke runner defaults to mock Foundry and mock LLM mode, so it can run without secrets:
+The smoke runner defaults to mock Foundry and mock LLM mode for local tests, so it can run without secrets:
 
 ```bash
 npm install
@@ -74,7 +74,7 @@ If the hackathon ontology already has action names with different API names, set
 
 The LLM adapter supports:
 
-- `LOCAL_LLM_MODE=mock`: deterministic local explanation for demos and tests.
+- `LOCAL_LLM_MODE=mock`: deterministic local explanation for tests and missing-model development only.
 - `LOCAL_LLM_MODE=ollama`: sends the compact CASK bundle to an Ollama-compatible `/api/chat` endpoint.
 
 Example:

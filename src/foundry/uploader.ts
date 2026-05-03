@@ -128,7 +128,7 @@ class OsdkFoundryUploader implements FoundryUploader {
       appliedActions,
       foundryEdits: edits,
       message:
-        "Uploaded location fixes through the narrow CASK GPS Position OSDK profile. Sensor, cue, health, and insight bundle records remain local/mock until matching ontology actions are available.",
+        "Uploaded location fixes through the narrow CASK GPS Position OSDK profile. Sensor, cue, health, and insight bundle records remain local and queued until matching ontology actions are available.",
     };
   }
 

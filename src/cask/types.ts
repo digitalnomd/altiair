@@ -11,7 +11,7 @@ export type SensorEventKind =
   | "camera"
   | "audio"
   | "rfid"
-  | "mock_provider_location";
+  | "provider_style_location";
 
 export type FilteringDecision =
   | "send_now"
@@ -35,7 +35,7 @@ export interface BaseSensorEvent {
   zoneId?: string;
   confidence: Confidence;
   policyState: PolicyState;
-  isMock?: boolean;
+  isTestFixture?: boolean;
 }
 
 export interface CameraEvent extends BaseSensorEvent {
@@ -73,27 +73,27 @@ export interface RfidEvent extends BaseSensorEvent {
   matchedFoundryObjectRid?: string;
 }
 
-export interface MockProviderLocationEvent extends BaseSensorEvent {
-  kind: "mock_provider_location";
-  sourceType: "mock_provider_rfid";
+export interface ProviderStyleLocationEvent extends BaseSensorEvent {
+  kind: "provider_style_location";
+  sourceType: "rfid_provider_style";
   sourceId: string;
   entityId: string;
   precisionRadiusMeters: number;
   expiresAt: IsoTimestamp;
   supportingEvidenceIds: string[];
-  isMock: true;
+  isCarrierGrade: false;
 }
 
 export type SensorEvent =
   | CameraEvent
   | AudioEvent
   | RfidEvent
-  | MockProviderLocationEvent;
+  | ProviderStyleLocationEvent;
 
 export interface LocationFix {
   id: string;
   entityId: string;
-  sourceType: "rfid" | "mock_provider_rfid" | "camera" | "audio" | "manual";
+  sourceType: "rfid" | "rfid_provider_style" | "camera" | "audio" | "manual";
   sourceIds: string[];
   zoneId?: string;
   coordinates?: {
@@ -104,7 +104,7 @@ export interface LocationFix {
   confidence: Confidence;
   observedAt: IsoTimestamp;
   expiresAt: IsoTimestamp;
-  isMock: boolean;
+  isCarrierGrade: boolean;
   supportingEvidenceIds: string[];
   policyState: PolicyState;
 }

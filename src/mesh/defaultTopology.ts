@@ -123,7 +123,7 @@ export const defaultDdilMeshTopology: MeshTopology = {
       capabilities: [
         {
           name: "sensor_ingest",
-          detail: "Camera, microphone, RFID, and mock provider-style location bundles.",
+          detail: "Camera, microphone, RFID, and RFID-derived provider-style location bundles.",
         },
         {
           name: "local_filter",

@@ -127,7 +127,7 @@ function buildAssignments(
       visualNode,
       "observe",
       readyForTag
-        ? "Maintain observation of the simulated cue and report confidence, uncertainty, and zone changes."
+        ? "Maintain observation of the authorized training cue and report confidence, uncertainty, and zone changes."
         : "Stage observation coverage and wait for operator authorization before tag confirmation.",
       nodeIds,
     ),

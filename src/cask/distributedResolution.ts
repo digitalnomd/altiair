@@ -173,7 +173,7 @@ function buildContributions(
       localConfidence: 0.57,
       estimatedMetersToObjective: 14,
       executionPositionScore: positionScore(0.57, 14, 88),
-      localReadout: "Visual model sees a simulated aerial-object marker or relevant movement.",
+      localReadout: "Visual model sees an authorized training drone marker or relevant movement.",
       whyInconclusiveAlone: "Vision sees an object or marker, but cannot connect it to the RFID tag or policy gate.",
       peerIntent: intent("observe", zoneId, policyState, now),
       leasePriority: 88,

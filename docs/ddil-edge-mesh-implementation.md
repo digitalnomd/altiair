@@ -38,7 +38,7 @@ Current implementation choices are grounded in these public primary or vendor-pr
 
 Assume no dedicated router, no phone hotspot, and no internet path. The Pi 5 is the local mission LAN: it broadcasts the private Wi-Fi AP `Altiair-LAN`, the two Pi 4Bs join it, and the Jetson joins by Wi-Fi if possible or Ethernet if needed. The stable mission model is node identity, local queueing, gateway selection, and policy-gated sync over this local link.
 
-For the physical node-loss preservation demo, loopback is only a fallback. Separate devices must share at least one local peer link before the simulated failure so a bundle can replicate off the node that later goes down. The mesh preserves evidence that has already reached another node; it cannot recover a bundle that existed only on a device that was powered off, isolated, or destroyed before replication.
+For the physical node-loss preservation demo, loopback is only a local development fallback. Separate devices must share at least one local peer link before the controlled node-loss test so a bundle can replicate off the node that later goes down. The mesh preserves evidence that has already reached another node; it cannot recover a bundle that existed only on a device that was powered off, isolated, or destroyed before replication.
 
 | Node | Day-one link assumption | Overlay | Role |
 | --- | --- | --- | --- |
@@ -51,7 +51,7 @@ Network rules:
 
 - Do not require an external hotspot, router, or internet path for the proof.
 - Start with logical nodes on one host only as a software fallback.
-- For physical distribution, bring up the Pi 5 `Altiair-LAN` AP before the simulated failure.
+- For physical distribution, bring up the Pi 5 `Altiair-LAN` AP before the controlled node-loss test.
 - Use Jetson Ethernet as the fallback if Jetson Wi-Fi does not cooperate.
 - Use venue Wi-Fi only as an optional later uplink; do not depend on it for node-to-node traffic.
 - Use `wg0` overlay `10.77.0.0/24`; keep each peer `AllowedIPs` to one `/32` so routing stays narrow.
@@ -71,7 +71,7 @@ The mesh code lives in:
 - `src/mesh/gatewaySelection.ts`: gateway scoring, hysteresis, stale heartbeat rejection, congestion/backpressure decisions, and one-node-failure continuity reporting.
 - `src/mesh/types.ts`: topology, peer health, gateway, and congestion contracts.
 - `src/scripts/mesh-plan.ts`: prints the topology or per-node environment/WireGuard templates without secrets.
-- `src/scripts/mesh-smoke.ts`: simulates normal and degraded gateway selection.
+- `src/scripts/mesh-smoke.ts`: deterministic smoke check for normal and degraded gateway selection.
 - `src/scripts/node-api.ts`: dependency-free prototype API for the edge-node contract before the Rust service lands, including bundle ingest, replication status, and local ledger views.
 
 Commands:
@@ -208,6 +208,6 @@ The TypeScript prototype already exposes the first three endpoints and a local p
 CJADC2 mapping:
 
 - Data collection: every node writes local bundles first, then forwards compact evidence when connectivity allows.
-- Data standardization: CASK bundle contracts normalize camera, audio, RFID, mock provider location, node health, cues, and insights.
+- Data standardization: CASK bundle contracts normalize camera, audio, RFID, provider-style location, node health, cues, and insights.
 - Security: the day-one mesh uses WireGuard overlay identity, protected API routes, narrow peer routing, and policy-gated upload; production should add mTLS/workload identity, signed bundles, encrypted queues, and SBOM/release attestation.
 - Scalability: gateway scoring and congestion decisions prevent one saturated node from blocking higher-priority evidence.

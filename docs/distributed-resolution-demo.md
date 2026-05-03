@@ -25,7 +25,7 @@ The field version is multi-cell. A drone, Hawkeye kit, vehicle, or operator comp
 | --- | --- | --- |
 | `altiair-node-a` | RFID read for a tagged training subject or tagged asset in the zone. | RFID proves presence/identity, but not visual class, activity, or mission relevance. |
 | `altiair-node-b` | Audio or micro-observation in the same time window. | Audio is ambiguous and needs identity plus visual/context corroboration. |
-| `altiair-orin` | Visual inference from a marker, toy prop, prerecorded clip, or simulated aerial-object cue. | Vision sees an object/marker but cannot connect it to the RFID tag or policy gate. |
+| `altiair-orin` | Visual inference from an authorized training drone marker, prop, or controlled test cue. | Vision sees an object/marker but cannot connect it to the RFID tag or policy gate. |
 | `altiair-hub` | Replicated CASK/Foundry ontology context, mission lane, tag-to-training-entity map, policy rules, and display/coordinator role. | Context is not a fresh observation until the edge nodes provide evidence, and this node is not authoritative. |
 
 Each node's local confidence stays below the resolution threshold. The fused view crosses threshold when at least three surviving nodes contribute replicated evidence. Full four-node operation gives the strongest confidence; one-node failure gives a degraded but still resolvable cue; two-node failure stays below quorum. After quorum resolution, each node publishes a signed intent ping with requested role and a short lease so the display, observation, safety, and tag-confirmation roles do not conflict.

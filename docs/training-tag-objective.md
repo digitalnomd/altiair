@@ -2,7 +2,7 @@
 
 This is the safe hackathon version of the "tag" component. It gives the demo an active mission objective without encoding harm, capture, pursuit, or autonomous engagement.
 
-The objective is a controlled training tag against a consenting participant, tagged asset, toy prop, drone surrogate, or simulated entity. A tag is confirmed by NFC/RFID scan, QR scan, BLE beacon proximity, or referee/operator acknowledgement. Physical contact is not required.
+The objective is a controlled training tag against a consenting participant, tagged asset, or controlled training object. A tag is confirmed by NFC/RFID scan, QR scan, BLE beacon proximity, or referee/operator acknowledgement. Physical contact is not required.
 
 ## How It Works
 
@@ -19,7 +19,7 @@ The objective is a controlled training tag against a consenting participant, tag
 
 | Role | Purpose |
 | --- | --- |
-| `observe` | Maintain observation of the simulated cue and report confidence, uncertainty, and zone changes. |
+| `observe` | Maintain observation of the authorized training cue and report confidence, uncertainty, and zone changes. |
 | `guide_to_checkpoint` | Move to the assigned observation/tag checkpoint for the authorized training zone. |
 | `confirm_tag` | Confirm the tag through NFC/RFID/QR/manual acknowledgement. |
 | `safety_observer` | Hold the objective if zone, bystander, policy, or confidence conditions are ambiguous. |
