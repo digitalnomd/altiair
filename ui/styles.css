@@ -118,11 +118,11 @@ button {
   order: 2;
 }
 
-.ops-grid {
+.mission-strip {
   order: 3;
 }
 
-.mission-strip {
+.ops-grid {
   order: 4;
 }
 
@@ -363,7 +363,7 @@ svg use {
   display: grid;
   grid-template-columns: 1.05fr 1.15fr 0.82fr 1.15fr 1.45fr;
   min-height: 94px;
-  margin-top: 14px;
+  margin-top: 0;
   overflow: hidden;
 }
 
@@ -439,7 +439,7 @@ svg use {
   display: grid;
   grid-template-columns: minmax(0, 1fr) 360px;
   gap: 14px;
-  margin-top: 0;
+  margin-top: 14px;
   align-items: stretch;
 }
 
@@ -1716,6 +1716,10 @@ svg use {
   .mission-strip,
   .target-panel {
     grid-template-columns: 1fr;
+  }
+
+  .mission-strip {
+    margin-top: 10px;
   }
 
   .source-controls {

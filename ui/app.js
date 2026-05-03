@@ -1985,7 +1985,12 @@ function capitalize(value) {
 }
 
 function formatPolicy(policyGate) {
-  return formatToken(policyGate ?? "review_needed");
+  const labels = {
+    authorized_to_share: "Share authorized",
+    review_needed: "Human review",
+    blocked: "Blocked",
+  };
+  return labels[policyGate] ?? formatToken(policyGate ?? "review_needed");
 }
 
 function formatToken(value) {
