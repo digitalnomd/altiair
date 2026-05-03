@@ -14,8 +14,17 @@ const inputs: LiveSensorInput[] = [
     rssi: -48,
     readCount: 4,
     providerStyle: {
-      sourceId: "arduino-rfid-kit-a",
+      sourceId: "l3harris-style-lte-mock-from-rfid-a",
       precisionRadiusMeters: 35,
+      providerName: "L3Harris-style tactical LTE mock",
+      emulationProfile: "l3harris_tactical_lte_mock",
+      transport: "wifi_rfid",
+      networkId: "altiair-private-lte-mock",
+      cellId: "mock-cell-training-alpha",
+      sectorId: "sector-a",
+      accessPointId: "altiair-lan-ap",
+      verificationMethod: "rfid_wifi_proximity",
+      isSimulated: true,
     },
   },
   {
@@ -67,6 +76,13 @@ for (const required of ["rfid", "provider_style_location", "audio", "camera"]) {
 }
 if (bundle.locationFixes.length === 0) {
   throw new Error("Expected RFID input to produce a provider-style location fix.");
+}
+const providerEvent = bundle.sensorEvents.find((event) => event.kind === "provider_style_location");
+if (providerEvent?.providerEnvelope.emulationProfile !== "l3harris_tactical_lte_mock") {
+  throw new Error("Expected provider-style event to carry the L3Harris-style mock LTE envelope.");
+}
+if (bundle.locationFixes[0]?.providerEnvelope?.transport !== "wifi_rfid") {
+  throw new Error("Expected location fix to preserve the RFID/Wi-Fi proximity transport envelope.");
 }
 if (bundle.droneObservations.length === 0) {
   throw new Error("Expected camera drone detection to produce a drone observation.");

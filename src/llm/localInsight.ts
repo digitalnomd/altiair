@@ -1,6 +1,7 @@
 import type { LocalLlmConfig } from "../config.js";
 import { assertAllowedLocalModel } from "../config.js";
 import type { CaskBundle, InsightDraft } from "../cask/types.js";
+import type { CaskLlmContextPack } from "./caskContext.js";
 
 interface OllamaChatResponse {
   message?: {
@@ -9,7 +10,7 @@ interface OllamaChatResponse {
 }
 
 export interface LocalInsightClient {
-  draftInsight(bundle: CaskBundle): Promise<InsightDraft>;
+  draftInsight(bundle: CaskBundle, context?: CaskLlmContextPack): Promise<InsightDraft>;
 }
 
 export function createLocalInsightClient(config: LocalLlmConfig): LocalInsightClient {
@@ -23,22 +24,24 @@ export function createLocalInsightClient(config: LocalLlmConfig): LocalInsightCl
 class DeterministicInsightClient implements LocalInsightClient {
   constructor(private readonly model: string) {}
 
-  async draftInsight(bundle: CaskBundle): Promise<InsightDraft> {
-    return buildFallbackInsight(bundle, this.model);
+  async draftInsight(bundle: CaskBundle, context?: CaskLlmContextPack): Promise<InsightDraft> {
+    return buildFallbackInsight(bundle, this.model, context);
   }
 }
 
 class OllamaInsightClient implements LocalInsightClient {
   constructor(private readonly config: LocalLlmConfig) {}
 
-  async draftInsight(bundle: CaskBundle): Promise<InsightDraft> {
+  async draftInsight(bundle: CaskBundle, context?: CaskLlmContextPack): Promise<InsightDraft> {
     const prompt = [
       "You are the local CASK edge insight drafter.",
       "Return only strict JSON for an InsightDraft.",
       "Use evidence IDs from the bundle. Mention uncertainty and policy state.",
+      "Use the CASK context pack for Foundry/ontology object names and connected-vs-DDIL status.",
       "Allowed recommendations are verification, sensor repositioning, coverage, deconfliction, and human review.",
       "Do not recommend target prosecution, engagement, capture, harm, or autonomous action.",
       "Schema keys: id, bundleId, model, createdAt, summary, confidence, limitations, evidenceIds, recommendedNextChecks, policyState.",
+      context === undefined ? "CASK context pack: none" : `CASK context pack JSON: ${JSON.stringify(context)}`,
       `Bundle JSON: ${JSON.stringify(bundle)}`,
     ].join("\n");
 
@@ -70,11 +73,15 @@ class OllamaInsightClient implements LocalInsightClient {
       throw new Error("Local LLM response did not include message.content.");
     }
 
-    return normalizeInsight(JSON.parse(content) as Partial<InsightDraft>, bundle, this.config.model);
+    return normalizeInsight(JSON.parse(content) as Partial<InsightDraft>, bundle, this.config.model, context);
   }
 }
 
-function buildFallbackInsight(bundle: CaskBundle, model: string): InsightDraft {
+function buildFallbackInsight(
+  bundle: CaskBundle,
+  model: string,
+  context?: CaskLlmContextPack,
+): InsightDraft {
   const evidenceIds = [
     ...bundle.sensorEvents.map((event) => event.id),
     ...bundle.locationFixes.map((fix) => fix.id),
@@ -97,6 +104,14 @@ function buildFallbackInsight(bundle: CaskBundle, model: string): InsightDraft {
     confidence,
     limitations: [
       "Arduino RFID location is live RFID-derived provider-style telemetry and is coarse by design.",
+      ...(context?.evidence.providerProfiles.includes("l3harris_tactical_lte_mock")
+        ? ["The L3Harris-style LTE feed is simulated from RFID/Wi-Fi proximity, not a live carrier or vendor integration."]
+        : []),
+      ...(context === undefined
+        ? ["No CASK context pack is attached; the LLM is using local bundle records only."]
+        : context.foundry.mode === "none"
+          ? ["No Foundry intelligence snapshot is attached; the LLM is using local CASK records only."]
+          : [`Foundry/CASK context is ${context.foundry.connected ? "connected" : "cached or mocked"} with ${context.foundry.recordCount} context records.`]),
       "Each node's local readout is intentionally below the resolution threshold without cross-node fusion.",
       "Camera and microphone observations require corroboration before sharing outside the local mesh.",
       "Foundry writeback may be queued when the CASK/Foundry uplink is unavailable.",
@@ -105,6 +120,7 @@ function buildFallbackInsight(bundle: CaskBundle, model: string): InsightDraft {
     recommendedNextChecks: [
       "Confirm the cue with a second sensor or operator report.",
       "Check freshness on RFID and provider-style location before escalation.",
+      "Use CASK ontology IDs and Foundry context records for citations when syncing to the commander view.",
       "Keep the policy gate visible on the Pi-hosted display.",
     ],
     policyState,
@@ -115,8 +131,9 @@ function normalizeInsight(
   draft: Partial<InsightDraft>,
   bundle: CaskBundle,
   model: string,
+  context?: CaskLlmContextPack,
 ): InsightDraft {
-  const fallback = buildFallbackInsight(bundle, model);
+  const fallback = buildFallbackInsight(bundle, model, context);
 
   return {
     id: typeof draft.id === "string" ? draft.id : fallback.id,

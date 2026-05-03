@@ -1,5 +1,5 @@
 import { execFileSync } from "node:child_process";
-import { readFileSync } from "node:fs";
+import { existsSync, readFileSync } from "node:fs";
 import path from "node:path";
 
 import { assertAllowedLocalModel } from "../config.js";
@@ -116,6 +116,9 @@ function scanTrackedFilesForSecrets(): SecretFinding[] {
   const findings: SecretFinding[] = [];
   for (const file of trackedFiles()) {
     const absolute = path.join(process.cwd(), file);
+    if (!existsSync(absolute)) {
+      continue;
+    }
     const buffer = readFileSync(absolute);
     if (buffer.includes(0)) {
       continue;

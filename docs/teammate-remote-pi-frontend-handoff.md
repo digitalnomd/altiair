@@ -17,6 +17,16 @@ The baseline demo does not require a phone hotspot or venue router. The Pi 5 sho
 
 Foundry connectivity is optional and gateway-only. When a gateway is connected, it can pull governed mission/tag/policy context down and push the local after-action/intelligence record back up to the commander. When disconnected, the local LLM, gossip, coordinator election, deployment leases, and replicated ledger continue without Foundry.
 
+For the current direct Foundry profile, use the gateway node or Mac with the ignored `.env` loaded:
+
+```bash
+npm run foundry:direct:intel
+npm run foundry:direct:smoke
+npm run node:api:foundry -- --node altiair-hub
+```
+
+This writes only the current Atlas-supported GPS/location slice and reads the available generated object exports. Full CASK bundle writeback waits on the expanded ontology/action set.
+
 ## What Runs On Each Node
 
 Each node runs the same local API shape through `scripts/pi/run-altiair-node.sh`:
@@ -57,13 +67,21 @@ Before real sensor adapters are available, use the deterministic mock scenario:
 npm run mock:replay -- --post-url http://127.0.0.1:8080/sensor-events
 ```
 
-That posts RFID, microphone, Jetson camera, provider-style location, and node-health degradation events through the same `/sensor-events` contract the real adapters will use. The RFID reader can be real while the location-provider part stays mocked: send tag ID, reader ID, zone, RSSI, and optional coarse coordinates, and the node will mark the derived provider-style fix as non-carrier-grade.
+That posts RFID, microphone, Jetson camera, provider-style location, and node-health degradation events through the same `/sensor-events` contract the real adapters will use. For the demo, these feeds can be mocked while the network component stays live. The RFID reader can be real while the location-provider part stays mocked: send tag ID, reader ID, zone, RSSI, optional coarse coordinates, and the fake tactical provider envelope, and the node will mark the derived provider-style fix as non-carrier-grade. The default envelope is `l3harris_tactical_lte_mock` over `wifi_rfid` proximity, not a live vendor or carrier feed.
 
 The local LLM profile is Gemma by default through Ollama-compatible config:
 
 ```text
 LOCAL_LLM_MODE=ollama
 LOCAL_LLM_BASE_URL=http://127.0.0.1:11434
+LOCAL_LLM_MODEL=gemma3:1b
+```
+
+For the hackathon demo, the simplest reliable configuration is to run Ollama/Gemma on the Mac and point the Pi/Jetson node APIs at the Mac's `Altiair-LAN` IP:
+
+```text
+LOCAL_LLM_MODE=ollama
+LOCAL_LLM_BASE_URL=http://<mac-altiair-lan-ip>:11434
 LOCAL_LLM_MODEL=gemma3:1b
 ```
 
@@ -134,6 +152,8 @@ Then open:
 ```text
 http://127.0.0.1:4173/
 ```
+
+For the chest-computer path, use the same Pi-hosted UI. Sarah's iPad can mirror or browse to the UI on `Altiair-LAN`; the Motorola should stay unflashed unless the team explicitly needs a separate Android-only client. The frontend should not assume either device is authoritative. It is just a display/acknowledgement surface for the Pi/Jetson CASK mesh.
 
 ## Frontend Contract
 

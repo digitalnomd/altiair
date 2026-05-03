@@ -22,6 +22,7 @@ import { buildDistributedResolutionReport } from "../cask/distributedResolution.
 import { buildTrainingTagPlan } from "../cask/trainingTag.js";
 import { buildReplicationReport } from "../mesh/replication.js";
 import { buildCaskBundleFromLiveInputs, type LiveSensorInput } from "../sensors/liveMerge.js";
+import { buildCaskLlmContextPack } from "../llm/caskContext.js";
 import { createLocalInsightClient, type LocalInsightClient } from "../llm/localInsight.js";
 import {
   createFoundryIntelligenceClient,
@@ -992,7 +993,10 @@ async function draftLocalInsight(
   bundle: CaskBundle,
 ): Promise<{ insight?: InsightDraft; error?: string }> {
   try {
-    const insight = await state.insightClient.draftInsight(bundle);
+    const insight = await state.insightClient.draftInsight(
+      bundle,
+      buildCaskLlmContextPack(bundle, latestFoundryIntelligenceSnapshot(state)),
+    );
     state.insights.push(insight);
     return { insight };
   } catch (error: unknown) {

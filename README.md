@@ -119,6 +119,8 @@ The current Atlas ontology has a narrow live path for `[Example] CASK GPS Positi
 
 Foundry is opportunistic, not required for decentralized operation. Use `GET /foundry/intelligence?refresh=true` only when a gateway node has connectivity and credentials; it pulls governed context into the local cache for the LLM and commander-facing evidence citations. When disconnected, the same node API continues from cached/local CASK records and queues commander sync until reconnection.
 
+For the best hackathon demo, keep the mesh/network layer live and let sensor/provider feeds be structurally mocked if needed: fake L3Harris-style LTE provider records and deterministic camera/audio/RFID fixtures. Use direct Foundry when `.env` and the generated SDK are available; fall back to cached/mock Foundry only when disconnected. Run the small local LLM on the Mac through the Ollama-compatible interface, for example `LOCAL_LLM_BASE_URL=http://<mac-altiair-lan-ip>:11434`, while Pi/Jetson nodes prove heartbeat, gossip, replication, failover, and coordinator election. Do not depend on Modal, OpenAI, or any cloud LLM for the main demo path.
+
 Run locally without Foundry secrets:
 
 ```bash
@@ -128,15 +130,23 @@ npm run smoke:mock
 npm run security:smoke
 ```
 
-To switch from local test mode to real OSDK writeback, create or obtain a Developer Console backend-service application with a generated NPM OSDK package, configure the local `.npmrc`, install the generated package, and export the values described in `.env.example`. Do not commit real Foundry URLs, registry URLs, package tokens, client secrets, private RIDs, or other access details.
+Direct Foundry is available when `.env` contains the backend-service credentials and the generated `@cask-edge-service/sdk` package is installed locally:
+
+```bash
+npm run foundry:direct:intel
+npm run foundry:direct:smoke
+npm run node:api:foundry -- --node altiair-hub
+```
+
+The current live ontology path writes the available `LocationFix` slice to `[Example] CASK GPS Position` through `createExampleCaskGpsPosition` and pulls `ExampleCaskGpsPosition` context for the local LLM. The full CASK bundle stays queued until matching Foundry ontology actions are added. Do not commit real Foundry URLs, registry URLs, package tokens, client secrets, private RIDs, or other access details.
 
 ## Demo Scenario
 
 The demo is an edge-node mesh for a controlled training environment. Operators use Pi-backed nodes with RFID readers plus camera and microphone inputs. Those nodes share structured observations, use RFID reads to estimate the location of a tagged training subject or tagged asset, and surface a shared operating picture on a Pi-built EagleEye-style display shell, Pi-attached screen, or chest-worn field computer. A phone browser can remain an emergency fallback, but it is not the primary concept.
 
-The real-world location pattern is provider-style RF/LTE telemetry: an external network can report a location estimate for a device or tag. For this implementation, we do not claim carrier-grade granularity. We use live Arduino/RFID reads to generate structurally similar provider-style location events, then mark them with explicit source, precision, confidence, freshness, and `isCarrierGrade=false`.
+The real-world location pattern is provider-style RF/LTE telemetry: an external network can report a location estimate for a device or tag. For this implementation, we do not claim carrier-grade granularity. We use Arduino/RFID reads plus local Wi-Fi/proximity context to generate structurally similar provider-style location events, then mark them with explicit source, precision, confidence, freshness, `isCarrierGrade=false`, and a fake L3Harris-style tactical LTE provider envelope. This is a mock schema for the demo, not a vendor integration.
 
-Photo Booth notes from the team added three concrete requirements: treat tactical LTE/private 5G as an optional future underlay, keep QR-assisted setup on the frontend roadmap, and make encryption/secure coding a visible demo acceptance gate. Those requirements are captured in [Photo Booth Requirements Capture - 2026-05-02](docs/photo-booth-requirements-2026-05-02.md).
+Photo Booth notes from the team added concrete requirements: fake LTE/private 5G data in an L3Harris-style structure, RFID/Wi-Fi proximity as the local stand-in, QR-assisted setup, visible failure points and redundancy, chest-computer display through iPad first, and encryption/secure coding as a visible demo acceptance gate. Those requirements are captured in [Photo Booth Requirements Capture - 2026-05-02](docs/photo-booth-requirements-2026-05-02.md).
 
 The CASK-backed omni-model should fuse the sensor streams into a local, evidence-grounded view:
 
@@ -624,6 +634,16 @@ Runtime tests:
   "location_fix": {
     "source": "rfid_provider_style",
     "isCarrierGrade": false,
+    "provider_network": {
+      "schema": "altiair-provider-style-v1",
+      "provider": "L3Harris-style tactical LTE mock",
+      "profile": "l3harris_tactical_lte_mock",
+      "transport": "wifi_rfid",
+      "network_id": "altiair-private-lte-mock",
+      "cell_id": "mock-cell-training-alpha",
+      "verification": "rfid_wifi_proximity",
+      "simulated": true
+    },
     "zone": "checkpoint-alpha",
     "precision_m": 25,
     "confidence": 0.71,

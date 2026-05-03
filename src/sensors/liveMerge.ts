@@ -8,6 +8,7 @@ import type {
   LocationFix,
   NodeHealth,
   PolicyState,
+  ProviderStyleNetworkEnvelope,
   ProviderStyleLocationEvent,
   RfidEvent,
   SensorEvent,
@@ -68,6 +69,16 @@ export interface LiveRfidReadInput extends BaseLiveSensorInput {
     entityId?: string;
     precisionRadiusMeters?: number;
     expiresAt?: string;
+    providerName?: string;
+    emulationProfile?: ProviderStyleNetworkEnvelope["emulationProfile"];
+    transport?: ProviderStyleNetworkEnvelope["transport"];
+    networkId?: string;
+    cellId?: string;
+    sectorId?: string;
+    accessPointId?: string;
+    wifiBssidHash?: string;
+    verificationMethod?: ProviderStyleNetworkEnvelope["verificationMethod"];
+    isSimulated?: boolean;
     coordinates?: {
       latitude: number;
       longitude: number;
@@ -273,6 +284,7 @@ function providerStyleLocationEvent(
       new Date(Date.parse(observedAt) + ttlMs).toISOString(),
     supportingEvidenceIds: [event.id],
     isCarrierGrade: false,
+    providerEnvelope: providerEnvelopeFrom(input),
   };
 }
 
@@ -299,6 +311,23 @@ function locationFixFrom(
     isCarrierGrade: false,
     supportingEvidenceIds: [rfid.id, providerEvent.id],
     policyState: providerEvent.policyState,
+    providerEnvelope: providerEvent.providerEnvelope,
+  };
+}
+
+function providerEnvelopeFrom(input: LiveRfidReadInput): ProviderStyleNetworkEnvelope {
+  return {
+    schemaVersion: "altiair-provider-style-v1",
+    providerName: input.providerStyle?.providerName ?? "L3Harris-style tactical LTE mock",
+    emulationProfile: input.providerStyle?.emulationProfile ?? "l3harris_tactical_lte_mock",
+    transport: input.providerStyle?.transport ?? "wifi_rfid",
+    networkId: input.providerStyle?.networkId ?? "altiair-private-lte-mock",
+    cellId: input.providerStyle?.cellId ?? input.readerId,
+    sectorId: input.providerStyle?.sectorId ?? input.antennaId,
+    accessPointId: input.providerStyle?.accessPointId,
+    wifiBssidHash: input.providerStyle?.wifiBssidHash,
+    verificationMethod: input.providerStyle?.verificationMethod ?? "rfid_wifi_proximity",
+    isSimulated: input.providerStyle?.isSimulated ?? true,
   };
 }
 

@@ -172,7 +172,8 @@ RFID readers:
 
 - Treat RFID as the most deterministic identity/presence signal.
 - Normalize reads into `RfidEvent` records and join them against Foundry asset/person/tag objects.
-- Emit `ProviderStyleLocationEvent` records from Arduino RFID reads to implement the structure of future provider-style RF/LTE telemetry.
+- Emit `ProviderStyleLocationEvent` records from Arduino RFID reads and local Wi-Fi/proximity context to implement the structure of future provider-style RF/LTE telemetry.
+- For the hackathon demo, default this to an L3Harris-style tactical LTE mock envelope with `isSimulated=true`; do not represent it as a live carrier or vendor integration.
 - Mark Arduino-derived location as coarse and not carrier-grade; do not present it as carrier-grade location.
 - Use RFID to ground camera/audio ambiguity, for example "asset likely present in zone" rather than relying on vision alone.
 - Track reader health, duplicate reads, missed-read windows, and tag-reader topology as separate operational signals.
@@ -180,8 +181,9 @@ RFID readers:
 Provider-style location telemetry:
 
 - Normalize all location feeds into `LocationFix` records.
-- Required fields: `sourceType`, `sourceId`, `entityId`, `zoneId` or coordinates, `precisionRadiusMeters`, `confidence`, `observedAt`, `expiresAt`, `isCarrierGrade`, and supporting evidence IDs.
+- Required fields: `sourceType`, `sourceId`, `entityId`, `zoneId` or coordinates, `precisionRadiusMeters`, `confidence`, `observedAt`, `expiresAt`, `isCarrierGrade`, supporting evidence IDs, and provider envelope metadata.
 - For the Arduino RFID implementation, `sourceType` should be `rfid_provider_style` and `isCarrierGrade` must be false.
+- Provider envelope metadata should include `schemaVersion`, `providerName`, `emulationProfile`, `transport`, optional network/cell/sector/access-point fields, `verificationMethod`, and `isSimulated`.
 - CASK and the LLM should reason from precision and confidence, not from a false assumption of exact location.
 
 Omni-model fusion:

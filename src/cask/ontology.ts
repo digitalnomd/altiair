@@ -194,6 +194,7 @@ export const caskOntologyShape: CaskOntologyShape = {
         ...sharedRecordFields,
         field("kind", "string", true, "camera, audio, rfid, or provider_style_location."),
         field("zoneId", "string", false, "Authorized training zone or coarse operational area."),
+        field("providerEnvelopeJson", "json", false, "Fake tactical provider envelope for provider_style_location observations."),
         field("payloadJson", "json", true, "Typed local event payload."),
       ],
     },
@@ -213,6 +214,7 @@ export const caskOntologyShape: CaskOntologyShape = {
         field("precisionRadiusMeters", "number", true, "Uncertainty radius. RFID kit data remains coarse."),
         field("expiresAt", "timestamp", true, "Freshness expiry for the fix."),
         field("isCarrierGrade", "boolean", true, "False for Arduino/RFID-kit mock provider data."),
+        field("providerEnvelopeJson", "json", false, "L3Harris-style tactical LTE mock envelope when provider-style location is simulated from RFID/Wi-Fi proximity."),
       ],
     },
     {

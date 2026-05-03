@@ -8,7 +8,7 @@ The built-in scenario is `distributed-training-tag-mock`:
 
 | Step | Mock source | What it proves |
 | --- | --- | --- |
-| `01-rfid-provider-location` | Pi 4B node A RFID reader | RFID identity plus provider-style location shape with `isCarrierGrade=false` |
+| `01-rfid-provider-location` | Pi 4B node A RFID reader | RFID identity plus fake L3Harris-style LTE provider location shape with `isCarrierGrade=false` |
 | `02-audio-corroboration` | Pi 4B node B microphone | Audio context joins the track, but remains inconclusive alone |
 | `03-jetson-visual-cue` | Jetson Orin camera inference | Visual evidence completes the cross-node quorum and produces a CASK cue |
 | `04-node-loss-continuity` | Node health mock | Node B becomes unreachable after replication; the mesh should show degraded continuity while preserving records |
@@ -125,16 +125,25 @@ The real adapters only need to emit the same event kinds:
       "zoneId": "training-zone-alpha",
       "rssi": -41,
       "providerStyle": {
-        "sourceId": "arduino-rfid-kit-a",
+        "sourceId": "l3harris-style-lte-mock-from-rfid-a",
         "entityId": "training-tag-001",
-        "precisionRadiusMeters": 35
+        "precisionRadiusMeters": 35,
+        "providerName": "L3Harris-style tactical LTE mock",
+        "emulationProfile": "l3harris_tactical_lte_mock",
+        "transport": "wifi_rfid",
+        "networkId": "altiair-private-lte-mock",
+        "cellId": "mock-cell-training-alpha",
+        "sectorId": "sector-a",
+        "accessPointId": "altiair-lan-ap",
+        "verificationMethod": "rfid_wifi_proximity",
+        "isSimulated": true
       }
     }
   ]
 }
 ```
 
-The RFID reader can be real while the provider-style location feed remains mocked. Emit the reader's tag ID, reader ID, zone, RSSI, and optional coarse coordinates; `src/sensors/liveMerge.ts` will create the CASK `RfidEvent`, `ProviderStyleLocationEvent`, and `LocationFix` records with `isCarrierGrade=false`.
+The RFID reader can be real while the provider-style location feed remains mocked. Emit the reader's tag ID, reader ID, zone, RSSI, optional coarse coordinates, and provider-style envelope fields; `src/sensors/liveMerge.ts` will create the CASK `RfidEvent`, `ProviderStyleLocationEvent`, and `LocationFix` records with `isCarrierGrade=false`. The default envelope is an L3Harris-style tactical LTE mock using RFID/Wi-Fi proximity, not a live carrier or vendor integration.
 
 No frontend or ontology code changes are required when the mock emitters are replaced by real Pi/Jetson capture processes.
 

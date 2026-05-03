@@ -65,6 +65,7 @@ In `FOUNDRY_MODE=osdk`, the node uses `FOUNDRY_INTEL_OBJECT_EXPORTS` to fetch ge
 - Installed the generated package locally outside Git from the Atlas package tarball.
 - Configured local ignored `.env` values for the Foundry stack URL, ontology RID, backend-service client id, client secret, generated OSDK package, and CASK GPS action export.
 - Ran the live OSDK smoke successfully; Foundry accepted `createExampleCaskGpsPosition` and created an `[Example] CASK GPS Position` object.
+- Revalidated direct Foundry from local `.env`: `npm run foundry:direct:intel` returned connected OSDK context, and `npm run foundry:direct:smoke` returned an accepted writeback through `createExampleCaskGpsPosition`.
 
 ## Remaining Foundry Work
 

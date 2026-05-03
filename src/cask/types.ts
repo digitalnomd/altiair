@@ -73,6 +73,37 @@ export interface RfidEvent extends BaseSensorEvent {
   matchedFoundryObjectRid?: string;
 }
 
+export type ProviderStyleEmulationProfile =
+  | "l3harris_tactical_lte_mock"
+  | "private_5g_mock"
+  | "rfid_wifi_proximity_mock"
+  | "generic_provider_style_mock";
+
+export type ProviderStyleTransport =
+  | "private_lte"
+  | "private_5g"
+  | "wifi_rfid"
+  | "rfid_only"
+  | "unknown";
+
+export interface ProviderStyleNetworkEnvelope {
+  schemaVersion: "altiair-provider-style-v1";
+  providerName: string;
+  emulationProfile: ProviderStyleEmulationProfile;
+  transport: ProviderStyleTransport;
+  networkId?: string;
+  cellId?: string;
+  sectorId?: string;
+  accessPointId?: string;
+  wifiBssidHash?: string;
+  verificationMethod:
+    | "rfid_read"
+    | "rfid_wifi_proximity"
+    | "operator_ack"
+    | "mock_fixture";
+  isSimulated: boolean;
+}
+
 export interface ProviderStyleLocationEvent extends BaseSensorEvent {
   kind: "provider_style_location";
   sourceType: "rfid_provider_style";
@@ -82,6 +113,7 @@ export interface ProviderStyleLocationEvent extends BaseSensorEvent {
   expiresAt: IsoTimestamp;
   supportingEvidenceIds: string[];
   isCarrierGrade: false;
+  providerEnvelope: ProviderStyleNetworkEnvelope;
 }
 
 export type SensorEvent =
@@ -107,6 +139,7 @@ export interface LocationFix {
   isCarrierGrade: boolean;
   supportingEvidenceIds: string[];
   policyState: PolicyState;
+  providerEnvelope?: ProviderStyleNetworkEnvelope;
 }
 
 export interface DroneObservation {
