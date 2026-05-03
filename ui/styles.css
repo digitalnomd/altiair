@@ -1357,6 +1357,7 @@ svg use {
 
 .pulse-icon.warn {
   color: var(--amber);
+  filter: drop-shadow(0 0 8px rgba(211, 181, 104, 0.16));
 }
 
 .pulse-icon.move {
@@ -1572,6 +1573,7 @@ svg use {
 
 .feed-dot.warn {
   background: var(--amber);
+  box-shadow: 0 0 10px rgba(211, 181, 104, 0.24);
 }
 
 .feed-dot.bad {
