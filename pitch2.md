@@ -26,6 +26,8 @@ Existing tactical systems either require cloud connectivity or put all intellige
 ---
 Live Demo:
 
+![Altiair demo flow chart](assets/pitch/demo-flow-chart.svg)
+
 Dashboard opens — tactical map, 4 nodes live, all green
 Camera feed active — YOLO detects object, visual confidence updates live on dashboard
 Audio detection fires — "rotor sound detected" populates on Node 2's card

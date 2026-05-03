@@ -133,6 +133,7 @@ Use three visuals in the pitch or demo deck:
 1. **Problem image:** squad members each see a different fragment; cloud link is broken; no single device has the truth.
 2. **Architecture image:** each node filters locally, shares compact evidence, then the mesh produces a human-reviewable cue and optional Foundry sync.
 3. **Failure image:** one coordinator disappears, a new coordinator is elected, mission state persists.
+4. **Flow chart:** one-command startup, sensor fusion, human review, node-loss recovery, and Foundry/CASK reconciliation.
 
 The SVG drafts are in `assets/pitch/` and can be dropped into slides or the README.
 
