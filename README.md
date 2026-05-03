@@ -70,6 +70,7 @@ The deeper decision brief is here:
 - [Training Tag Objective](docs/training-tag-objective.md)
 - [Security Implementation Plan](docs/security-implementation-plan.md)
 - [DARPA Opportunity Alignment](docs/darpa-opportunity-alignment.md)
+- [Teammate Remote Pi and Frontend Handoff](docs/teammate-remote-pi-frontend-handoff.md)
 
 Shared data ideas and LLM context drop:
 

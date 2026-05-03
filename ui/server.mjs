@@ -55,7 +55,26 @@ async function handleRequest(request, response) {
 }
 
 async function serveDashboardSnapshot(response) {
-  const [health, topology, peers, gateway, congestion, pending, ledger] = await Promise.all([
+  const directDashboard = await fetchTargetJson("/dashboard");
+  if (!directDashboard?.error) {
+    writeJson(response, 200, directDashboard);
+    return;
+  }
+
+  const [
+    health,
+    topology,
+    peers,
+    gateway,
+    congestion,
+    pending,
+    ledger,
+    replication,
+    insight,
+    tagPlan,
+    instructions,
+    missionContinuity,
+  ] = await Promise.all([
     fetchTargetJson("/health"),
     fetchTargetJson("/topology"),
     fetchTargetJson("/peers"),
@@ -63,6 +82,11 @@ async function serveDashboardSnapshot(response) {
     fetchTargetJson("/congestion"),
     fetchTargetJson("/bundles/pending"),
     fetchTargetJson("/ledger"),
+    fetchTargetJson("/replication/latest"),
+    fetchTargetJson("/insights/latest"),
+    fetchTargetJson("/tag-plan/latest"),
+    fetchTargetJson("/instructions/latest"),
+    fetchTargetJson("/mission-continuity"),
   ]);
 
   if ([health, topology, peers, gateway, congestion, pending, ledger].every((item) => item?.error)) {
@@ -83,6 +107,11 @@ async function serveDashboardSnapshot(response) {
       congestion,
       pending,
       ledger,
+      replication: replication?.error ? null : replication,
+      insight: insight?.error ? null : insight,
+      tagPlan: tagPlan?.error ? null : tagPlan,
+      instructions: instructions?.error ? null : instructions,
+      missionContinuity: missionContinuity?.error ? null : missionContinuity,
     },
   });
 }

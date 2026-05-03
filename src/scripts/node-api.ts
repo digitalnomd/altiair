@@ -44,6 +44,7 @@ if (!Number.isInteger(port) || port < 1 || port > 65535) {
 
 const host = argValue("--host") ?? process.env.ALTIAIR_API_HOST ?? "0.0.0.0";
 const apiToken = process.env.ALTIAIR_API_TOKEN;
+const corsOrigin = process.env.ALTIAIR_CORS_ORIGIN;
 
 const state: RuntimeState = {
   node,
@@ -80,6 +81,8 @@ server.listen(port, host, () => {
           mode: state.llmMode,
           model: state.llmModel,
         },
+        dashboard: "/dashboard",
+        frontendCors: corsOrigin === undefined ? "disabled" : corsOrigin,
         protectedRoutes: apiToken === undefined ? "disabled" : "bearer",
       },
       null,
@@ -96,6 +99,11 @@ async function handleRequest(
   const url = new URL(request.url ?? "/", "http://localhost");
   const path = url.pathname.replace(/\/+$/, "") || "/";
 
+  if (request.method === "OPTIONS") {
+    writeCorsPreflight(response);
+    return;
+  }
+
   if (request.method === "GET" && path === "/health") {
     writeJson(response, 200, buildHealth(state));
     return;
@@ -106,6 +114,11 @@ async function handleRequest(
       error: "Unauthorized.",
       message: "Protected route requires Authorization: Bearer <token>.",
     });
+    return;
+  }
+
+  if (request.method === "GET" && path === "/dashboard") {
+    writeJson(response, 200, buildDashboardSnapshot(state));
     return;
   }
 
@@ -299,6 +312,7 @@ async function handleRequest(
     error: "Not found.",
     endpoints: [
       "GET /health",
+      "GET /dashboard",
       "GET /topology",
       "GET /peers",
       "GET /gateway",
@@ -347,6 +361,54 @@ function parseBundle(rawBody: string): CaskBundle {
     throw new Error("Bundle must include numeric priority.");
   }
   return parsed as CaskBundle;
+}
+
+function buildDashboardSnapshot(state: RuntimeState): unknown {
+  const gateway = selectGateway(defaultDdilMeshTopology, state.observations, {
+    currentGatewayId: state.currentGatewayId,
+  });
+  state.currentGatewayId = gateway.selectedGatewayId ?? state.currentGatewayId;
+  const gatewayObservation = state.observations.find(
+    (observation) => observation.nodeId === gateway.selectedGatewayId,
+  );
+  const latestReport = latestReplicationReport(state);
+  const latestTagPlan = latestTrainingTagPlan(state);
+
+  return {
+    nodeApi: {
+      capturedAt: new Date().toISOString(),
+      health: buildHealth(state),
+      topology: defaultDdilMeshTopology,
+      peers: {
+        nodeId: state.node.id,
+        peers: defaultDdilMeshTopology.nodes
+          .filter((peer) => peer.id !== state.node.id)
+          .map((peer) => ({
+            ...peer,
+            observation: state.observations.find((observation) => observation.nodeId === peer.id),
+          })),
+      },
+      gateway,
+      missionContinuity: assessMissionContinuity(
+        defaultDdilMeshTopology,
+        state.observations,
+        gateway.selectedGatewayId ?? undefined,
+      ),
+      congestion: gatewayObservation === undefined
+        ? null
+        : decideCongestion(defaultDdilMeshTopology, gatewayObservation, 0, 0, "review_needed"),
+      pending: {
+        nodeId: state.node.id,
+        count: state.bundles.length,
+        bundles: state.bundles,
+      },
+      ledger: buildLocalLedgerView(state),
+      replication: latestReport ?? null,
+      insight: latestInsightDraft(state) ?? null,
+      tagPlan: latestTagPlan ?? null,
+      instructions: latestTagPlan === undefined ? null : nodeInstructionView(state.node.id, latestTagPlan),
+    },
+  };
 }
 
 function parseBundleResponse(rawBody: string, response: ServerResponse): CaskBundle | undefined {
@@ -688,11 +750,31 @@ function readBody(request: IncomingMessage, maxBytes: number): Promise<string> {
 
 function writeJson(response: ServerResponse, statusCode: number, body: unknown): void {
   response.writeHead(statusCode, {
-    "content-type": "application/json; charset=utf-8",
-    "cache-control": "no-store",
-    "x-content-type-options": "nosniff",
+    ...responseHeaders("application/json; charset=utf-8"),
   });
   response.end(`${JSON.stringify(body, null, 2)}\n`);
+}
+
+function writeCorsPreflight(response: ServerResponse): void {
+  response.writeHead(204, responseHeaders("text/plain; charset=utf-8"));
+  response.end();
+}
+
+function responseHeaders(contentType: string): Record<string, string> {
+  return {
+    "content-type": contentType,
+    "cache-control": "no-store",
+    "x-content-type-options": "nosniff",
+    ...(corsOrigin === undefined
+      ? {}
+      : {
+          "access-control-allow-origin": corsOrigin,
+          "access-control-allow-methods": "GET,POST,OPTIONS",
+          "access-control-allow-headers": "authorization,content-type",
+          "access-control-max-age": "600",
+          "vary": "Origin",
+        }),
+  };
 }
 
 function argValue(name: string): string | undefined {

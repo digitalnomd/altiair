@@ -17,7 +17,8 @@ http://127.0.0.1:4173/
 The UI accepts either:
 
 - `GET /api/dashboard` returning the dashboard state shape used in `data/demo-state.json`.
-- The existing node API endpoints through the proxy: `/health`, `/topology`, `/peers`, `/gateway`, `/congestion`, `/bundles/pending`, and `/ledger`.
+- The node API `/dashboard` snapshot through the proxy.
+- The existing node API endpoints through the proxy: `/health`, `/topology`, `/peers`, `/gateway`, `/mission-continuity`, `/congestion`, `/bundles/pending`, `/ledger`, `/replication/latest`, `/insights/latest`, `/tag-plan/latest`, and `/instructions/latest`.
 
 The intended producer split is:
 
@@ -26,3 +27,11 @@ The intended producer split is:
 - `gossip`: node reachability, peer roles, mesh links, and replicated ledger hints.
 
 Use `?source=demo` to force fixture data, or `?api=/api` to choose a same-origin API prefix.
+
+For a teammate frontend running on a different dev server, prefer the proxy above. If direct browser-to-node calls are needed, start the node API with:
+
+```bash
+ALTIAIR_CORS_ORIGIN=http://localhost:5173 npm run node:api -- --node altiair-hub
+```
+
+If `ALTIAIR_API_TOKEN` is enabled, the frontend must send `Authorization: Bearer <token>`.

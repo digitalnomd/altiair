@@ -8,6 +8,10 @@ ENV_DIR="${ALTIAIR_ENV_DIR:-/etc/altiair}"
 ENV_FILE="${ALTIAIR_ENV_FILE:-${ENV_DIR}/altiair-node.env}"
 NODE_ID="${ALTIAIR_NODE_ID:-altiair-hub}"
 NODE_PORT="${ALTIAIR_API_PORT:-8080}"
+BOOT_ENV_FILES=(
+  "/boot/firmware/altiair-node.env"
+  "/boot/altiair-node.env"
+)
 
 if command -v apt-get >/dev/null 2>&1; then
   sudo apt-get update
@@ -25,7 +29,19 @@ npm ci
 
 sudo mkdir -p "$ENV_DIR"
 if [[ ! -f "$ENV_FILE" ]]; then
-  sudo tee "$ENV_FILE" >/dev/null <<EOF
+  BOOT_ENV_FILE=""
+  for candidate in "${BOOT_ENV_FILES[@]}"; do
+    if [[ -f "$candidate" ]]; then
+      BOOT_ENV_FILE="$candidate"
+      break
+    fi
+  done
+
+  if [[ -n "$BOOT_ENV_FILE" ]]; then
+    sudo cp "$BOOT_ENV_FILE" "$ENV_FILE"
+    sudo chmod 600 "$ENV_FILE"
+  else
+    sudo tee "$ENV_FILE" >/dev/null <<EOF
 ALTIAIR_NODE_ID=${NODE_ID}
 ALTIAIR_API_HOST=0.0.0.0
 ALTIAIR_API_PORT=${NODE_PORT}
@@ -39,6 +55,8 @@ FOUNDRY_UPLOAD_PROFILE=cask_gps_position
 FOUNDRY_ACTION_CREATE_CASK_GPS_POSITION=createExampleCaskGpsPosition
 FOUNDRY_ACTION_PAYLOAD_STYLE=raw
 EOF
+    sudo chmod 600 "$ENV_FILE"
+  fi
 fi
 
 sudo tee "/etc/systemd/system/${SERVICE_NAME}.service" >/dev/null <<EOF

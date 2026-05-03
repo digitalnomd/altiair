@@ -256,12 +256,30 @@ async function loadLivePayload() {
     fetchJson(joinUrl(apiBase, "topology")),
     fetchJson(joinUrl(apiBase, "peers")),
     fetchJson(joinUrl(apiBase, "gateway")),
+    fetchJson(joinUrl(apiBase, "mission-continuity")),
     fetchJson(joinUrl(apiBase, "congestion")),
     fetchJson(joinUrl(apiBase, "bundles/pending")),
     fetchJson(joinUrl(apiBase, "ledger")),
+    fetchJson(joinUrl(apiBase, "replication/latest")),
+    fetchJson(joinUrl(apiBase, "insights/latest")),
+    fetchJson(joinUrl(apiBase, "tag-plan/latest")),
+    fetchJson(joinUrl(apiBase, "instructions/latest")),
   ]);
 
-  const [health, topology, peers, gateway, congestion, pending, ledger] = endpoints.map((result) =>
+  const [
+    health,
+    topology,
+    peers,
+    gateway,
+    missionContinuity,
+    congestion,
+    pending,
+    ledger,
+    replication,
+    insight,
+    tagPlan,
+    instructions,
+  ] = endpoints.map((result) =>
     result.status === "fulfilled" ? result.value : null,
   );
 
@@ -279,6 +297,11 @@ async function loadLivePayload() {
       congestion,
       pending,
       ledger,
+      missionContinuity,
+      replication,
+      insight,
+      tagPlan,
+      instructions,
     },
   };
 }
@@ -331,6 +354,12 @@ function fromNodeApiSnapshot(snapshot) {
   const latestCue = latestBundle?.counterUasCues?.[0];
   const latestDrone = latestBundle?.droneObservations?.[0];
   const latestEstimate = latestBundle?.controlSourceEstimates?.[0];
+  const latestInsight = snapshot.insight && !snapshot.insight.error ? snapshot.insight : null;
+  const latestTagPlan = snapshot.tagPlan && !snapshot.tagPlan.error ? snapshot.tagPlan : null;
+  const localInstructions = snapshot.instructions && !snapshot.instructions.error ? snapshot.instructions : null;
+  const localAssignment = localInstructions?.localAssignments?.[0];
+  const missionContinuity = snapshot.missionContinuity && !snapshot.missionContinuity.error ? snapshot.missionContinuity : null;
+  const replication = snapshot.replication && !snapshot.replication.error ? snapshot.replication : null;
 
   const peerObservationById = new Map();
   for (const peer of peerRows) {
@@ -374,10 +403,21 @@ function fromNodeApiSnapshot(snapshot) {
   const totalCount = liveNodes.length || topologyNodes.length || 1;
   const selectedGateway = snapshot.gateway?.selectedGatewayId ?? snapshot.gateway?.gatewayDecision?.selectedGatewayId ?? null;
   const congestion = snapshot.congestion?.congestion ?? snapshot.congestion;
+  const instructionText =
+    localAssignment?.instruction ??
+    localInstructions?.standby ??
+    latestInsight?.recommendedNextChecks?.[0] ??
+    latestCue?.recommendedNextChecks?.[0] ??
+    null;
 
   base.updatedAt = snapshot.capturedAt ?? new Date().toISOString();
-  base.mission.status = `${onlineCount}/${totalCount} nodes active - ${onlineCount >= 3 ? "mesh stable" : "mesh degraded"}`;
+  base.mission.status = missionContinuity
+    ? `${onlineCount}/${totalCount} nodes active - ${formatToken(missionContinuity.status)}`
+    : `${onlineCount}/${totalCount} nodes active - ${onlineCount >= 3 ? "mesh stable" : "mesh degraded"}`;
   base.fusion.confidenceScore = latestCue?.confidence ?? latestEstimate?.confidence ?? base.fusion.confidenceScore;
+  if (latestInsight?.confidence !== undefined) {
+    base.fusion.confidenceScore = Math.max(base.fusion.confidenceScore, latestInsight.confidence);
+  }
   base.fusion.confidenceLabel = confidenceLabel(base.fusion.confidenceScore);
   base.fusion.latestEvent = latestDrone
     ? `${formatDroneClass(latestDrone.droneClass)} cue in ${latestDrone.zoneId ?? "active zone"}`
@@ -390,7 +430,9 @@ function fromNodeApiSnapshot(snapshot) {
     {
       level: latestCue ? "warn" : "info",
       title: "Fusion",
-      text: latestCue?.evidence?.[0]?.summary ?? "Waiting for fused cue bundle from the local LLM fusion layer.",
+      text: latestInsight?.summary ??
+        latestCue?.evidence?.[0]?.summary ??
+        "Waiting for fused cue bundle from the local LLM fusion layer.",
     },
     {
       level: base.fusion.policyGate === "authorized_to_share" ? "good" : "warn",
@@ -407,31 +449,35 @@ function fromNodeApiSnapshot(snapshot) {
   ];
 
   base.coordinator.recommendedNextAction =
-    latestCue?.recommendedNextChecks?.[0] ??
+    instructionText ??
     (congestion?.preferredDecision ? `Coordinator fallback: ${formatToken(congestion.preferredDecision)}` : base.coordinator.recommendedNextAction);
-  base.coordinator.operatorNextAction =
-    latestCue?.recommendedNextChecks?.[0] ??
+  base.coordinator.operatorNextAction = instructionText ??
     "Maintain observation. Keep collecting compact evidence until a cue is available.";
+  const assignmentByNode = new Map((latestTagPlan?.assignments ?? []).map((assignment) => [assignment.nodeId, assignment]));
   base.coordinator.teamPulse = liveNodes.map((node) => ({
     nodeId: node.id,
-    task: node.status === "degraded" ? "Degraded" : selectedGateway === node.sourceId ? "Gateway" : node.id === shortNodeId(health.nodeId) ? "Local" : "Peer",
-    status: node.status === "degraded" ? "warn" : selectedGateway === node.sourceId ? "good" : "neutral",
+    task: teamTaskLabel(node, assignmentByNode, selectedGateway, health.nodeId),
+    status: teamTaskStatus(node, assignmentByNode, selectedGateway),
   }));
   base.coordinator.feed = [
     {
       level: "info",
-      title: "Coordinator",
+      title: "Local instruction",
       text: base.coordinator.recommendedNextAction,
     },
     {
-      level: selectedGateway ? "good" : "warn",
-      title: "Gateway",
-      text: selectedGateway ? `${nodeLabel(selectedGateway)} selected for sync.` : "No gateway selected; continue local queueing.",
+      level: latestTagPlan ? (latestTagPlan.executionState === "blocked" ? "bad" : "warn") : "info",
+      title: "Tag objective",
+      text: latestTagPlan
+        ? `${formatToken(latestTagPlan.executionState)} for ${latestTagPlan.subjectRef}.`
+        : "No CASK tag objective has been produced yet.",
     },
     {
-      level: pendingBundles.length > 0 ? "warn" : "good",
-      title: "Queue",
-      text: `${pendingBundles.length} bundle${pendingBundles.length === 1 ? "" : "s"} pending local handling.`,
+      level: latestInsight ? "good" : "info",
+      title: "Local LLM",
+      text: latestInsight
+        ? latestInsight.summary
+        : "No local LLM insight has been generated from live sensor events yet.",
     },
   ];
 
@@ -442,20 +488,54 @@ function fromNodeApiSnapshot(snapshot) {
       text: `${onlineCount} of ${totalCount} nodes reachable through gossip and heartbeat state.`,
     },
     {
-      level: selectedGateway ? "good" : "warn",
-      title: "Gateway",
-      text: selectedGateway ? `${nodeLabel(selectedGateway)} is current gateway candidate.` : "Gateway selection is local-only.",
+      level: missionContinuity?.canContinueLocalFusion ? "good" : "warn",
+      title: "Continuity",
+      text: missionContinuity?.missionNotes?.[0] ??
+        (selectedGateway ? `${nodeLabel(selectedGateway)} is current gateway candidate.` : "Gateway selection is local-only."),
     },
     {
-      level: snapshot.ledger?.survivableNodeLoss ? "good" : "warn",
-      title: "Ledger",
-      text: snapshot.ledger?.storedRecordCount
-        ? `${snapshot.ledger.storedRecordCount} replicated records visible locally.`
-        : "No replicated records reported yet.",
+      level: replication?.allReachableNodesHaveAllRecords || snapshot.ledger?.survivableNodeLoss ? "good" : "warn",
+      title: "Replication",
+      text: replication?.allReachableNodesHaveAllRecords
+        ? "All reachable nodes have the latest CASK records."
+        : snapshot.ledger?.storedRecordCount
+          ? `${snapshot.ledger.storedRecordCount} replicated records visible locally.`
+          : "No replicated records reported yet.",
     },
   ];
 
   return base;
+}
+
+function teamTaskLabel(node, assignmentByNode, selectedGateway, healthNodeId) {
+  const assignment = assignmentByNode.get(node.sourceId);
+  if (node.status === "degraded") {
+    return "Degraded";
+  }
+  if (assignment) {
+    return formatToken(assignment.role);
+  }
+  if (selectedGateway === node.sourceId) {
+    return "Gateway";
+  }
+  if (node.id === shortNodeId(healthNodeId)) {
+    return "Local";
+  }
+  return "Peer";
+}
+
+function teamTaskStatus(node, assignmentByNode, selectedGateway) {
+  const assignment = assignmentByNode.get(node.sourceId);
+  if (node.status === "degraded") {
+    return "warn";
+  }
+  if (assignment?.role === "guide_to_checkpoint") {
+    return "move";
+  }
+  if (assignment || selectedGateway === node.sourceId) {
+    return "good";
+  }
+  return "neutral";
 }
 
 function evidenceFromBundle(bundle, fallback) {
