@@ -434,6 +434,7 @@ svg use {
 
 .summary-cell .metric-warning {
   color: var(--amber);
+  text-shadow: 0 0 14px rgba(211, 181, 104, 0.18);
 }
 
 .summary-cell .metric-good {
