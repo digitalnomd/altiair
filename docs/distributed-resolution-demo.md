@@ -15,7 +15,7 @@ Sources:
 - https://www.darpa.mil/research/programs/decentralized-artificial-intelligence-through-controlled-emergence
 - https://www.darpa.mil/research/programs/secure-handhelds
 
-There is no single central authority. `altiair-hub` is the Pi 5 local mission LAN host and preferred display/coordinator when online, but replicated evidence and cached mission context allow any surviving three-node quorum to continue if one node fails. Foundry/CASK can enrich or reconcile later, but the live demo must still work with no venue Wi-Fi or internet.
+There is no permanent central authority. `altiair-hub` is the Pi 5 local mission LAN host and preferred display/coordinator when online, but Raft-style election makes the coordinator LLM singleton for only the current term. Replicated evidence and cached mission context allow any surviving three-node quorum to elect or retain a coordinator if one node fails. Foundry/CASK can enrich or reconcile later, but the live demo must still work with no venue Wi-Fi or internet.
 
 The field version is multi-cell. A drone, Hawkeye kit, vehicle, or operator computer can host or join whatever local LAN is practical, then the overlay treats it as another reachable node or bridge. The demo's Pi 5 AP is the smallest concrete version of that pattern.
 
@@ -30,6 +30,8 @@ The field version is multi-cell. A drone, Hawkeye kit, vehicle, or operator comp
 
 Each node's local confidence stays below the resolution threshold. The fused view crosses threshold when at least three surviving nodes contribute replicated evidence. Full four-node operation gives the strongest confidence; one-node failure gives a degraded but still resolvable cue; two-node failure stays below quorum. After quorum resolution, each node publishes a signed intent ping with requested role and a short lease so the display, observation, safety, and tag-confirmation roles do not conflict.
 
+The live system decides ownership pragmatically. The singleton coordinator LLM is the best connected or best positioned viable node for that Raft-style term, based on link quality, load, role, model availability, and current task/evidence ownership. Field support roles are assigned to the best-positioned nodes for the bounded training task, not to a permanent hub.
+
 ## Demo Flow
 
 1. Start the no-router proof path: run logical nodes on the Pi 5/laptop first, then make the Pi 5 broadcast `Altiair-LAN`.
@@ -38,7 +40,7 @@ Each node's local confidence stays below the resolution threshold. The fused vie
 4. Trigger the RFID read on `altiair-node-a`.
 5. Trigger an audio/motion event on `altiair-node-b`.
 6. Trigger the Jetson visual event from a camera frame, marker, toy/static prop, or prerecorded clip.
-7. The current coordinator correlates the edge observations with replicated CASK/Foundry mission context.
+7. The current Raft-elected singleton coordinator correlates the edge observations with replicated CASK/Foundry mission context.
 8. The surviving quorum publishes peer intent pings and assigns supporting roles.
 9. The display shows a policy-gated cue with evidence IDs, confidence, uncertainty, source nodes, peer intents, and required next checks.
 10. Kill one node or the optional uplink. The mesh should elect or retain a surviving coordinator, show degraded mission continuity, and continue local operation.

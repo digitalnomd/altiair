@@ -97,8 +97,8 @@ export function buildDistributedResolutionReport(
   const reasons = [
     "RFID identity, audio cue, visual marker, and cached mission context live on different nodes.",
     "Every single-node readout remains below the resolution threshold.",
-    "The fused cue crosses threshold through replicated peer evidence, not a single central authority.",
-    "The Pi 5 may coordinate when online, but the Jetson or a Pi peer can take over the quorum role.",
+    "The fused cue crosses threshold through replicated peer evidence, not a permanent central authority.",
+    "Raft-style election keeps exactly one coordinator LLM active for the current term, and the Jetson or a Pi peer can take over after quorum failover.",
     "The result remains a review cue with uncertainty and policy state, not an autonomous action.",
   ];
 

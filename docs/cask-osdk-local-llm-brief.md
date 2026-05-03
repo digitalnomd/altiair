@@ -205,6 +205,8 @@ Local LLM control-plane filtering:
 Required node endpoints for this path:
 
 - `GET /congestion`: queue depth, in-flight transfers, CPU, memory, network usage, and gateway saturation.
+- `GET /gossip/world`: shared node/evidence state used by the coordinator.
+- `GET /coordinator/latest`: current singleton coordinator directive for the active Raft-style term.
 - `POST /bundles/{bundle_id}/decision`: local LLM/rules decision and priority.
 - `GET /cues`: active `CounterUasCue` records and policy review state.
 - `POST /cues/{cue_id}/ack`: operator acknowledgement from the Pi-hosted UI.

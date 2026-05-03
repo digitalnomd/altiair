@@ -18,13 +18,13 @@ The UI accepts either:
 
 - `GET /api/dashboard` returning the dashboard state shape used in `data/demo-state.json`.
 - The node API `/dashboard` snapshot through the proxy.
-- The existing node API endpoints through the proxy: `/health`, `/topology`, `/peers`, `/gateway`, `/mission-continuity`, `/congestion`, `/bundles/pending`, `/ledger`, `/replication/latest`, `/insights/latest`, `/tag-plan/latest`, and `/instructions/latest`.
+- The existing node API endpoints through the proxy: `/health`, `/topology`, `/peers`, `/gateway`, `/mission-continuity`, `/congestion`, `/gossip/world`, `/coordinator/latest`, `/bundles/pending`, `/ledger`, `/replication/latest`, `/insights/latest`, `/tag-plan/latest`, and `/instructions/latest`.
 
 The intended producer split is:
 
 - `fusion`: local LLM fusion output from camera, microphone, RF/RFID, and confidence/evidence.
-- `coordinator`: next checks, operator action, and per-node intent assignments.
-- `gossip`: node reachability, peer roles, mesh links, and replicated ledger hints.
+- `coordinator`: the current Raft-term singleton coordinator directive, next checks, operator action, and per-node intent assignments.
+- `gossip`: node reachability, failed nodes, peer roles, mesh links, and replicated ledger hints.
 
 Use `?source=demo` to force fixture data, or `?api=/api` to choose a same-origin API prefix.
 

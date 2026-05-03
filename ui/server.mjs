@@ -73,6 +73,8 @@ async function serveDashboardSnapshot(response) {
     insight,
     tagPlan,
     instructions,
+    coordinator,
+    gossipWorld,
     missionContinuity,
   ] = await Promise.all([
     fetchTargetJson("/health"),
@@ -86,6 +88,8 @@ async function serveDashboardSnapshot(response) {
     fetchTargetJson("/insights/latest"),
     fetchTargetJson("/tag-plan/latest"),
     fetchTargetJson("/instructions/latest"),
+    fetchTargetJson("/coordinator/latest"),
+    fetchTargetJson("/gossip/world"),
     fetchTargetJson("/mission-continuity"),
   ]);
 
@@ -111,6 +115,8 @@ async function serveDashboardSnapshot(response) {
       insight: insight?.error ? null : insight,
       tagPlan: tagPlan?.error ? null : tagPlan,
       instructions: instructions?.error ? null : instructions,
+      coordinator: coordinator?.error ? null : coordinator,
+      gossipWorld: gossipWorld?.error ? null : gossipWorld,
       missionContinuity: missionContinuity?.error ? null : missionContinuity,
     },
   });

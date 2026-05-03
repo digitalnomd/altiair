@@ -62,7 +62,7 @@ Keep real runtime values in `.env` or shell exports only.
 
 The current live connection is operational for the narrow GPS-position writeback profile. Remaining work is ontology expansion rather than connection setup:
 
-1. Add full CASK object/action types for sensor observations, drone observations, control-source estimates, counter-UAS cues, insight drafts, and node health.
+1. Add full CASK object/action types for sensor observations, drone observations, control-source estimates, counter-UAS cues, gossip world state, coordinator directives, insight drafts, and node health.
 2. Regenerate the OSDK package after those resources are added.
 3. Switch `FOUNDRY_UPLOAD_PROFILE` from `cask_gps_position` to `bundle_actions` once matching actions exist.
 
@@ -75,6 +75,8 @@ To move beyond the narrow GPS smoke, the ontology should gain first-class object
 - Drone observation.
 - Control source estimate.
 - Counter-UAS cue.
+- Gossip world state.
+- Coordinator directive.
 - Insight draft.
 - Node health.
 

@@ -73,15 +73,19 @@ curl -sS http://127.0.0.1:8080/dashboard
 curl -sS http://127.0.0.1:8080/insights/latest
 curl -sS http://127.0.0.1:8080/tag-plan/latest
 curl -sS http://127.0.0.1:8080/instructions/latest
+curl -sS http://127.0.0.1:8080/gossip/world
+curl -sS http://127.0.0.1:8080/coordinator/latest
 curl -sS http://127.0.0.1:8080/mission-continuity
 ```
 
 Expected result:
 
-- `/dashboard` has one latest `nodeApi` snapshot with CASK bundle, insight, tag plan, instructions, replication, and continuity.
+- `/dashboard` has one latest `nodeApi` snapshot with CASK bundle, insight, tag plan, instructions, gossip world, singleton coordinator directive, replication, and continuity.
 - `/insights/latest` returns the local LLM path output. In `LOCAL_LLM_MODE=mock`, this is deterministic. In `LOCAL_LLM_MODE=ollama`, it uses the configured approved local model.
 - `/tag-plan/latest` returns a controlled non-contact training tag objective.
 - `/instructions/latest` returns the current node's local instruction view.
+- `/gossip/world` reports `altiair-node-b` as failed after the final mock step and keeps the surviving nodes online.
+- `/coordinator/latest` reports the current Raft-style singleton coordinator leader, term, authority state, and per-node instruction map.
 - `/mission-continuity` reports degraded state after the final step because `altiair-node-b` is mocked unreachable.
 
 ## Mock-To-Real Swap
@@ -107,6 +111,8 @@ The real adapters only need to emit the same event kinds:
   ]
 }
 ```
+
+The RFID reader can be real while the provider-style location feed remains mocked. Emit the reader's tag ID, reader ID, zone, RSSI, and optional coarse coordinates; `src/sensors/liveMerge.ts` will create the CASK `RfidEvent`, `ProviderStyleLocationEvent`, and `LocationFix` records with `isCarrierGrade=false`.
 
 No frontend or ontology code changes are required when the mock emitters are replaced by real Pi/Jetson capture processes.
 

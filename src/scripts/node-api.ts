@@ -6,6 +6,11 @@ import {
   decideCongestion,
   selectGateway,
 } from "../mesh/gatewaySelection.js";
+import {
+  buildCoordinatorDirective,
+  buildGossipWorldState,
+  type CoordinatorDirective,
+} from "../mesh/coordinator.js";
 import { buildDistributedResolutionReport } from "../cask/distributedResolution.js";
 import { buildTrainingTagPlan } from "../cask/trainingTag.js";
 import { buildReplicationReport } from "../mesh/replication.js";
@@ -22,11 +27,15 @@ interface RuntimeState {
   insights: InsightDraft[];
   tagPlans: TrainingTagPlan[];
   replicationReports: ReplicationReport[];
+  coordinatorDirectives: CoordinatorDirective[];
   insightClient: LocalInsightClient;
   llmMode: string;
   llmModel: string;
   startedAt: number;
   currentGatewayId?: string;
+  currentCoordinatorLeaderId?: string;
+  coordinatorTerm: number;
+  coordinatorIndex: number;
   apiToken?: string;
 }
 
@@ -61,11 +70,15 @@ const state: RuntimeState = {
   insights: [],
   tagPlans: [],
   replicationReports: [],
+  coordinatorDirectives: [],
   insightClient: createLocalInsightClient(config.llm),
   llmMode: config.llm.mode,
   llmModel: config.llm.model,
   startedAt: Date.now(),
   currentGatewayId: process.env.ALTIAIR_CURRENT_GATEWAY_ID,
+  currentCoordinatorLeaderId: process.env.ALTIAIR_CURRENT_COORDINATOR_ID,
+  coordinatorTerm: Number(process.env.ALTIAIR_COORDINATOR_TERM ?? 0),
+  coordinatorIndex: 0,
   apiToken,
 };
 
@@ -90,6 +103,7 @@ server.listen(port, host, () => {
           model: state.llmModel,
         },
         dashboard: "/dashboard",
+        coordinator: "/coordinator/latest",
         frontendCors: corsOrigin === undefined ? "disabled" : corsOrigin,
         protectedRoutes: apiToken === undefined ? "disabled" : "bearer",
       },
@@ -163,6 +177,33 @@ async function handleRequest(
       200,
       assessMissionContinuity(defaultDdilMeshTopology, state.observations, state.currentGatewayId),
     );
+    return;
+  }
+
+  if (request.method === "GET" && path === "/gossip/world") {
+    writeJson(
+      response,
+      200,
+      buildGossipWorldState(
+        defaultDdilMeshTopology,
+        state.observations,
+        latestTrainingTagPlan(state),
+      ),
+    );
+    return;
+  }
+
+  if (request.method === "GET" && path === "/coordinator/latest") {
+    const latestCoordinator = latestCoordinatorDirective(state);
+    if (latestCoordinator === undefined) {
+      writeJson(response, 404, {
+        error: "No coordinator directive.",
+        message: "POST /sensor-events or POST /bundles first, then read /coordinator/latest.",
+      });
+      return;
+    }
+
+    writeJson(response, 200, latestCoordinator);
     return;
   }
 
@@ -328,6 +369,8 @@ async function handleRequest(
       "GET /peers",
       "GET /gateway",
       "GET /mission-continuity",
+      "GET /gossip/world",
+      "GET /coordinator/latest",
       "GET /congestion",
       "GET /replication",
       "GET /replication/latest",
@@ -384,6 +427,7 @@ function buildDashboardSnapshot(state: RuntimeState): unknown {
   );
   const latestReport = latestReplicationReport(state);
   const latestTagPlan = latestTrainingTagPlan(state);
+  const latestCoordinator = latestCoordinatorDirective(state);
 
   return {
     nodeApi: {
@@ -417,6 +461,12 @@ function buildDashboardSnapshot(state: RuntimeState): unknown {
       replication: latestReport ?? null,
       insight: latestInsightDraft(state) ?? null,
       tagPlan: latestTagPlan ?? null,
+      coordinator: latestCoordinator ?? null,
+      gossipWorld: buildGossipWorldState(
+        defaultDdilMeshTopology,
+        state.observations,
+        latestTagPlan,
+      ),
       instructions: latestTagPlan === undefined ? null : nodeInstructionView(state.node.id, latestTagPlan),
     },
   };
@@ -545,6 +595,26 @@ async function acceptBundleResponse(
   state.replicationReports.push(products.replicationReport);
   state.tagPlans.push(products.tagPlan);
   const insightResult = await draftLocalInsight(state, bundle);
+  const coordinator = buildCoordinatorDirective(
+    defaultDdilMeshTopology,
+    state.observations,
+    bundle.id,
+    bundle.missionId,
+    products.tagPlan,
+    insightResult.insight,
+    {
+      localNodeId: state.node.id,
+      previousLeaderId: state.currentCoordinatorLeaderId,
+      previousTerm: state.coordinatorTerm,
+      previousIndex: state.coordinatorIndex,
+      model: state.llmModel,
+      mode: state.llmMode,
+    },
+  );
+  state.coordinatorDirectives.push(coordinator);
+  state.currentCoordinatorLeaderId = coordinator.election.leaderId ?? state.currentCoordinatorLeaderId;
+  state.coordinatorTerm = coordinator.election.term;
+  state.coordinatorIndex += 1;
 
   writeJson(response, 202, {
     accepted: congestion?.acceptBundle ?? true,
@@ -554,6 +624,7 @@ async function acceptBundleResponse(
     congestion,
     replication: summarizeReplicationReport(products.replicationReport),
     tagPlan: summarizeTagPlan(products.tagPlan),
+    coordinator: summarizeCoordinatorDirective(coordinator),
     localInstructions: nodeInstructionView(state.node.id, products.tagPlan),
     localLlm: {
       mode: state.llmMode,
@@ -667,6 +738,10 @@ function latestTrainingTagPlan(state: RuntimeState): TrainingTagPlan | undefined
   return state.tagPlans[state.tagPlans.length - 1];
 }
 
+function latestCoordinatorDirective(state: RuntimeState): CoordinatorDirective | undefined {
+  return state.coordinatorDirectives[state.coordinatorDirectives.length - 1];
+}
+
 function summarizeTagPlan(tagPlan: TrainingTagPlan): unknown {
   return {
     objectiveId: tagPlan.objectiveId,
@@ -679,6 +754,17 @@ function summarizeTagPlan(tagPlan: TrainingTagPlan): unknown {
     selectedNodeId: tagPlan.selectedNodeId,
     degraded: tagPlan.degraded,
     executionState: tagPlan.executionState,
+  };
+}
+
+function summarizeCoordinatorDirective(directive: CoordinatorDirective): unknown {
+  return {
+    id: directive.id,
+    leaderId: directive.election.leaderId,
+    term: directive.election.term,
+    authorityState: directive.election.authorityState,
+    recommendedNextAction: directive.recommendedNextAction,
+    instructionNodeIds: Object.keys(directive.instructions).sort(),
   };
 }
 

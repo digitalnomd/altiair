@@ -102,6 +102,7 @@ The repo now includes a runnable TypeScript integration scaffold for the Foundry
 - `src/llm/localInsight.ts`: local LLM adapter with Ollama-compatible mode plus test-only mock mode.
 - `src/scripts/smoke.ts`: end-to-end smoke path that builds a sample Pi bundle, drafts an insight, and queues/uploads it.
 - `src/mesh/*`: four-node Pi/Jetson DDIL topology, gateway scoring, and congestion decisions.
+- `src/mesh/coordinator.ts`: gossip-derived world state plus Raft-style singleton coordinator selection so only one local LLM publishes per-node instructions for a term.
 - `src/scripts/mesh-plan.ts`: per-node environment and WireGuard template generator with no committed secrets.
 - `src/scripts/mesh-smoke.ts`: gateway failover and congestion smoke simulation.
 - `src/scripts/node-api.ts`: dependency-free prototype node API exposing health, peer, gateway, congestion, live sensor merge, local LLM insight, tag-plan instruction, replication, and ledger endpoints.
@@ -129,11 +130,12 @@ The real-world location pattern is provider-style RF/LTE telemetry: an external 
 The CASK-backed omni-model should fuse the sensor streams into a local, evidence-grounded view:
 
 - RFID provides the primary identity or presence signal.
-- RFID-derived provider-style location events provide the LTE/RF location shape we expect CASK to consume later.
+- RFID reads provide real tag identity/proximity from the reader; the demo mocks the upstream LTE/RF-provider location layer by converting reader ID, zone, RSSI, and optional coordinates into a coarse provider-style location fix with `isCarrierGrade=false`.
 - Camera events provide visual confirmation, movement, zone, and scene context.
 - Microphone events provide transcripts, acoustic events, and local context.
 - Foundry/OSDK provides governed mission context, asset/person/tag mappings, permissions, and writeback.
 - The local LLM explains the fused picture, calls out uncertainty, and recommends non-kinetic coordination steps such as coverage, search, deconfliction, sensor repositioning, and next verification checks.
+- The coordinator and role assignment logic prefer the best connected or best positioned viable node: connectivity/load/role drive coordinator election, while task proximity/evidence ownership drive field role assignment.
 
 The demo should be a distributed evidence puzzle. No single node is allowed to resolve the event alone, and no node is authoritative:
 
@@ -447,6 +449,8 @@ Every node or gateway should expose the same minimal API so the workflows can in
 | `GET /peers` | Returns known peers and last heartbeat status. |
 | `GET /gateway` | Returns current gateway candidate and score. |
 | `GET /congestion` | Returns queue depth, in-flight transfers, CPU, memory, network usage, and gateway saturation state. |
+| `GET /gossip/world` | Returns the gossip-derived shared world state: online nodes, failed nodes, per-node evidence IDs, and queue/load hints. |
+| `GET /coordinator/latest` | Returns the latest Raft-term singleton coordinator directive, elected leader, authority state, and per-node instruction map. |
 | `POST /sensor-events` | Receives live adapter JSON from Pi/Nano camera, microphone, RFID, or health processes, merges it into a CASK bundle, and drafts a local LLM insight. |
 | `POST /bundles` | Receives a sensor bundle from local capture or another Pi. |
 | `GET /bundles/pending` | Lists bundles that still need forwarding or upload. |
@@ -653,7 +657,7 @@ Runtime tests:
 3. Pi 4B node A captures RFID identity/presence.
 4. Pi 4B node B captures an audio or micro-observation cue.
 5. Jetson Orin captures a visual inference from an authorized training drone marker, prop, or controlled test cue.
-6. The current coordinator receives partial evidence, fuses it with replicated CASK/Foundry mission context, and drafts a structured insight.
+6. The current Raft-elected singleton coordinator LLM receives gossip state plus replicated CASK/Foundry mission context and publishes the term's structured directive.
 7. Nodes publish peer intents so the surviving quorum can assign non-conflicting support roles.
 8. Pi-hosted display updates with an EagleEye-style cue overlay.
 9. Cue queue shows selected node, peer intents, evidence links, missing-node status, confidence, and policy gate.

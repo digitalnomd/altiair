@@ -200,6 +200,8 @@ Wire the gateway and congestion decisions into the real node API:
 
 - `GET /gateway` returns `GatewayDecision`.
 - `GET /congestion` returns queue and link pressure plus `CongestionDecision`.
+- `GET /gossip/world` returns the shared node/evidence state used by the coordinator.
+- `GET /coordinator/latest` returns the active Raft-term singleton coordinator directive.
 - `POST /bundles` runs `decideCongestion` before accepting or forwarding media.
 - `POST /foundry/upload` is allowed only on the selected gateway and only when the bundle policy gate allows sharing.
 

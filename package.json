@@ -9,6 +9,7 @@
   },
   "scripts": {
     "build": "tsc --noEmit",
+    "coordinator:smoke": "tsx src/scripts/coordinator-smoke.ts",
     "cask:ontology": "tsx src/scripts/cask-ontology.ts",
     "fusion:smoke": "tsx src/scripts/fusion-smoke.ts",
     "mesh:plan": "tsx src/scripts/mesh-plan.ts",

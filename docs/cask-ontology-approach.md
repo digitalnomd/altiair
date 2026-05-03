@@ -23,6 +23,8 @@ The target CASK ontology shape is:
 | `CaskCounterUasCue` | Policy-gated cue for human review and verification. |
 | `CaskTagObjective` | Non-contact training tag objective state. |
 | `CaskNodeInstruction` | Per-node instruction, role, fallback nodes, and evidence IDs. |
+| `CaskGossipWorldState` | Gossip-derived shared awareness snapshot: online nodes, failed nodes, evidence IDs, and queue/load hints. |
+| `CaskCoordinatorDirective` | Raft-term singleton coordinator output with leader ID, authority state, recommended action, and per-node instruction map. |
 | `CaskInsightDraft` | Local LLM draft with citations, limitations, and policy state. |
 | `CaskNodeHealth` | Node health, queue depth, Foundry reachability, and local model status. |
 
@@ -38,6 +40,8 @@ createCaskControlSourceEstimate
 createCaskCounterUasCue
 createCaskTagObjective
 upsertCaskNodeInstruction
+createCaskGossipWorldState
+createCaskCoordinatorDirective
 createCaskInsightDraft
 upsertCaskNodeHealth
 ```
@@ -56,13 +60,16 @@ flowchart LR
   Bundle --> Ledger["replicated local ledger"]
   Bundle --> LLM["local LLM insight"]
   Bundle --> Tag["CaskTagObjective + CaskNodeInstruction"]
+  Ledger --> Gossip["CaskGossipWorldState"]
+  Gossip --> Coordinator["CaskCoordinatorDirective"]
+  Tag --> Coordinator
   Ledger --> Peers["reachable Pi/Nano peers"]
   LLM --> Display["/insights/latest"]
-  Tag --> Display2["/instructions/latest"]
+  Coordinator --> Display2["/coordinator/latest + /instructions/latest"]
   Bundle --> Foundry["Foundry CASK OSDK when policy + ontology allow"]
 ```
 
-Every Pi and the Jetson can run `POST /sensor-events` and `GET /instructions/latest`. The Pi 5 hub is the preferred CASK/Foundry gateway, and the Jetson is the secondary gateway, but the local CASK ledger and tag-plan records replicate to every reachable node. Each node also runs its own local LLM insight path; Gemma is the default approved model family for the Pi starter profile, with Ollama mode enabled once the model runtime is installed.
+Every Pi and the Jetson can run `POST /sensor-events`, `GET /gossip/world`, `GET /coordinator/latest`, and `GET /instructions/latest`. The Pi 5 hub is the preferred CASK/Foundry gateway, and the Jetson is the secondary gateway, but the local CASK ledger, gossip world, tag-plan records, and coordinator directives replicate to every reachable node. Each node also runs its own local LLM insight path; Gemma is the default approved model family for the Pi starter profile, with Ollama mode enabled once the model runtime is installed. The coordinator LLM is singleton per Raft-style term: local fusion can run everywhere, but only the elected leader publishes coordinator directives. Election favors the best connected or best positioned viable node using link/load/model/role state plus current evidence and task ownership.
 
 ## Instruction Boundary
 

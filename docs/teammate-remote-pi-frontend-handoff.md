@@ -29,7 +29,7 @@ Live adapters post camera, microphone, RFID, provider-style location, and health
 POST /sensor-events
 ```
 
-The node merges those events into a CASK bundle, drafts a local LLM insight, creates a controlled training tag objective, builds per-node instructions, and records the replicated mission ledger state.
+The node merges those events into a CASK bundle, drafts a local LLM insight, creates a controlled training tag objective, builds per-node instructions, records the replicated mission ledger state, and updates the gossip/coordinator surfaces.
 
 Before real sensor adapters are available, use the deterministic mock scenario:
 
@@ -37,7 +37,7 @@ Before real sensor adapters are available, use the deterministic mock scenario:
 npm run mock:replay -- --post-url http://127.0.0.1:8080/sensor-events
 ```
 
-That posts RFID, microphone, Jetson camera, provider-style location, and node-health degradation events through the same `/sensor-events` contract the real adapters will use.
+That posts RFID, microphone, Jetson camera, provider-style location, and node-health degradation events through the same `/sensor-events` contract the real adapters will use. The RFID reader can be real while the location-provider part stays mocked: send tag ID, reader ID, zone, RSSI, and optional coarse coordinates, and the node will mark the derived provider-style fix as non-carrier-grade.
 
 The local LLM profile is Gemma by default through Ollama-compatible config:
 
@@ -156,7 +156,11 @@ A custom frontend should read:
 | `insight` | Local LLM summary, limitations, confidence, and recommended checks |
 | `tagPlan` | Controlled training tag objective and per-node assignments |
 | `instructions` | The current node's local CASK instruction view |
+| `gossipWorld` | Online nodes, failed nodes, per-node evidence IDs, and queue/load hints |
+| `coordinator` | Current Raft-term singleton coordinator leader, authority state, and per-node directive map |
 | `replication` / `ledger` | Evidence that records are replicated across reachable nodes |
+
+The frontend should describe the leader as elected, not fixed. It is normally the best connected or best positioned viable node for the current term, and field roles can still be assigned to a different node if that node owns the relevant RFID/location, camera, or audio evidence.
 
 Minimal frontend fetch:
 
@@ -164,6 +168,7 @@ Minimal frontend fetch:
 const response = await fetch("/api/dashboard", { cache: "no-store" });
 const { nodeApi } = await response.json();
 const localInstruction =
+  nodeApi.coordinator?.instructions?.[nodeApi.health?.nodeId] ??
   nodeApi.instructions?.localAssignments?.[0]?.instruction ??
   nodeApi.instructions?.standby ??
   nodeApi.insight?.recommendedNextChecks?.[0] ??
@@ -196,6 +201,8 @@ Live frontend and teammate tooling should prefer `/dashboard`, but the lower-lev
 | `GET /peers` | Peer observations |
 | `GET /gateway` | Preferred Foundry/CASK gateway selection |
 | `GET /mission-continuity` | Local fusion continuity after degraded comms or node loss |
+| `GET /gossip/world` | Gossip-derived shared awareness state for frontend and coordinator input |
+| `GET /coordinator/latest` | Current singleton coordinator directive for the active Raft-style term |
 | `GET /bundles/pending` | Local queued CASK bundles |
 | `GET /ledger` | Local ledger summary |
 | `GET /replication/latest` | Latest per-record replication report |

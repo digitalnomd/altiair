@@ -7,6 +7,7 @@ This repo now includes a runnable local scaffold for the CASK edge path:
 - A live sensor merge boundary in `src/sensors/liveMerge.ts`.
 - Deterministic demo-shaped sensor data in `src/mock/caskDemoScenario.ts`.
 - A local insight adapter in `src/llm/localInsight.ts`.
+- Gossip world state and singleton coordinator directives in `src/mesh/coordinator.ts`.
 - A Foundry OSDK uploader in `src/foundry/uploader.ts`.
 - A smoke runner in `src/scripts/smoke.ts`.
 
@@ -33,11 +34,27 @@ curl -X POST http://127.0.0.1:8080/sensor-events \
   --data @./local-sensor-events.json
 ```
 
-Accepted event kinds are `camera_detection`, `audio_window`, `rfid_read`, and `node_health`. RFID reads automatically produce both a `RfidEvent` and a coarse `ProviderStyleLocationEvent`/`LocationFix` with `isCarrierGrade=false`. Drone-class camera detections produce `DroneObservation` records. Camera/RFID correlation produces a policy-gated cue for human review.
+Accepted event kinds are `camera_detection`, `audio_window`, `rfid_read`, and `node_health`. RFID reads automatically produce both a `RfidEvent` and a coarse `ProviderStyleLocationEvent`/`LocationFix` with `isCarrierGrade=false`. That is the intended mock boundary: the reader can be real, while the carrier-style location provider is represented by reader ID, zone, RSSI, optional coordinates, freshness, and precision radius until a real provider feed exists. Drone-class camera detections produce `DroneObservation` records. Camera/RFID correlation produces a policy-gated cue for human review.
 
-`POST /sensor-events` and `POST /bundles` also run the configured local insight client on the receiving node. The response includes the local LLM mode/model, the generated `InsightDraft`, the CASK training tag objective summary, and this node's local instruction view. `GET /insights/latest`, `GET /tag-plan/latest`, and `GET /instructions/latest` return those latest runtime products.
+`POST /sensor-events` and `POST /bundles` also run the configured local insight client on the receiving node. The response includes the local LLM mode/model, the generated `InsightDraft`, the CASK training tag objective summary, this node's local instruction view, and the latest singleton coordinator summary. `GET /insights/latest`, `GET /tag-plan/latest`, `GET /instructions/latest`, `GET /gossip/world`, and `GET /coordinator/latest` return those latest runtime products.
 
 All four compute nodes are modeled as local-LLM capable: the two Pi 4B sensor nodes, the Pi 5 hub/display/gateway, and the Jetson Orin Nano inference node.
+
+## Gossip And Singleton Coordinator
+
+Every node can locally merge sensor evidence and draft a bounded local insight. Nodes then gossip health, latest evidence, queue/load, and reachability into a shared world state. The coordinator layer uses that world state to elect one active coordinator LLM for the current Raft-style term.
+
+The election is intentionally practical: choose the best connected or best positioned viable coordinator candidate. Link class, packet loss, latency freshness, queue depth, CPU, memory pressure, gateway/display roles, local LLM availability, current evidence ownership, and task assignment all contribute to the score. This is separate from field role assignment, where the selected node is usually the one best positioned for the training tag/checkpoint role.
+
+The active coordinator publishes one `CaskCoordinatorDirective` containing:
+
+- the elected `leaderId`, term, quorum size, candidate list, and authority state;
+- the latest `CaskGossipWorldState`, including online and failed nodes;
+- a policy-gated recommended next action;
+- per-node instruction text for the surviving online nodes;
+- constraints that reject stale terms and non-leader coordinator outputs.
+
+If quorum is lost, `/coordinator/latest` reports `no_quorum_observe_only`; nodes continue local sensing, evidence preservation, and gossip, but should not accept new coordinator instructions until quorum returns.
 
 ## Mock Data Replay
 
@@ -110,6 +127,8 @@ The current default action export names are:
 | Sensor events | `FOUNDRY_ACTION_CREATE_SENSOR_OBSERVATION` | `createCaskSensorObservation` |
 | Location fixes | `FOUNDRY_ACTION_CREATE_LOCATION_FIX` | `createCaskLocationFix` |
 | Counter-UAS cues | `FOUNDRY_ACTION_CREATE_COUNTER_UAS_CUE` | `createCaskCounterUasCue` |
+| Gossip world state | `FOUNDRY_ACTION_CREATE_GOSSIP_WORLD_STATE` | `createCaskGossipWorldState` |
+| Coordinator directives | `FOUNDRY_ACTION_CREATE_COORDINATOR_DIRECTIVE` | `createCaskCoordinatorDirective` |
 | Insight drafts | `FOUNDRY_ACTION_CREATE_INSIGHT_DRAFT` | `createCaskInsightDraft` |
 | Node health | `FOUNDRY_ACTION_UPSERT_NODE_HEALTH` | `upsertCaskNodeHealth` |
 | CASK GPS Position smoke | `FOUNDRY_ACTION_CREATE_CASK_GPS_POSITION` | `createExampleCaskGpsPosition` |

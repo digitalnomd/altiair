@@ -264,6 +264,8 @@ async function loadLivePayload() {
     fetchJson(joinUrl(apiBase, "insights/latest")),
     fetchJson(joinUrl(apiBase, "tag-plan/latest")),
     fetchJson(joinUrl(apiBase, "instructions/latest")),
+    fetchJson(joinUrl(apiBase, "coordinator/latest")),
+    fetchJson(joinUrl(apiBase, "gossip/world")),
   ]);
 
   const [
@@ -279,6 +281,8 @@ async function loadLivePayload() {
     insight,
     tagPlan,
     instructions,
+    coordinator,
+    gossipWorld,
   ] = endpoints.map((result) =>
     result.status === "fulfilled" ? result.value : null,
   );
@@ -302,6 +306,8 @@ async function loadLivePayload() {
       insight,
       tagPlan,
       instructions,
+      coordinator,
+      gossipWorld,
     },
   };
 }
@@ -358,6 +364,8 @@ function fromNodeApiSnapshot(snapshot) {
   const latestTagPlan = snapshot.tagPlan && !snapshot.tagPlan.error ? snapshot.tagPlan : null;
   const localInstructions = snapshot.instructions && !snapshot.instructions.error ? snapshot.instructions : null;
   const localAssignment = localInstructions?.localAssignments?.[0];
+  const coordinatorDirective = snapshot.coordinator && !snapshot.coordinator.error ? snapshot.coordinator : null;
+  const gossipWorld = snapshot.gossipWorld && !snapshot.gossipWorld.error ? snapshot.gossipWorld : coordinatorDirective?.gossipWorld ?? null;
   const missionContinuity = snapshot.missionContinuity && !snapshot.missionContinuity.error ? snapshot.missionContinuity : null;
   const replication = snapshot.replication && !snapshot.replication.error ? snapshot.replication : null;
 
@@ -404,6 +412,7 @@ function fromNodeApiSnapshot(snapshot) {
   const selectedGateway = snapshot.gateway?.selectedGatewayId ?? snapshot.gateway?.gatewayDecision?.selectedGatewayId ?? null;
   const congestion = snapshot.congestion?.congestion ?? snapshot.congestion;
   const instructionText =
+    coordinatorDirective?.operatorNextAction ??
     localAssignment?.instruction ??
     localInstructions?.standby ??
     latestInsight?.recommendedNextChecks?.[0] ??
@@ -449,6 +458,7 @@ function fromNodeApiSnapshot(snapshot) {
   ];
 
   base.coordinator.recommendedNextAction =
+    coordinatorDirective?.recommendedNextAction ??
     instructionText ??
     (congestion?.preferredDecision ? `Coordinator fallback: ${formatToken(congestion.preferredDecision)}` : base.coordinator.recommendedNextAction);
   base.coordinator.operatorNextAction = instructionText ??
@@ -461,9 +471,11 @@ function fromNodeApiSnapshot(snapshot) {
   }));
   base.coordinator.feed = [
     {
-      level: "info",
-      title: "Local instruction",
-      text: base.coordinator.recommendedNextAction,
+      level: coordinatorDirective?.election?.authorityState === "leader_active" ? "good" : "warn",
+      title: "Coordinator",
+      text: coordinatorDirective?.election?.leaderId
+        ? `${nodeLabel(coordinatorDirective.election.leaderId)} leads term ${coordinatorDirective.election.term}.`
+        : "No Raft coordinator quorum; nodes continue observation-only gossip.",
     },
     {
       level: latestTagPlan ? (latestTagPlan.executionState === "blocked" ? "bad" : "warn") : "info",
@@ -483,9 +495,11 @@ function fromNodeApiSnapshot(snapshot) {
 
   base.gossip.feed = [
     {
-      level: onlineCount >= 3 ? "good" : "warn",
+      level: coordinatorDirective?.election?.authorityState === "leader_active" || onlineCount >= 3 ? "good" : "warn",
       title: "Mesh",
-      text: `${onlineCount} of ${totalCount} nodes reachable through gossip and heartbeat state.`,
+      text: gossipWorld?.onlineNodeIds
+        ? `${gossipWorld.onlineNodeIds.length} of ${totalCount} nodes reachable through gossip; ${formatToken(coordinatorDirective?.election?.algorithm ?? "raft_single_leader")}.`
+        : `${onlineCount} of ${totalCount} nodes reachable through gossip and heartbeat state.`,
     },
     {
       level: missionContinuity?.canContinueLocalFusion ? "good" : "warn",
