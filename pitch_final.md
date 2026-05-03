@@ -1,48 +1,38 @@
 # DarkMesh: Resilient Edge Intelligence for Contested Operations
 
-
 ---
 
 ## TAGLINE
 
 > DarkMesh turns a squad's scattered sensors into a single fused intelligence picture — locally, without cloud, without a central command node — and keeps the mission running even when nodes go dark.
 
-
 ---
 
-## THE PAIN
+## SECTION 1 - THE PAIN
 **Goal: make the problem visceral before you mention your product**
 
 - Squads today are **sensor-rich but coordination-poor**
 - One soldier sees a drone. Another hears rotor sound. A third gets an RF ping. A fourth files a report.
-- Four signals. No fusion. The squad leader mentally stitches it together — under fire, in a jammed network, with degraded comms.
-- And if the coorination node goes down? **The picture fragments. The squad goes dark.**
-- Army XTech solicited solutions for this exact problem. DARPA funded a program for it two weeks ago. It is still unsolved in the field.
-
-**Delivery note:** Pause after "the squad goes dark." Let it sit one beat. Then move.
-
-**What NOT to say:** Do not say DDIL yet. Do not explain the acronym. Judges know it. Saying it sounds like you're padding.
+- Those four signals never talk to each other. The squad leader has to mentally connect them — under fire, with degraded comms, in real time
+- The current solution? Either ship everything to the cloud (which dies the moment the network is jammed or intercepted) or rely on one central node device to coordinate the whole squad. Take out the leader, and the squad goes out.
+- DARPA just issued a program for this two weeks ago. The Army is searching for this solution in the DDIL environment.
 
 ---
 
-## SECTION 2 — WHAT WE BUILT (0:20–0:38)
+## SECTION 2 — WHAT WE BUILT
 **Goal: one clean architecture statement. No jargon overload.**
 
-Say:
-- DarkMesh is a **low-cost edge intelligence mesh** — each soldier carries a node: Raspberry Pi for sensor I/O, Jetson for local AI inference
-- Camera, microphone, RFID — all processed **locally**. No cloud required. No raw video streaming upstream.
-- Nodes share only compact evidence — not full sensor feeds — across an encrypted local mesh
-- A coordinator LLM is elected to fuse all signals and issue per-node instructions toward the mission objective
-- **Existing systems require either cloud OR a centralized command node. We eliminated both assumptions.** ← say this clearly, it's your creativity answer (25% of score)
-- This is not a replacement for IVAS, Nett Warrior, or Palantir. It is the **missing edge layer** that feeds them. At ~$400/node vs $80K/IVAS kit — it scales to every squad member.
-- When connectivity returns: everything syncs to Palantir Foundry via CASK — Foundry's local data contract running at the edge, same ontology, no internet required offline.
+- We built DarkMesh to solve this
+> DarkMesh turns a squad's scattered sensors into a single fused intelligence picture — locally, without cloud, without a central command node — and keeps the mission running even when nodes go dark.
 
-**Delivery note:** The cost comparison ($400 vs $80K) is a one-liner, not a slide. Say it fast and move. Don't dwell — you're not pitching cheapness, you're pitching scalability.
+- Each soldier is a node in the field: raspberry pi runing camera, microphone, RF sensors, and Jerson running a local lightweight AI model, catching what is being seen and heard in the field.
+- These signals get shared across an encrypted local WiFi mesh between every soldier's node, putting together a coherent, full picture of what's happening.
+- A coordinator LLM is elected to fuse all signals and issue per-node instructions toward the stated mission objective
+- while modern systems rely on one centralized command node, we built a mesh system that fuses and coordinates all these signals together. If the coordinating device gets destroyed — a new one is elected automatically in under a second, with full context already replicated across the mesh. No data loss. No restart. Mission continues.
 
 ---
 
-## SECTION 3 — LIVE DEMO: NORMAL OPERATION (0:38–1:08)
-**Goal: chaos → fusion → action. Show it, narrate it minimally.**
+## SECTION 3 — LIVE DEMO: NORMAL OPERATION
 
 Demo sequence — show in this exact order:
 1. Dashboard opens: tactical map, 4 nodes live, all green, local-only
@@ -57,19 +47,19 @@ Demo sequence — show in this exact order:
 
 Narrate:
 - "Four squad members, four weak signals. Alone — noise. Together — one explainable threat picture with 88% confidence."
-- "The coordinator LLM doesn't just say *something's there*. It tells each soldier what to do about it, based on their position."
+- "The coordinator LLM doesn't just say *something's there*. It tells each soldier what to do about it, based on their position real-time data, and the mission objective."
 - "No raw video going to the cloud. Filtered at the edge. Shared as compact evidence."
 
 **Delivery note:** Point at the hardware on the table while narrating. "This is running on that." Physical hardware = credibility. Don't just gesture at the screen.
 
 ---
 
-## SECTION 4 — THE KILL MOMENT (1:08–1:42)
+## SECTION 4 — THE KILL MOMENT
 **Goal: the single moment judges remember when they vote. Slow down here.**
 
 Setup line:
 - "Now we simulate the failure that breaks every traditional system."
-- "Most teams demo this in software simulation. We built it in hardware, running live." ← hits creativity criterion directly
+- "Most teams demo this in software simulation. We built it in hardware, running live."
 
 Action: **physically unplug Node 1**. Say nothing for 2 full seconds. Let judges watch.
 
@@ -94,26 +84,24 @@ Narrate:
 
 ---
 
-## SECTION 5 — PALANTIR / FOUNDRY (1:42–1:52)
+## SECTION 5 — PALANTIR / FOUNDRY
 **Goal: 10 seconds, targeted at Palantir and IQT judges specifically**
 
 Say:
 - "Offline, we run CASK at the edge — Foundry's local brain. Same ontology, same data contracts, no internet required."
 - "When any node regains connectivity, the full record syncs to Foundry automatically: every sensor event, every fusion decision, every coordinator term."
-- "The edge is ephemeral. The intelligence is permanent."
 
 **Delivery note:** Look at the Palantir judges when you say "Foundry's local brain." You're telling them: we're not competing with you — we're extending you to places you can't reach.
 
 ---
 
-## SECTION 6 — CLOSE (1:52–2:00)
+## SECTION 6 — CLOSE
 **Goal: 8 seconds. One line. Stop.**
 
-> "DARPA called this an open problem. Army XTech solicited it. JADC2 mandates it. We demo'd it this weekend."
+> DarkMesh is not a research concept. It is a working system, running on cost-efficient hardware, solving the exact problem DARPA and Army XTech have flagged as open in the field.
 
-Full stop. Do not add anything after it.
+FINAL LINE: The commander can be taken out. The mission cannot.
 
-**Delivery note:** If you want a shorter version: *"The commander can be taken out. The mission cannot."* — use this if the kill moment demo went perfectly and you want to call back to it. Use the DARPA/XTech/JADC2 line if you want to hit every judge in the room by name.
 
 ---
 
@@ -136,28 +124,3 @@ Full stop. Do not add anything after it.
 
 ---
 
-## SCORING MAP — HOW THIS PITCH HITS EACH CRITERION
-
-| Criterion | % | Where it lands in pitch |
-|---|---|---|
-| Technical Demo | 35% | Live YOLO + fusion + kill moment on real hardware |
-| Military Impact | 30% | Army doctrine gap + XTech solicitation + JADC2 mandate + operator validation |
-| Solution Creativity | 25% | "We eliminated cloud AND single command node" + hardware kill demo (not simulation) |
-| Presentation & Pitch | 10% | Chaos→fusion→action arc + hardware on table + clean punchline |
-
----
-
-## WHAT TO HAVE ON THE TABLE
-
-- Jetson Nano + RPi physically visible — not hidden in a bag
-- One node physically unplugable mid-demo (test the cable 10x before)
-- Dashboard on a large screen, not a laptop lid
-- Hardware labeled: "Node 1", "Node 2" etc — judges need to match physical to screen
-
----
-
-## ONE LINE TO WRITE ON THE HARDWARE
-
-**"No cloud. No single point of failure. No data lost."**
-
-Judges walking past the table before judging starts will read it. It does work before you open your mouth.
