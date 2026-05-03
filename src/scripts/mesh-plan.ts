@@ -82,7 +82,9 @@ function renderSummary(topology: MeshTopology): string {
       topology.defaultGatewayAddress === undefined ? "" : ` via gateway ${topology.defaultGatewayAddress}`
     }`,
     `WireGuard overlay: ${topology.overlayCidr}`,
-    "No router or hotspot is required for the proof path; use loopback emulation, direct Ethernet/USB, or any available LAN.",
+    "No router, hotspot, or internet path is required for the proof path.",
+    "Physical multi-node preservation still needs one local peer link first: Pi 5 AP, direct Ethernet/USB, or any peer-capable LAN.",
+    "Loopback emulation proves the software contracts; it does not prove physical replication before node loss.",
     "",
     "Node              Platform            LAN              Overlay       Roles",
     "----              --------            ---              -------       -----",

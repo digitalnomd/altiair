@@ -1,6 +1,19 @@
 # Distributed Resolution Demo
 
-This scenario is designed so no single Pi, Jetson, operator screen, or cloud path can resolve the event alone. The point of the demo is to prove that Altiair's edge mesh can fuse incomplete observations into a policy-gated training cue during DDIL operation.
+This scenario is designed so no single Pi, Jetson, operator screen, or cloud path can resolve the event alone. The point of the demo is to prove that Altiair's edge mesh can fuse incomplete observations into a policy-gated training cue during DDIL operation, then exchange intent pings to deconflict support roles.
+
+This aligns with the DARPA DDIL lineage:
+
+- MINC: mission-integrated network control routes critical data to the right user at the right time across contested, dynamic communications.
+- EdgeCT: edge devices infer network state and adapt protocol/application behavior without changing WAN infrastructure or encryption boundaries.
+- DICE: decentralized AI agents coordinate peer-to-peer, remain resilient to failure or compromise of individual agents, and use local inference control to stay aligned with intent.
+
+Sources:
+
+- https://www.darpa.mil/news/2022/minic-data-flow-contested-environment
+- https://www.darpa.mil/research/programs/edge-directed-cyber-technologies-for-reliable-mission-communication
+- https://www.darpa.mil/research/programs/decentralized-artificial-intelligence-through-controlled-emergence
+- https://www.darpa.mil/research/programs/secure-handhelds
 
 There is no single central authority. `altiair-hub` is a preferred display/coordinator when online, but replicated evidence and cached mission context allow any surviving three-node quorum to continue if one node fails. Foundry/CASK can enrich or reconcile later, but the live demo must still work when venue Wi-Fi is removed.
 
@@ -13,7 +26,7 @@ There is no single central authority. `altiair-hub` is a preferred display/coord
 | `altiair-orin` | Visual inference from a marker, toy prop, prerecorded clip, or simulated aerial-object cue. | Vision sees an object/marker but cannot connect it to the RFID tag or policy gate. |
 | `altiair-hub` | Replicated CASK/Foundry ontology context, mission lane, tag-to-training-entity map, policy rules, and display/coordinator role. | Context is not a fresh observation until the edge nodes provide evidence, and this node is not authoritative. |
 
-Each node's local confidence stays below the resolution threshold. The fused view crosses threshold when at least three surviving nodes contribute replicated evidence. Full four-node operation gives the strongest confidence; one-node failure gives a degraded but still resolvable cue; two-node failure stays below quorum.
+Each node's local confidence stays below the resolution threshold. The fused view crosses threshold when at least three surviving nodes contribute replicated evidence. Full four-node operation gives the strongest confidence; one-node failure gives a degraded but still resolvable cue; two-node failure stays below quorum. After quorum resolution, each node publishes a signed intent ping with requested role and a short lease so the display, observation, safety, and tag-confirmation roles do not conflict.
 
 ## Demo Flow
 
@@ -23,14 +36,16 @@ Each node's local confidence stays below the resolution threshold. The fused vie
 4. Trigger an audio/motion event on `altiair-node-b`.
 5. Trigger the Jetson visual event from a camera frame, marker, toy/static prop, or prerecorded clip.
 6. The current coordinator correlates the edge observations with replicated CASK/Foundry mission context.
-7. The display shows a policy-gated cue with evidence IDs, confidence, uncertainty, source nodes, and required next checks.
-8. Kill one node or the venue uplink. The mesh should elect or retain a surviving coordinator, show degraded mission continuity, and continue local operation.
+7. The surviving quorum publishes peer intent pings and assigns supporting roles.
+8. The display shows a policy-gated cue with evidence IDs, confidence, uncertainty, source nodes, peer intents, and required next checks.
+9. Kill one node or the venue uplink. The mesh should elect or retain a surviving coordinator, show degraded mission continuity, and continue local operation.
 
 ## Acceptance Criteria
 
 - A single node view never claims resolution.
 - The display shows which evidence IDs were contributed by each surviving node.
 - The fused cue crosses threshold only when a three-node quorum can correlate RFID, audio/micro-observation, visual inference, and replicated mission context.
+- Peer pings prevent duplicate role claims after quorum resolution.
 - The cue remains `review_needed` unless an operator explicitly changes policy state in an authorized workflow.
 - If any one node is missing, the mesh reports the missing contribution and keeps a degraded review cue alive.
 - If two nodes are missing, the mesh reports below-quorum state and keeps collecting evidence instead of claiming resolution.

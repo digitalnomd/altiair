@@ -52,6 +52,7 @@ The deeper decision brief is here:
 - [Foundry Atlas Status](docs/foundry-atlas-status.md)
 - [DDIL Edge Mesh Implementation](docs/ddil-edge-mesh-implementation.md)
 - [Distributed Resolution Demo](docs/distributed-resolution-demo.md)
+- [Training Tag Objective](docs/training-tag-objective.md)
 - [Security Implementation Plan](docs/security-implementation-plan.md)
 - [DARPA Opportunity Alignment](docs/darpa-opportunity-alignment.md)
 
@@ -121,7 +122,9 @@ The demo should be a distributed evidence puzzle. No single node is allowed to r
 - `altiair-orin` has visual inference from a marker, prop, or simulated aerial-object cue, but not tag context.
 - `altiair-hub` has replicated CASK/Foundry ontology and policy context, but not fresh observation by itself.
 
-Any surviving three-node quorum can produce the fused review cue. Full four-node operation gives the strongest confidence; one-node failure stays degraded but operational; two-node failure stays below quorum and keeps collecting evidence. The output remains a policy-gated review cue rather than an autonomous action.
+Any surviving three-node quorum can produce the fused review cue. Full four-node operation gives the strongest confidence; one-node failure stays degraded but operational; two-node failure stays below quorum and keeps collecting evidence. After quorum resolution, nodes publish peer intents with role, confidence, estimated distance to the objective zone, and a short lease so support roles can be deconflicted. The output remains a policy-gated review cue rather than an autonomous action.
+
+The active demo objective is a controlled training tag. After quorum resolution and peer deconfliction, the mesh can stage role assignments for observation, checkpoint guidance, non-contact tag confirmation, safety observation, and display relay. The tag is confirmed through NFC/RFID, QR, BLE beacon proximity, or operator/referee acknowledgement; it is not pursuit, capture, restraint, or physical contact.
 
 Any "target" language in demos means an authorized, tagged training subject or simulated entity. This repo should not encode instructions for harming, capturing, or attacking a real person.
 
@@ -225,9 +228,12 @@ flowchart LR
 
 No-router baseline topology:
 
-- No dedicated router or hotspot is assumed.
-- Prove the edge implementation first through logical nodes on one machine or the Pi 5: `altiair-hub`, `altiair-node-a`, `altiair-node-b`, and `altiair-orin` run as separate API instances or simulated peer observations.
-- Add physical links opportunistically: direct Ethernet, USB networking, venue Wi-Fi if peer traffic is allowed, or a Pi 5 software AP if setup time permits.
+- No dedicated router, hotspot, or internet path is assumed.
+- Prove the software path first through logical nodes on one machine or the Pi 5: `altiair-hub`, `altiair-node-a`, `altiair-node-b`, and `altiair-orin` run as separate API instances or simulated peer observations.
+- To prove physical distribution and preservation across separate devices, the nodes still need one local peer link before the simulated failure: Pi 5 software AP, direct Ethernet, USB networking, or venue Wi-Fi/LAN if peer traffic is allowed.
+- Loopback emulation proves the contracts, queueing, gateway scoring, and UI flow; it does not prove that evidence was physically replicated off a device before that device went down.
+- The node-loss demo should generate an event, replicate the signed evidence bundle to at least one peer, then power down or isolate one node and show the surviving peer still has the bundle and mission-continuity state.
+- If a node is destroyed or powered off before its bundle replicates, only that node's durable queue had the data; the system can preserve already-replicated evidence, not recover unreplicated data.
 - `altiair-node-a` and `altiair-node-b` are Pi 4B edge nodes.
 - `altiair-hub` is the Pi 5 preferred display/coordinator and gateway candidate; queues and mission context should replicate so it is not authoritative.
 - `altiair-orin` is the Jetson Orin Nano inference accelerator and secondary CASK/Foundry gateway.
@@ -241,6 +247,7 @@ Mesh implementation helpers:
 ```bash
 npm run mesh:plan -- --format summary
 npm run fusion:smoke
+npm run tag:smoke
 npm run mesh:plan -- --node altiair-hub --format env
 npm run mesh:plan -- --node altiair-hub --format wireguard
 npm run mesh:smoke
@@ -546,8 +553,10 @@ Runtime tests:
 
 2. Bring up the local execution path.
    - Start without assuming a router or hotspot: run logical nodes on one host, or connect devices by direct Ethernet/USB when available.
+   - For the distributed preservation demo, establish one local peer link before simulating node loss: Pi 5 software AP, direct Ethernet, USB networking, or a peer-capable venue LAN.
    - Use venue Wi-Fi only if it allows device-to-device traffic; otherwise keep networking local and simulate peer observations until a direct link is ready.
    - Connect both Pi 4B nodes, Pi 5, Jetson Orin Nano, and the Pi-hosted operator display shell as physical links become available.
+   - Verify the bundle exists on a surviving peer before powering down or isolating a node; unreplicated data on the failed node cannot be preserved by the mesh.
    - Generate static peer/WireGuard templates with `npm run mesh:plan`.
    - Verify `GET /health`, `GET /peers`, `GET /mission-continuity`, and `GET /congestion` across devices.
 
@@ -588,11 +597,14 @@ Runtime tests:
 4. Pi 4B node B captures an audio or micro-observation cue.
 5. Jetson Orin captures a visual inference from a marker, prop, or simulated aerial-object cue.
 6. The current coordinator receives partial evidence, fuses it with replicated CASK/Foundry mission context, and drafts a structured insight.
-7. Pi-hosted display updates with an EagleEye-style cue overlay.
-8. Cue queue shows the fused training cue, required evidence links, missing-node status, confidence, and policy gate.
-9. If Foundry/CASK is online, the hub syncs and receives acknowledgement or enrichment.
-10. If the cloud or one display client drops, local devices continue showing cached mesh state and new local events.
-11. When connectivity returns, queued events reconcile.
+7. Nodes publish peer intents so the surviving quorum can assign non-conflicting support roles.
+8. Pi-hosted display updates with an EagleEye-style cue overlay.
+9. Cue queue shows selected node, peer intents, evidence links, missing-node status, confidence, and policy gate.
+10. Operator authorizes a controlled non-contact tag objective for the consenting training subject or surrogate.
+11. Mesh assigns observe, guide-to-checkpoint, confirm-tag, safety-observer, and relay-display roles across surviving nodes.
+12. If Foundry/CASK is online, the hub syncs and receives acknowledgement or enrichment.
+13. If the cloud or one display client drops, local devices continue showing cached mesh state and new local events.
+14. When connectivity returns, queued events reconcile.
 
 ## Hard Constraints
 
@@ -604,6 +616,7 @@ Runtime tests:
 - Raw camera/audio retention must follow policy. Prefer structured detections, transcripts, and redacted references over storing raw media.
 - No kill-chain automation. Human review is required for every consequential output.
 - No target prosecution, engagement planning, or instructions to harm a person.
+- Training tag objectives must be non-contact, operator-authorized, and limited to consenting participants, tagged assets, toy props, drone surrogates, or simulated entities.
 - No drone swarm coordination, offensive cyber, RF jamming detection, or adversary spoofing in the MVP.
 - No hidden dependency on internet access for the local demo path.
 

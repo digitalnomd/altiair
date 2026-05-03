@@ -74,7 +74,8 @@ sudo ufw enable
 
 ## Mesh And API Controls
 
-- No hotspot or router is required. Use loopback, direct Ethernet/USB, venue Wi-Fi, Pi AP mode, or an optional router only as untrusted underlay.
+- No hotspot, router, or internet path is required. Use loopback, direct Ethernet/USB, venue Wi-Fi, Pi AP mode, or an optional router only as untrusted underlay.
+- Physical preservation across separate nodes still requires a local peer link before failure. The system can preserve bundles already replicated to another node, but it cannot recover data that existed only on the failed node.
 - Use WireGuard as the mission overlay with per-device keys and narrow `/32` `AllowedIPs`.
 - Bind the Altiair API to the node overlay address or an explicit host using `ALTIAIR_API_HOST`.
 - Set `ALTIAIR_API_TOKEN` for every demo. The prototype requires this token for all non-health routes when configured.

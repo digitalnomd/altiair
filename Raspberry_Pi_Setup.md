@@ -90,6 +90,8 @@ The script supports both newer Raspberry Pi OS images that expose `user-data` an
 
 - A router or hotspot is not required to prove the Altiair edge implementation.
 - The fastest proof path is to boot one Pi at a time, then run logical nodes on the Pi 5 or laptop until physical links are ready.
+- Physical distribution across separate nodes still requires one local peer link before the failure demo: Pi 5 software AP, direct Ethernet, USB networking, or peer-capable venue LAN.
+- To prove preservation, generate a bundle, verify it replicated to a surviving peer, then power down or isolate one node. Data that never left the failed node cannot be recovered by the mesh.
 - For physical multi-node testing, prefer direct Ethernet or USB networking first.
 - Venue Wi-Fi is usable only if it has no captive portal and allows device-to-device traffic.
 - Captive portal Wi-Fi usually does not work for headless first boot.

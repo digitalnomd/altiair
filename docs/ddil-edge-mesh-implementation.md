@@ -35,7 +35,9 @@ Current implementation choices are grounded in these public primary or vendor-pr
 
 ## Day-One Architecture
 
-Assume no dedicated router and no phone hotspot. The day-one proof does not depend on either. The stable mission model is node identity, local queueing, gateway selection, and policy-gated sync; the physical underlay can be loopback, direct Ethernet/USB, venue Wi-Fi if peer traffic is allowed, or a Pi 5 software AP later.
+Assume no dedicated router, no phone hotspot, and no internet path. The day-one software proof does not depend on any of them. The stable mission model is node identity, local queueing, gateway selection, and policy-gated sync; the physical underlay can be loopback, direct Ethernet/USB, venue Wi-Fi if peer traffic is allowed, or a Pi 5 software AP.
+
+For the physical node-loss preservation demo, loopback is only a fallback. Separate devices must share at least one local peer link before the simulated failure so a bundle can replicate off the node that later goes down. The mesh preserves evidence that has already reached another node; it cannot recover a bundle that existed only on a device that was powered off, isolated, or destroyed before replication.
 
 | Node | Day-one link assumption | Overlay | Role |
 | --- | --- | --- | --- |
@@ -48,6 +50,7 @@ Network rules:
 
 - Do not require a hotspot or router for the proof.
 - Start with logical nodes on one host if physical node-to-node networking is blocked.
+- For physical distribution, establish one local peer link first: Pi 5 software AP, direct Ethernet, USB networking, or a peer-capable LAN.
 - Use direct Ethernet or USB networking before spending time on venue Wi-Fi.
 - Use venue Wi-Fi only if it has no captive portal and allows peer traffic.
 - Prefer Ethernet for `altiair-hub` and `altiair-orin` when hardware allows it.
@@ -55,6 +58,7 @@ Network rules:
 - WireGuard templates use `<hostname>.local` endpoints for any LAN that supports mDNS. If mDNS fails, replace the endpoint with the current peer IP from `ip addr`, `arp -a`, or the venue/client list.
 - Keep raw media local by default. Forward metadata, thumbnails, transcripts, or short clips first.
 - Every node keeps a local queue so hub or uplink loss does not halt capture.
+- A node-loss demo must show replication before failure: create a bundle, verify it exists on a surviving peer, then power down or isolate one node and confirm mission continuity remains degraded but operational.
 - CASK/Foundry upload is gateway-selected and policy-gated; local review continues when no gateway is eligible.
 - One-node failure is expected. The mesh is degraded but operational if at least one sensor node and either `altiair-hub` or `altiair-orin` remain online.
 
@@ -123,25 +127,26 @@ Mission continuity reporting classifies the mesh as `nominal`, `degraded_one_nod
 2. Set hostnames: `altiair-node-a`, `altiair-node-b`, `altiair-hub`, `altiair-orin`.
 3. Start with the no-router proof path: run logical nodes on one host, or connect the first physical node by direct Ethernet/USB.
 4. If venue Wi-Fi is used, confirm there is no captive portal and that peer-to-peer traffic works before depending on it.
-5. Patch each device and enable SSH key auth only; disable password SSH before public demo use.
-6. Install base tools on each node:
+5. Before claiming physical preservation, verify one bundle replicated to a surviving peer and remains visible after a node is powered down or isolated.
+6. Patch each device and enable SSH key auth only; disable password SSH before public demo use.
+7. Install base tools on each node:
 
 ```bash
 sudo apt update
 sudo apt install -y curl jq sqlite3 wireguard-tools iperf3
 ```
 
-7. Generate WireGuard keys on each device and exchange public keys out-of-band.
-8. Generate each `wg0.conf` template with `npm run mesh:plan -- --node <node-id> --format wireguard`.
-9. Replace placeholders with local private key and peer public keys on the device only.
-10. Set an API token locally on each node, outside git:
+8. Generate WireGuard keys on each device and exchange public keys out-of-band.
+9. Generate each `wg0.conf` template with `npm run mesh:plan -- --node <node-id> --format wireguard`.
+10. Replace placeholders with local private key and peer public keys on the device only.
+11. Set an API token locally on each node, outside git:
 
 ```bash
 export ALTIAIR_API_TOKEN="<demo-token>"
 export ALTIAIR_API_HOST="<node-overlay-ip>"
 ```
 
-11. Bring up the overlay:
+12. Bring up the overlay:
 
 ```bash
 sudo install -m 600 wg0.conf /etc/wireguard/wg0.conf
@@ -149,7 +154,7 @@ sudo systemctl enable --now wg-quick@wg0
 wg show
 ```
 
-12. Verify peer reachability:
+13. Verify peer reachability:
 
 ```bash
 ping -c 3 10.77.0.10
