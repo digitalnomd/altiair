@@ -13,8 +13,8 @@
   --muted-2: #7f8085;
   --cyan: #65c7ff;
   --cyan-soft: rgba(101, 199, 255, 0.14);
-  --amber: #c8d2da;
-  --amber-soft: rgba(151, 182, 202, 0.14);
+  --amber: #d3b568;
+  --amber-soft: rgba(211, 181, 104, 0.14);
   --green: #8bd0ff;
   --red: #c7463f;
   --violet: #b8b8bd;
@@ -22,6 +22,8 @@
   --blue-grey: #415774;
   --region-blue: rgba(91, 182, 255, 0.18);
   --region-blue-strong: rgba(129, 207, 255, 0.62);
+  --region-amber: rgba(228, 195, 105, 0.18);
+  --region-amber-strong: rgba(232, 205, 123, 0.66);
   --shadow: 0 28px 90px rgba(0, 0, 0, 0.48);
 }
 
