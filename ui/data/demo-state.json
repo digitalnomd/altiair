@@ -92,8 +92,8 @@
     "status": "5/6 nodes active - mesh stable"
   },
   "fusion": {
-    "confidenceLabel": "Medium",
-    "confidenceScore": 0.74,
+    "confidenceLabel": "High",
+    "confidenceScore": 0.87,
     "latestEvent": "UAS track crossing northwest approach",
     "eventLabel": "UAS Track",
     "position": { "x": 39.3, "y": 15.2, "latitude": 37.79125, "longitude": -122.40355 },
