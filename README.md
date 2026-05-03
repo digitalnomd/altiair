@@ -51,6 +51,7 @@ The deeper decision brief is here:
 - [CASK Edge Implementation](docs/cask-implementation.md)
 - [Foundry Atlas Status](docs/foundry-atlas-status.md)
 - [DDIL Edge Mesh Implementation](docs/ddil-edge-mesh-implementation.md)
+- [Distributed Resolution Demo](docs/distributed-resolution-demo.md)
 - [Security Implementation Plan](docs/security-implementation-plan.md)
 - [DARPA Opportunity Alignment](docs/darpa-opportunity-alignment.md)
 
@@ -113,6 +114,15 @@ The CASK-backed omni-model should fuse the sensor streams into a local, evidence
 - Foundry/OSDK provides governed mission context, asset/person/tag mappings, permissions, and writeback.
 - The local LLM explains the fused picture, calls out uncertainty, and recommends non-kinetic coordination steps such as coverage, search, deconfliction, sensor repositioning, and next verification checks.
 
+The demo should be a distributed evidence puzzle. No single node is allowed to resolve the event alone, and no node is authoritative:
+
+- `altiair-node-a` has RFID identity/presence, but not visual class or mission relevance.
+- `altiair-node-b` has audio or micro-observation context, but not identity.
+- `altiair-orin` has visual inference from a marker, prop, or simulated aerial-object cue, but not tag context.
+- `altiair-hub` has replicated CASK/Foundry ontology and policy context, but not fresh observation by itself.
+
+Any surviving three-node quorum can produce the fused review cue. Full four-node operation gives the strongest confidence; one-node failure stays degraded but operational; two-node failure stays below quorum and keeps collecting evidence. The output remains a policy-gated review cue rather than an autonomous action.
+
 Any "target" language in demos means an authorized, tagged training subject or simulated entity. This repo should not encode instructions for harming, capturing, or attacking a real person.
 
 ## Counter-UAS Cueing Use Case
@@ -155,7 +165,7 @@ Confirmed demo hardware:
 | 1+ | Camera inputs | Visual observations through Pi camera or USB camera. |
 | 1+ | Microphone inputs | Voice activity, transcript, acoustic event, or note capture. |
 | 1+ | Pi-attached display, wearable display shell, or chest computer | Operator display through Pi-hosted EagleEye-style UI. |
-| 1 | Travel router or local AP | Closed LAN for Pis and fallback viewers; AP isolation must be off. |
+| 0 required | Travel router, local AP, or hotspot | Optional only. Useful for polish, but not required for proving the edge implementation. |
 
 ## MVP Architecture
 
@@ -213,21 +223,24 @@ flowchart LR
   Uploader -.-> Lattice
 ```
 
-Recommended day-one topology:
+No-router baseline topology:
 
-- Closed LAN through a phone Wi-Fi hotspot or travel router with AP isolation off. Use the hotspot instead of SHack15/captive-portal Wi-Fi for headless Pis.
+- No dedicated router or hotspot is assumed.
+- Prove the edge implementation first through logical nodes on one machine or the Pi 5: `altiair-hub`, `altiair-node-a`, `altiair-node-b`, and `altiair-orin` run as separate API instances or simulated peer observations.
+- Add physical links opportunistically: direct Ethernet, USB networking, venue Wi-Fi if peer traffic is allowed, or a Pi 5 software AP if setup time permits.
 - `altiair-node-a` and `altiair-node-b` are Pi 4B edge nodes.
-- `altiair-hub` is the Pi 5 gateway, local LLM host, queue owner, and display host.
+- `altiair-hub` is the Pi 5 preferred display/coordinator and gateway candidate; queues and mission context should replicate so it is not authoritative.
 - `altiair-orin` is the Jetson Orin Nano inference accelerator and secondary CASK/Foundry gateway.
-- Use hotspot DHCP or static LAN reservations under a narrow WireGuard overlay: `10.77.0.10` hub, `10.77.0.11` node A, `10.77.0.12` node B, `10.77.0.20` Orin.
+- Use static node identity under a narrow WireGuard overlay when multiple devices are connected: `10.77.0.10` hub, `10.77.0.11` node A, `10.77.0.12` node B, `10.77.0.20` Orin.
 - The primary operator display is built off the Pi: attached screen, kiosk browser, or chest-worn compute/display rig that resembles EagleEye cueing.
 - Phones and tablets are fallback viewers only.
-- Use static peer configuration first; NATS JetStream leaf nodes, libp2p GossipSub, Wi-Fi Direct, or MANET behavior are stretch goals after the wired/closed-LAN demo is stable.
+- Use static peer configuration first; NATS JetStream leaf nodes, libp2p GossipSub, Wi-Fi Direct, Pi AP mode, LoRa/Meshtastic, or MANET behavior are stretch goals after the local proof is stable.
 
 Mesh implementation helpers:
 
 ```bash
 npm run mesh:plan -- --format summary
+npm run fusion:smoke
 npm run mesh:plan -- --node altiair-hub --format env
 npm run mesh:plan -- --node altiair-hub --format wireguard
 npm run mesh:smoke
@@ -531,9 +544,10 @@ Runtime tests:
    - Enable SSH, camera support, microphone access, and RFID interfaces.
    - Install Rust toolchain, SQLite tooling, camera utilities, networking tools, WireGuard tools, and `llama.cpp`.
 
-2. Bring up the local LAN.
-   - Configure the phone hotspot or travel router with AP isolation off. Do not use SHack15/captive-portal Wi-Fi for headless first boot.
-   - Connect both Pi 4B nodes, Pi 5, Jetson Orin Nano, and the Pi-hosted operator display shell.
+2. Bring up the local execution path.
+   - Start without assuming a router or hotspot: run logical nodes on one host, or connect devices by direct Ethernet/USB when available.
+   - Use venue Wi-Fi only if it allows device-to-device traffic; otherwise keep networking local and simulate peer observations until a direct link is ready.
+   - Connect both Pi 4B nodes, Pi 5, Jetson Orin Nano, and the Pi-hosted operator display shell as physical links become available.
    - Generate static peer/WireGuard templates with `npm run mesh:plan`.
    - Verify `GET /health`, `GET /peers`, `GET /mission-continuity`, and `GET /congestion` across devices.
 
@@ -570,20 +584,21 @@ Runtime tests:
 
 1. Pi 5 hub and Pi-hosted EagleEye-style display are visible on the local LAN.
 2. Operator display is local-only, with no dependency on cloud access.
-3. Pi 4B node captures RFID plus camera or microphone event.
-4. Local model/rules filter classifies the bundle and protects the gateway from overload.
-5. Pi 5 hub receives the bundle, fuses deterministic evidence, and drafts a structured insight.
-6. Pi-hosted display updates with an EagleEye-style cue overlay.
-7. Counter-UAS cue queue shows a drone observation, likely control-source zone, evidence links, confidence, and policy gate.
-8. If Foundry/CASK is online, the hub syncs and receives acknowledgement or enrichment.
-9. If the cloud or one display client drops, local devices continue showing cached mesh state and new local events.
-10. When connectivity returns, queued events reconcile.
+3. Pi 4B node A captures RFID identity/presence.
+4. Pi 4B node B captures an audio or micro-observation cue.
+5. Jetson Orin captures a visual inference from a marker, prop, or simulated aerial-object cue.
+6. The current coordinator receives partial evidence, fuses it with replicated CASK/Foundry mission context, and drafts a structured insight.
+7. Pi-hosted display updates with an EagleEye-style cue overlay.
+8. Cue queue shows the fused training cue, required evidence links, missing-node status, confidence, and policy gate.
+9. If Foundry/CASK is online, the hub syncs and receives acknowledgement or enrichment.
+10. If the cloud or one display client drops, local devices continue showing cached mesh state and new local events.
+11. When connectivity returns, queued events reconcile.
 
 ## Hard Constraints
 
 - No credentials, access details, tokens, client secrets, or private Foundry URLs in git.
 - No Chinese-origin model families.
-- No unauthenticated write/control API exposed on the hotspot LAN; use WireGuard plus `ALTIAIR_API_TOKEN` for protected routes.
+- No unauthenticated write/control API exposed beyond loopback; use WireGuard plus `ALTIAIR_API_TOKEN` for protected routes.
 - No CUI or classified data in the demo environment unless a separate authorization boundary and protection plan are in place.
 - LLM output is advisory. Mission-critical actions must stay behind deterministic checks, policy gates, and operator review.
 - Raw camera/audio retention must follow policy. Prefer structured detections, transcripts, and redacted references over storing raw media.

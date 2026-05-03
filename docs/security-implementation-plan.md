@@ -16,7 +16,7 @@ This is the security baseline for the Altiair DDIL edge mesh demo. It is written
 ## Protection Goals
 
 1. Keep credentials, access details, tokens, Foundry URLs, private ontology RIDs, and device private keys out of git.
-2. Keep every node useful when cloud access is degraded, but never trusted only because it is on the hotspot.
+2. Keep every node useful when cloud access is degraded, but never trusted only because it is reachable on a local link.
 3. Protect the mission graph from spoofed or stale sensor events.
 4. Keep raw media local by default and forward compact, signed, policy-gated evidence first.
 5. Make the LLM advisory only; deterministic policy gates decide what can be shared or surfaced.
@@ -27,7 +27,7 @@ This is the security baseline for the Altiair DDIL edge mesh demo. It is written
 | Risk | Control |
 | --- | --- |
 | Lost or stolen Pi / Jetson | Unique WireGuard key per node, revocation list, encrypted queue, no committed secrets, short retention, remote Foundry tokens only on gateway nodes. |
-| Hostile or curious hotspot client | WireGuard overlay, API bound to `wg0` or explicit host, bearer token or mTLS, firewall default deny, no broad CORS. |
+| Hostile or curious local-link client | WireGuard overlay, API bound to `wg0` or explicit host, bearer token or mTLS, firewall default deny, no broad CORS. |
 | Sensor spoofing or stale RFID read | Tag allowlist, freshness window, confidence and precision fields, multi-sensor corroboration before cue escalation. |
 | Malicious bundle or malformed JSON | Body size limits, JSON schema validation, strict content type, reject unknown policy states, fail closed on parse errors. |
 | Prompt injection through sensor text or Foundry context | Treat all retrieved/context text as untrusted data, require structured output, reject model commands that bypass policy gates. |
@@ -56,10 +56,10 @@ Baseline for every Pi and Jetson:
 2. Use unique hostnames and unique OS users. Do not reuse passwords.
 3. Enable SSH key auth only; disable password login and root login.
 4. Install only required packages: `wireguard-tools`, `sqlite3`, `jq`, sensor utilities, and the node runtime.
-5. Enable a default-deny firewall. Allow SSH only from the admin machine, WireGuard UDP from the hotspot LAN, and the Altiair API only on the WireGuard interface.
+5. Enable a default-deny firewall. Allow SSH only from the admin machine, WireGuard UDP from the selected local link, and the Altiair API only on the WireGuard interface.
 6. Store app data under a dedicated service user with `0700` directories.
 7. Keep device private keys under `0600` permissions and never copy them back into the repo.
-8. Rotate the hotspot password and WireGuard keys after public demos.
+8. Rotate WireGuard keys after public demos. Rotate optional SSID passwords if a local AP or hotspot is used.
 
 Example firewall posture, adjusted per device:
 
@@ -74,7 +74,7 @@ sudo ufw enable
 
 ## Mesh And API Controls
 
-- Use the phone hotspot or travel router as the underlay, but treat it as untrusted.
+- No hotspot or router is required. Use loopback, direct Ethernet/USB, venue Wi-Fi, Pi AP mode, or an optional router only as untrusted underlay.
 - Use WireGuard as the mission overlay with per-device keys and narrow `/32` `AllowedIPs`.
 - Bind the Altiair API to the node overlay address or an explicit host using `ALTIAIR_API_HOST`.
 - Set `ALTIAIR_API_TOKEN` for every demo. The prototype requires this token for all non-health routes when configured.

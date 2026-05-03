@@ -37,7 +37,7 @@ For hackathon use, prefer **Raspberry Pi OS Lite 64-bit** unless you need a desk
 ssh piuser@team42-pi1.local
 ```
 
-If `.local` does not resolve, check the router/device list or scan the local subnet. On macOS:
+If `.local` does not resolve, check the active link's client list if one exists, or scan the local subnet. On macOS:
 
 ```bash
 ipconfig getifaddr en0
@@ -88,21 +88,21 @@ The script supports both newer Raspberry Pi OS images that expose `user-data` an
 
 ## Hackathon Network Notes
 
-- The Pi must join a network before it has an IP address.
+- A router or hotspot is not required to prove the Altiair edge implementation.
+- The fastest proof path is to boot one Pi at a time, then run logical nodes on the Pi 5 or laptop until physical links are ready.
+- For physical multi-node testing, prefer direct Ethernet or USB networking first.
+- Venue Wi-Fi is usable only if it has no captive portal and allows device-to-device traffic.
 - Captive portal Wi-Fi usually does not work for headless first boot.
-- Use the phone hotspot for the Altiair demo instead of SHack15/captive-portal Wi-Fi.
-- A phone hotspot, travel router, or simple WPA/WPA2 Wi-Fi network is much more reliable.
-- If using a travel router, turn off AP/client isolation so laptops and phones can reach the Pi.
-- Ethernet is the simplest fallback if the Pi model has an Ethernet port.
+- A phone hotspot, travel router, or simple WPA/WPA2 Wi-Fi network remains optional if someone brings one later.
 
-Example hotspot customization:
+Example Wi-Fi customization, only when a normal SSID is available:
 
 ```bash
 ./scripts/customize_raspberry_pi_sd.sh \
   --boot /Volumes/bootfs \
   --hostname altiair-node-a \
   --username piuser \
-  --wifi-ssid "YOUR_PHONE_HOTSPOT_NAME" \
+  --wifi-ssid "OPTIONAL_NORMAL_WIFI_SSID" \
   --wifi-country US \
   --timezone America/Los_Angeles
 ```

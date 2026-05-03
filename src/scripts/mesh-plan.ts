@@ -78,8 +78,11 @@ function renderSummary(topology: MeshTopology): string {
 
   return [
     `Mission network: ${topology.missionNetworkId}`,
-    `LAN: ${topology.defaultLanCidr} via router ${topology.travelRouterAddress}`,
+    `Optional underlay LAN: ${topology.defaultLanCidr}${
+      topology.defaultGatewayAddress === undefined ? "" : ` via gateway ${topology.defaultGatewayAddress}`
+    }`,
     `WireGuard overlay: ${topology.overlayCidr}`,
+    "No router or hotspot is required for the proof path; use loopback emulation, direct Ethernet/USB, or any available LAN.",
     "",
     "Node              Platform            LAN              Overlay       Roles",
     "----              --------            ---              -------       -----",
@@ -127,7 +130,7 @@ function renderWireGuard(node: NodeDescriptor, topology: MeshTopology): string {
         `PublicKey = <${peer.publicKeyEnv}>`,
         `AllowedIPs = ${peer.overlayAddress}/32`,
         `Endpoint = ${peer.hostname}.local:${peer.wireGuardListenPort}`,
-        `# Static-LAN fallback: Endpoint = ${peer.lanAddress}:${peer.wireGuardListenPort}`,
+        `# Static/direct-LAN fallback: Endpoint = ${peer.lanAddress}:${peer.wireGuardListenPort}`,
         "# Enable only when peers cross NAT/firewall boundaries; LAN-only demos can omit it.",
         "PersistentKeepalive = 25",
       ].join("\n"),
@@ -140,7 +143,7 @@ function renderWireGuard(node: NodeDescriptor, topology: MeshTopology): string {
     `ListenPort = ${node.wireGuardListenPort}`,
     `PrivateKey = <${privateKeyEnv}>`,
     "",
-    "# Keep the overlay route narrow so the travel-router LAN remains directly reachable.",
+    "# Keep the overlay route narrow so any direct or venue LAN remains directly reachable.",
     ...peers,
   ].join("\n");
 }

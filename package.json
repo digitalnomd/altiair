@@ -9,6 +9,7 @@
   },
   "scripts": {
     "build": "tsc --noEmit",
+    "fusion:smoke": "tsx src/scripts/fusion-smoke.ts",
     "mesh:plan": "tsx src/scripts/mesh-plan.ts",
     "mesh:smoke": "tsx src/scripts/mesh-smoke.ts",
     "node:api": "tsx src/scripts/node-api.ts",

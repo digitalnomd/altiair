@@ -18,6 +18,8 @@ export type LinkClass =
   | "unknown";
 
 export type TransportLayer =
+  | "loopback_emulation"
+  | "direct_ethernet"
   | "closed_lan"
   | "wireguard_l3_overlay"
   | "http_json_api"
@@ -68,7 +70,7 @@ export interface MeshTopology {
   missionNetworkId: string;
   overlayCidr: string;
   defaultLanCidr: string;
-  travelRouterAddress: string;
+  defaultGatewayAddress?: string;
   transports: TransportLayer[];
   interopBoundaries: InteropBoundary[];
   policy: MeshPolicy;

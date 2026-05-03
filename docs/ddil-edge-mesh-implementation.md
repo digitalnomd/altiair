@@ -35,21 +35,24 @@ Current implementation choices are grounded in these public primary or vendor-pr
 
 ## Day-One Architecture
 
-Use a phone Wi-Fi hotspot first, not SHack15 or another captive/event Wi-Fi. The phone hotspot is only the underlay. The stable mission network is the WireGuard overlay:
+Assume no dedicated router and no phone hotspot. The day-one proof does not depend on either. The stable mission model is node identity, local queueing, gateway selection, and policy-gated sync; the physical underlay can be loopback, direct Ethernet/USB, venue Wi-Fi if peer traffic is allowed, or a Pi 5 software AP later.
 
-| Node | LAN | Overlay | Role |
+| Node | Day-one link assumption | Overlay | Role |
 | --- | --- | --- | --- |
-| `altiair-hub` | hotspot DHCP / `altiair-hub.local` | `10.77.0.10` | Pi 5 hub, queue owner, display host, preferred CASK/Foundry gateway |
-| `altiair-node-a` | hotspot DHCP / `altiair-node-a.local` | `10.77.0.11` | Pi 4B sensor node |
-| `altiair-node-b` | hotspot DHCP / `altiair-node-b.local` | `10.77.0.12` | Pi 4B sensor node |
-| `altiair-orin` | hotspot DHCP / `altiair-orin.local` | `10.77.0.20` | Jetson inference node, secondary CASK/Foundry gateway |
+| `altiair-hub` | loopback or Pi 5 local API first; direct LAN when available | `10.77.0.10` | Pi 5 hub, queue owner, display host, preferred CASK/Foundry gateway |
+| `altiair-node-a` | logical node first; direct Ethernet/USB/venue LAN when available | `10.77.0.11` | Pi 4B sensor node |
+| `altiair-node-b` | logical node first; direct Ethernet/USB/venue LAN when available | `10.77.0.12` | Pi 4B sensor node |
+| `altiair-orin` | logical node first; direct Ethernet/USB/venue LAN when available | `10.77.0.20` | Jetson inference node, secondary CASK/Foundry gateway |
 
 Network rules:
 
-- Use a phone hotspot or dedicated travel router with AP/client isolation off. Avoid SHack15/captive-portal Wi-Fi for headless first boot.
+- Do not require a hotspot or router for the proof.
+- Start with logical nodes on one host if physical node-to-node networking is blocked.
+- Use direct Ethernet or USB networking before spending time on venue Wi-Fi.
+- Use venue Wi-Fi only if it has no captive portal and allows peer traffic.
 - Prefer Ethernet for `altiair-hub` and `altiair-orin` when hardware allows it.
 - Use `wg0` overlay `10.77.0.0/24`; keep each peer `AllowedIPs` to one `/32` so routing stays narrow.
-- WireGuard templates use `<hostname>.local` endpoints for hotspot DHCP. If mDNS fails, replace the endpoint with the current DHCP address from the hotspot client list or `arp -a`.
+- WireGuard templates use `<hostname>.local` endpoints for any LAN that supports mDNS. If mDNS fails, replace the endpoint with the current peer IP from `ip addr`, `arp -a`, or the venue/client list.
 - Keep raw media local by default. Forward metadata, thumbnails, transcripts, or short clips first.
 - Every node keeps a local queue so hub or uplink loss does not halt capture.
 - CASK/Foundry upload is gateway-selected and policy-gated; local review continues when no gateway is eligible.
@@ -89,7 +92,7 @@ Do not commit generated keys, Foundry URLs, registry tokens, OAuth secrets, or p
 
 The implementation security plan is tracked in [Security Implementation Plan](security-implementation-plan.md). The short version:
 
-- Treat the phone hotspot as untrusted underlay. The trusted mission path is the WireGuard overlay plus per-node identity.
+- Treat every underlay as untrusted, including loopback-to-LAN transitions, venue Wi-Fi, direct Ethernet, USB networking, and any optional hotspot/router. The trusted mission path is the WireGuard overlay plus per-node identity.
 - Set `ALTIAIR_API_TOKEN` for every demo where the API is reachable beyond loopback. Protected API routes require `Authorization: Bearer <token>` when the token is configured.
 - Bind the node API deliberately with `ALTIAIR_API_HOST`; prefer the node's WireGuard overlay address instead of `0.0.0.0` for live demos.
 - Use a default-deny firewall and allow the node API only on `wg0`.
@@ -118,8 +121,8 @@ Mission continuity reporting classifies the mesh as `nominal`, `degraded_one_nod
 
 1. Flash Raspberry Pi OS Lite 64-bit on both Pi 4B nodes and the Pi 5; use Ubuntu/Jetson Linux on the Orin Nano.
 2. Set hostnames: `altiair-node-a`, `altiair-node-b`, `altiair-hub`, `altiair-orin`.
-3. Start a phone hotspot or dedicated travel router. Do not use SHack15/captive-portal Wi-Fi for the headless Pis.
-4. Record the hotspot SSID locally and do not commit the password.
+3. Start with the no-router proof path: run logical nodes on one host, or connect the first physical node by direct Ethernet/USB.
+4. If venue Wi-Fi is used, confirm there is no captive portal and that peer-to-peer traffic works before depending on it.
 5. Patch each device and enable SSH key auth only; disable password SSH before public demo use.
 6. Install base tools on each node:
 

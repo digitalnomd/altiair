@@ -4,8 +4,10 @@ export const defaultDdilMeshTopology: MeshTopology = {
   missionNetworkId: "altiair-ddil-demo-net",
   overlayCidr: "10.77.0.0/24",
   defaultLanCidr: "192.168.42.0/24",
-  travelRouterAddress: "192.168.42.1",
+  defaultGatewayAddress: "192.168.42.1",
   transports: [
+    "loopback_emulation",
+    "direct_ethernet",
     "closed_lan",
     "wireguard_l3_overlay",
     "http_json_api",
