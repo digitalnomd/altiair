@@ -8,6 +8,7 @@ environment variables instead of editing this file on every device:
 """
 
 import os
+import socket
 
 
 def env_str(name: str, fallback: str) -> str:
@@ -24,6 +25,31 @@ def env_float(name: str, fallback: float) -> float:
     return fallback if value is None else float(value)
 
 
+def detect_local_ip(fallback: str) -> str:
+    """Best-effort display/API IP for DHCP Wi-Fi or Ethernet bring-up.
+
+    This does not require the internet; UDP connect only asks the OS which
+    local address it would use for a normal routed packet.
+    """
+    try:
+        with socket.socket(socket.AF_INET, socket.SOCK_DGRAM) as sock:
+            sock.connect(("8.8.8.8", 80))
+            detected = sock.getsockname()[0]
+            if detected and not detected.startswith("127."):
+                return detected
+    except OSError:
+        pass
+
+    try:
+        detected = socket.gethostbyname(socket.gethostname())
+        if detected and not detected.startswith("127."):
+            return detected
+    except OSError:
+        pass
+
+    return fallback
+
+
 NODE_ID = env_str("ALTIAIR_NODE_ID", "node_1")
 
 # All nodes on the local Wi-Fi mesh. Add/remove entries to match the field set.
@@ -34,7 +60,7 @@ NODES = {
     "node_4": env_str("ALTIAIR_NODE_4_IP", "192.168.42.4"),
 }
 
-MY_IP = env_str("ALTIAIR_MY_IP", NODES.get(NODE_ID, "127.0.0.1"))
+MY_IP = env_str("ALTIAIR_MY_IP", detect_local_ip(NODES.get(NODE_ID, "127.0.0.1")))
 
 # Ports.
 GOSSIP_PUB_PORT = env_int("ALTIAIR_GOSSIP_PORT", 5555)
