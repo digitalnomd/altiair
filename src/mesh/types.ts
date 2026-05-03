@@ -34,6 +34,27 @@ export type InteropBoundary =
   | "lattice_style_entity_optional"
   | "atak_tak_server_optional";
 
+export type ReplicationRecordKind =
+  | "sensor_event"
+  | "location_fix"
+  | "drone_observation"
+  | "control_source_estimate"
+  | "counter_uas_cue"
+  | "node_health"
+  | "peer_intent"
+  | "training_tag_plan"
+  | "bundle_manifest";
+
+export interface ReplicationPolicy {
+  mode: "all_reachable_nodes";
+  requiredRecordKinds: ReplicationRecordKind[];
+  rawMediaStrategy: "metadata_hash_and_policy_allowed_blobs";
+  encryptedAtRest: true;
+  signedRecords: true;
+  requirePeerAck: true;
+  minSurvivorCopies: number;
+}
+
 export interface MeshPolicy {
   zeroTrust: boolean;
   allowAutonomousAction: false;
@@ -43,6 +64,7 @@ export interface MeshPolicy {
   maxClockSkewSeconds: number;
   maxBundleSizeBytes: number;
   highWaterQueueDepth: number;
+  replication: ReplicationPolicy;
 }
 
 export interface NodeCapability {
@@ -69,6 +91,7 @@ export interface NodeDescriptor {
 export interface MeshTopology {
   missionNetworkId: string;
   overlayCidr: string;
+  defaultApSsid?: string;
   defaultLanCidr: string;
   defaultGatewayAddress?: string;
   transports: TransportLayer[];
@@ -131,4 +154,34 @@ export interface MissionContinuityReport {
   canContinueLocalFusion: boolean;
   canSyncExternal: boolean;
   missionNotes: string[];
+}
+
+export interface ReplicatedRecord {
+  recordId: string;
+  kind: ReplicationRecordKind;
+  sourceNodeId: string;
+  policyState: "collect_only" | "review_needed" | "authorized_to_share" | "blocked";
+  contentHash: string;
+  signedByNodeId: string;
+  encryptedAtRest: true;
+  requiredReplicaNodeIds: string[];
+  replicatedToNodeIds: string[];
+  missingReplicaNodeIds: string[];
+}
+
+export interface NodeReplicationInventory {
+  nodeId: string;
+  online: boolean;
+  storedRecordIds: string[];
+}
+
+export interface ReplicationReport {
+  missionNetworkId: string;
+  bundleId: string;
+  requiredReplicaNodeIds: string[];
+  allReachableNodesHaveAllRecords: boolean;
+  survivableNodeLoss: boolean;
+  records: ReplicatedRecord[];
+  inventories: NodeReplicationInventory[];
+  notes: string[];
 }

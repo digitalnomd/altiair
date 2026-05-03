@@ -59,7 +59,7 @@ Baseline for every Pi and Jetson:
 5. Enable a default-deny firewall. Allow SSH only from the admin machine, WireGuard UDP from the selected local link, and the Altiair API only on the WireGuard interface.
 6. Store app data under a dedicated service user with `0700` directories.
 7. Keep device private keys under `0600` permissions and never copy them back into the repo.
-8. Rotate WireGuard keys after public demos. Rotate optional SSID passwords if a local AP or hotspot is used.
+8. Rotate WireGuard keys after public demos. Rotate the `Altiair-LAN` SSID password after public demos.
 
 Example firewall posture, adjusted per device:
 
@@ -74,8 +74,8 @@ sudo ufw enable
 
 ## Mesh And API Controls
 
-- No hotspot, router, or internet path is required. Use loopback, direct Ethernet/USB, venue Wi-Fi, Pi AP mode, or an optional router only as untrusted underlay.
-- Physical preservation across separate nodes still requires a local peer link before failure. The system can preserve bundles already replicated to another node, but it cannot recover data that existed only on the failed node.
+- No external hotspot, router, or internet path is required. Use the Pi 5 `Altiair-LAN` AP as the baseline untrusted underlay; loopback is the software fallback and Jetson Ethernet is the hardware fallback.
+- Physical preservation across separate nodes requires the Pi 5 AP or Ethernet fallback before failure. The system can preserve bundles already replicated to another node, but it cannot recover data that existed only on the failed node.
 - Use WireGuard as the mission overlay with per-device keys and narrow `/32` `AllowedIPs`.
 - Bind the Altiair API to the node overlay address or an explicit host using `ALTIAIR_API_HOST`.
 - Set `ALTIAIR_API_TOKEN` for every demo. The prototype requires this token for all non-health routes when configured.

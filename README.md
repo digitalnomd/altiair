@@ -52,6 +52,7 @@ The deeper decision brief is here:
 - [Foundry Atlas Status](docs/foundry-atlas-status.md)
 - [DDIL Edge Mesh Implementation](docs/ddil-edge-mesh-implementation.md)
 - [Distributed Resolution Demo](docs/distributed-resolution-demo.md)
+- [Replicated Mission Ledger](docs/replicated-mission-ledger.md)
 - [Training Tag Objective](docs/training-tag-objective.md)
 - [Security Implementation Plan](docs/security-implementation-plan.md)
 - [DARPA Opportunity Alignment](docs/darpa-opportunity-alignment.md)
@@ -86,7 +87,7 @@ The repo now includes a runnable TypeScript integration scaffold for the Foundry
 - `src/mesh/*`: four-node Pi/Jetson DDIL topology, gateway scoring, and congestion decisions.
 - `src/scripts/mesh-plan.ts`: per-node environment and WireGuard template generator with no committed secrets.
 - `src/scripts/mesh-smoke.ts`: gateway failover and congestion smoke simulation.
-- `src/scripts/node-api.ts`: dependency-free prototype node API exposing health, peer, gateway, congestion, and bundle endpoints.
+- `src/scripts/node-api.ts`: dependency-free prototype node API exposing health, peer, gateway, congestion, bundle, replication, and ledger endpoints.
 
 The current Atlas ontology has a narrow live path for `[Example] CASK GPS Position`. Use `FOUNDRY_UPLOAD_PROFILE=cask_gps_position` for the first live OSDK writeback smoke. Keep `FOUNDRY_UPLOAD_PROFILE=bundle_actions` for the full local CASK contract once matching ontology actions exist.
 
@@ -125,6 +126,8 @@ The demo should be a distributed evidence puzzle. No single node is allowed to r
 Any surviving three-node quorum can produce the fused review cue. Full four-node operation gives the strongest confidence; one-node failure stays degraded but operational; two-node failure stays below quorum and keeps collecting evidence. After quorum resolution, nodes publish peer intents with role, confidence, estimated distance to the objective zone, and a short lease so support roles can be deconflicted. The output remains a policy-gated review cue rather than an autonomous action.
 
 The active demo objective is a controlled training tag. After quorum resolution and peer deconfliction, the mesh can stage role assignments for observation, checkpoint guidance, non-contact tag confirmation, safety observation, and display relay. The tag is confirmed through NFC/RFID, QR, BLE beacon proximity, or operator/referee acknowledgement; it is not pursuit, capture, restraint, or physical contact.
+
+Every reachable node stores the mission ledger from every node: observations, location fixes, peer intents, tag-plan state, node health, policy state, and sync receipts. Raw media is policy-gated, but hashes/references and allowed thumbnails/transcripts replicate everywhere.
 
 Any "target" language in demos means an authorized, tagged training subject or simulated entity. This repo should not encode instructions for harming, capturing, or attacking a real person.
 
@@ -168,7 +171,7 @@ Confirmed demo hardware:
 | 1+ | Camera inputs | Visual observations through Pi camera or USB camera. |
 | 1+ | Microphone inputs | Voice activity, transcript, acoustic event, or note capture. |
 | 1+ | Pi-attached display, wearable display shell, or chest computer | Operator display through Pi-hosted EagleEye-style UI. |
-| 0 required | Travel router, local AP, or hotspot | Optional only. Useful for polish, but not required for proving the edge implementation. |
+| 0 required | External router, phone hotspot, or internet path | Optional only. The Pi 5 hosts the private local mission LAN for the physical demo. |
 
 ## MVP Architecture
 
@@ -226,11 +229,14 @@ flowchart LR
   Uploader -.-> Lattice
 ```
 
-No-router baseline topology:
+Pi 5 local mission LAN topology:
 
-- No dedicated router, hotspot, or internet path is assumed.
+- No external router, phone hotspot, or internet path is assumed.
+- `altiair-hub` / Pi 5 creates the private Wi-Fi AP `Altiair-LAN`.
+- `altiair-node-a` and `altiair-node-b` join `Altiair-LAN`.
+- `altiair-orin` joins `Altiair-LAN` if Wi-Fi works, otherwise it uses Ethernet if available.
 - Prove the software path first through logical nodes on one machine or the Pi 5: `altiair-hub`, `altiair-node-a`, `altiair-node-b`, and `altiair-orin` run as separate API instances or simulated peer observations.
-- To prove physical distribution and preservation across separate devices, the nodes still need one local peer link before the simulated failure: Pi 5 software AP, direct Ethernet, USB networking, or venue Wi-Fi/LAN if peer traffic is allowed.
+- To prove physical distribution and preservation across separate devices, bring up the Pi 5 AP before the simulated failure so a bundle can replicate off the node that later goes down.
 - Loopback emulation proves the contracts, queueing, gateway scoring, and UI flow; it does not prove that evidence was physically replicated off a device before that device went down.
 - The node-loss demo should generate an event, replicate the signed evidence bundle to at least one peer, then power down or isolate one node and show the surviving peer still has the bundle and mission-continuity state.
 - If a node is destroyed or powered off before its bundle replicates, only that node's durable queue had the data; the system can preserve already-replicated evidence, not recover unreplicated data.
@@ -238,20 +244,37 @@ No-router baseline topology:
 - `altiair-hub` is the Pi 5 preferred display/coordinator and gateway candidate; queues and mission context should replicate so it is not authoritative.
 - `altiair-orin` is the Jetson Orin Nano inference accelerator and secondary CASK/Foundry gateway.
 - Use static node identity under a narrow WireGuard overlay when multiple devices are connected: `10.77.0.10` hub, `10.77.0.11` node A, `10.77.0.12` node B, `10.77.0.20` Orin.
+- Use the Pi 5 AP LAN as the underlay; use the `10.77.0.x` overlay as the stable app identity contract.
 - The primary operator display is built off the Pi: attached screen, kiosk browser, or chest-worn compute/display rig that resembles EagleEye cueing.
 - Phones and tablets are fallback viewers only.
-- Use static peer configuration first; NATS JetStream leaf nodes, libp2p GossipSub, Wi-Fi Direct, Pi AP mode, LoRa/Meshtastic, or MANET behavior are stretch goals after the local proof is stable.
+- Use static peer configuration first; NATS JetStream leaf nodes, libp2p GossipSub, Wi-Fi Direct, LoRa/Meshtastic, or MANET behavior are stretch goals after the local proof is stable.
+
+Pi 5 AP baseline command:
+
+```bash
+sudo nmcli device wifi hotspot ifname wlan0 con-name altiair-lan ssid Altiair-LAN password "change-this-demo-password"
+```
+
+If the Pi 5 uses its Wi-Fi radio as the AP, do not depend on that same Wi-Fi radio for internet. The local mesh still works; Foundry/CASK sync queues until any gateway gets internet later.
 
 Mesh implementation helpers:
 
 ```bash
 npm run mesh:plan -- --format summary
 npm run fusion:smoke
+npm run replication:smoke
 npm run tag:smoke
 npm run mesh:plan -- --node altiair-hub --format env
 npm run mesh:plan -- --node altiair-hub --format wireguard
 npm run mesh:smoke
 npm run node:api -- --node altiair-hub --port 8080
+```
+
+After posting a bundle to a node API, inspect the networking ledger:
+
+```bash
+curl -H "Authorization: Bearer $ALTIAIR_API_TOKEN" http://127.0.0.1:8080/replication
+curl -H "Authorization: Bearer $ALTIAIR_API_TOKEN" http://127.0.0.1:8080/ledger
 ```
 
 ## Consolidated Workflows
@@ -552,10 +575,11 @@ Runtime tests:
    - Install Rust toolchain, SQLite tooling, camera utilities, networking tools, WireGuard tools, and `llama.cpp`.
 
 2. Bring up the local execution path.
-   - Start without assuming a router or hotspot: run logical nodes on one host, or connect devices by direct Ethernet/USB when available.
-   - For the distributed preservation demo, establish one local peer link before simulating node loss: Pi 5 software AP, direct Ethernet, USB networking, or a peer-capable venue LAN.
-   - Use venue Wi-Fi only if it allows device-to-device traffic; otherwise keep networking local and simulate peer observations until a direct link is ready.
-   - Connect both Pi 4B nodes, Pi 5, Jetson Orin Nano, and the Pi-hosted operator display shell as physical links become available.
+   - Start without assuming an external router, phone hotspot, or internet path: run logical nodes on one host or the Pi 5.
+   - Make the Pi 5 the local mission LAN by creating `Altiair-LAN` with `nmcli`.
+   - Join both Pi 4B nodes to `Altiair-LAN`; join the Jetson by Wi-Fi if available, otherwise by Ethernet if available.
+   - Use venue Wi-Fi only as an optional internet/uplink path later; do not depend on it for node-to-node traffic.
+   - Connect the Pi-hosted operator display shell to the Pi 5 local LAN.
    - Verify the bundle exists on a surviving peer before powering down or isolating a node; unreplicated data on the failed node cannot be preserved by the mesh.
    - Generate static peer/WireGuard templates with `npm run mesh:plan`.
    - Verify `GET /health`, `GET /peers`, `GET /mission-continuity`, and `GET /congestion` across devices.

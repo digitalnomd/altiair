@@ -15,7 +15,7 @@ Sources:
 - https://www.darpa.mil/research/programs/decentralized-artificial-intelligence-through-controlled-emergence
 - https://www.darpa.mil/research/programs/secure-handhelds
 
-There is no single central authority. `altiair-hub` is a preferred display/coordinator when online, but replicated evidence and cached mission context allow any surviving three-node quorum to continue if one node fails. Foundry/CASK can enrich or reconcile later, but the live demo must still work when venue Wi-Fi is removed.
+There is no single central authority. `altiair-hub` is the Pi 5 local mission LAN host and preferred display/coordinator when online, but replicated evidence and cached mission context allow any surviving three-node quorum to continue if one node fails. Foundry/CASK can enrich or reconcile later, but the live demo must still work with no venue Wi-Fi or internet.
 
 ## Four Partial Views
 
@@ -30,15 +30,16 @@ Each node's local confidence stays below the resolution threshold. The fused vie
 
 ## Demo Flow
 
-1. Start the no-router proof path: run logical nodes on the Pi 5/laptop first, then add direct Ethernet/USB or any available LAN only if it is ready.
-2. Start the Pi 5 display/coordinator candidate and local node APIs.
-3. Trigger the RFID read on `altiair-node-a`.
-4. Trigger an audio/motion event on `altiair-node-b`.
-5. Trigger the Jetson visual event from a camera frame, marker, toy/static prop, or prerecorded clip.
-6. The current coordinator correlates the edge observations with replicated CASK/Foundry mission context.
-7. The surviving quorum publishes peer intent pings and assigns supporting roles.
-8. The display shows a policy-gated cue with evidence IDs, confidence, uncertainty, source nodes, peer intents, and required next checks.
-9. Kill one node or the venue uplink. The mesh should elect or retain a surviving coordinator, show degraded mission continuity, and continue local operation.
+1. Start the no-router proof path: run logical nodes on the Pi 5/laptop first, then make the Pi 5 broadcast `Altiair-LAN`.
+2. Join both Pi 4B nodes to `Altiair-LAN`; join the Jetson by Wi-Fi if possible or Ethernet if needed.
+3. Start the Pi 5 display/coordinator candidate and local node APIs.
+4. Trigger the RFID read on `altiair-node-a`.
+5. Trigger an audio/motion event on `altiair-node-b`.
+6. Trigger the Jetson visual event from a camera frame, marker, toy/static prop, or prerecorded clip.
+7. The current coordinator correlates the edge observations with replicated CASK/Foundry mission context.
+8. The surviving quorum publishes peer intent pings and assigns supporting roles.
+9. The display shows a policy-gated cue with evidence IDs, confidence, uncertainty, source nodes, peer intents, and required next checks.
+10. Kill one node or the optional uplink. The mesh should elect or retain a surviving coordinator, show degraded mission continuity, and continue local operation.
 
 ## Acceptance Criteria
 

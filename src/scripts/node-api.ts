@@ -5,13 +5,17 @@ import {
   decideCongestion,
   selectGateway,
 } from "../mesh/gatewaySelection.js";
+import { buildDistributedResolutionReport } from "../cask/distributedResolution.js";
+import { buildTrainingTagPlan } from "../cask/trainingTag.js";
+import { buildReplicationReport } from "../mesh/replication.js";
 import type { CaskBundle, NodeHealth, PolicyState } from "../cask/types.js";
-import type { NodeDescriptor, PeerObservation } from "../mesh/types.js";
+import type { NodeDescriptor, PeerObservation, ReplicationReport } from "../mesh/types.js";
 
 interface RuntimeState {
   node: NodeDescriptor;
   observations: PeerObservation[];
   bundles: CaskBundle[];
+  replicationReports: ReplicationReport[];
   startedAt: number;
   currentGatewayId?: string;
   apiToken?: string;
@@ -35,6 +39,7 @@ const state: RuntimeState = {
   node,
   observations: nominalMeshObservations,
   bundles: [],
+  replicationReports: [],
   startedAt: Date.now(),
   currentGatewayId: process.env.ALTIAIR_CURRENT_GATEWAY_ID,
   apiToken,
@@ -150,6 +155,35 @@ async function handleRequest(
     return;
   }
 
+  if (request.method === "GET" && path === "/replication") {
+    writeJson(response, 200, {
+      nodeId: state.node.id,
+      policy: defaultDdilMeshTopology.policy.replication,
+      reportCount: state.replicationReports.length,
+      latest: summarizeReplicationReport(latestReplicationReport(state)),
+    });
+    return;
+  }
+
+  if (request.method === "GET" && path === "/replication/latest") {
+    const latestReport = latestReplicationReport(state);
+    if (latestReport === undefined) {
+      writeJson(response, 404, {
+        error: "No replicated bundles.",
+        message: "POST /bundles first, then read /replication/latest.",
+      });
+      return;
+    }
+
+    writeJson(response, 200, latestReport);
+    return;
+  }
+
+  if (request.method === "GET" && path === "/ledger") {
+    writeJson(response, 200, buildLocalLedgerView(state));
+    return;
+  }
+
   if (request.method === "GET" && path === "/bundles/pending") {
     writeJson(response, 200, {
       nodeId: state.node.id,
@@ -190,6 +224,8 @@ async function handleRequest(
         );
 
     state.bundles.push(bundle);
+    const replicationReport = buildBundleReplicationReport(state, bundle);
+    state.replicationReports.push(replicationReport);
 
     writeJson(response, 202, {
       accepted: congestion?.acceptBundle ?? true,
@@ -197,6 +233,7 @@ async function handleRequest(
       bundleId: bundle.id,
       gatewayDecision,
       congestion,
+      replication: summarizeReplicationReport(replicationReport),
     });
     return;
   }
@@ -210,6 +247,9 @@ async function handleRequest(
       "GET /gateway",
       "GET /mission-continuity",
       "GET /congestion",
+      "GET /replication",
+      "GET /replication/latest",
+      "GET /ledger",
       "POST /bundles",
       "GET /bundles/pending",
     ],
@@ -308,6 +348,98 @@ function bundlePolicyGate(bundle: CaskBundle): PolicyState {
   }
   const eventPolicy = bundle.sensorEvents?.[0]?.policyState;
   return eventPolicy ?? "review_needed";
+}
+
+function buildBundleReplicationReport(state: RuntimeState, bundle: CaskBundle): ReplicationReport {
+  const offlineNodeIds = state.observations
+    .filter((observation) => !observation.online)
+    .map((observation) => observation.nodeId);
+  const resolution = buildDistributedResolutionReport(bundle, { offlineNodeIds });
+  const tagPlan = buildTrainingTagPlan(bundle, resolution);
+  return buildReplicationReport(
+    defaultDdilMeshTopology,
+    bundle,
+    resolution,
+    tagPlan,
+    state.observations,
+    { offlineNodeIds },
+  );
+}
+
+function latestReplicationReport(state: RuntimeState): ReplicationReport | undefined {
+  return state.replicationReports[state.replicationReports.length - 1];
+}
+
+function summarizeReplicationReport(report: ReplicationReport | undefined): unknown {
+  if (report === undefined) {
+    return null;
+  }
+  return {
+    bundleId: report.bundleId,
+    recordCount: report.records.length,
+    requiredReplicaNodeIds: report.requiredReplicaNodeIds,
+    allReachableNodesHaveAllRecords: report.allReachableNodesHaveAllRecords,
+    survivableNodeLoss: report.survivableNodeLoss,
+  };
+}
+
+function buildLocalLedgerView(state: RuntimeState): unknown {
+  if (state.replicationReports.length === 0) {
+    return {
+      nodeId: state.node.id,
+      bundleCount: state.bundles.length,
+      storedRecordCount: 0,
+      storedRecordIds: [],
+      records: [],
+      inventories: [],
+      reports: [],
+    };
+  }
+
+  const recordsByKey = new Map(
+    state.replicationReports
+      .flatMap((report) => report.records)
+      .map((record) => [`${record.recordId}:${record.contentHash}`, record]),
+  );
+  const inventories = defaultDdilMeshTopology.nodes.map((node) => {
+    const storedRecordIds = new Set<string>();
+    let online = false;
+    for (const report of state.replicationReports) {
+      const inventory = report.inventories.find((candidate) => candidate.nodeId === node.id);
+      if (inventory === undefined) {
+        continue;
+      }
+      online = online || inventory.online;
+      for (const recordId of inventory.storedRecordIds) {
+        storedRecordIds.add(recordId);
+      }
+    }
+    return {
+      nodeId: node.id,
+      online,
+      storedRecordIds: [...storedRecordIds].sort(),
+    };
+  });
+  const localInventory = inventories.find((inventory) => inventory.nodeId === state.node.id);
+  const storedRecordIds = localInventory?.storedRecordIds ?? [];
+  const storedRecordIdSet = new Set(storedRecordIds);
+  const latestReport = latestReplicationReport(state);
+
+  return {
+    nodeId: state.node.id,
+    latestBundleId: latestReport?.bundleId,
+    bundleCount: state.bundles.length,
+    online: localInventory?.online ?? false,
+    storedRecordCount: storedRecordIds.length,
+    storedRecordIds,
+    records: [...recordsByKey.values()].filter((record) => storedRecordIdSet.has(record.recordId)),
+    inventories,
+    reports: state.replicationReports.map(summarizeReplicationReport),
+    allReachableNodesHaveAllRecords: state.replicationReports.every(
+      (report) => report.allReachableNodesHaveAllRecords,
+    ),
+    survivableNodeLoss: state.replicationReports.every((report) => report.survivableNodeLoss),
+  };
 }
 
 function policyQuery(url: URL): PolicyState {

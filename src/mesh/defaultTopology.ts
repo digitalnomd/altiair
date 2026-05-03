@@ -3,7 +3,9 @@ import type { MeshTopology, PeerObservation } from "./types.js";
 export const defaultDdilMeshTopology: MeshTopology = {
   missionNetworkId: "altiair-ddil-demo-net",
   overlayCidr: "10.77.0.0/24",
+  defaultApSsid: "Altiair-LAN",
   defaultLanCidr: "192.168.42.0/24",
+  defaultGatewayAddress: "192.168.42.10",
   transports: [
     "loopback_emulation",
     "direct_ethernet",
@@ -30,6 +32,25 @@ export const defaultDdilMeshTopology: MeshTopology = {
     maxClockSkewSeconds: 2,
     maxBundleSizeBytes: 8 * 1024 * 1024,
     highWaterQueueDepth: 250,
+    replication: {
+      mode: "all_reachable_nodes",
+      requiredRecordKinds: [
+        "sensor_event",
+        "location_fix",
+        "drone_observation",
+        "control_source_estimate",
+        "counter_uas_cue",
+        "node_health",
+        "peer_intent",
+        "training_tag_plan",
+        "bundle_manifest",
+      ],
+      rawMediaStrategy: "metadata_hash_and_policy_allowed_blobs",
+      encryptedAtRest: true,
+      signedRecords: true,
+      requirePeerAck: true,
+      minSurvivorCopies: 2,
+    },
   },
   nodes: [
     {
@@ -42,7 +63,7 @@ export const defaultDdilMeshTopology: MeshTopology = {
       apiPort: 8080,
       wireGuardListenPort: 51820,
       publicKeyEnv: "ALTIAIR_HUB_WG_PUBLIC_KEY",
-      preferredLinks: ["ethernet", "wifi_ap", "wireguard_overlay"],
+      preferredLinks: ["wifi_ap", "ethernet", "wireguard_overlay"],
       capabilities: [
         {
           name: "durable_queue",
@@ -58,6 +79,7 @@ export const defaultDdilMeshTopology: MeshTopology = {
         },
       ],
       constraints: [
+        "Create the Altiair-LAN private Wi-Fi AP for the day-one physical mission LAN.",
         "Do not make the hub a single point of failure; edge nodes keep local queues.",
         "Throttle media first when queue depth or CPU pressure rises.",
       ],
@@ -127,7 +149,7 @@ export const defaultDdilMeshTopology: MeshTopology = {
       apiPort: 8080,
       wireGuardListenPort: 51820,
       publicKeyEnv: "ALTIAIR_ORIN_WG_PUBLIC_KEY",
-      preferredLinks: ["ethernet", "wifi_ap", "wireguard_overlay"],
+      preferredLinks: ["wifi_ap", "ethernet", "wireguard_overlay"],
       capabilities: [
         {
           name: "vision_inference",

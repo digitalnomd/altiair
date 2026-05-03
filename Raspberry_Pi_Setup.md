@@ -88,14 +88,23 @@ The script supports both newer Raspberry Pi OS images that expose `user-data` an
 
 ## Hackathon Network Notes
 
-- A router or hotspot is not required to prove the Altiair edge implementation.
-- The fastest proof path is to boot one Pi at a time, then run logical nodes on the Pi 5 or laptop until physical links are ready.
-- Physical distribution across separate nodes still requires one local peer link before the failure demo: Pi 5 software AP, direct Ethernet, USB networking, or peer-capable venue LAN.
+- A router, phone hotspot, or internet path is not required to prove the Altiair edge implementation.
+- The physical baseline is the Pi 5 private mission LAN. `altiair-hub` creates `Altiair-LAN`; `altiair-node-a`, `altiair-node-b`, and `altiair-orin` join it.
+- The fastest proof path is to boot one Pi at a time, then run logical nodes on the Pi 5 or laptop until `Altiair-LAN` is ready.
+- Physical distribution across separate nodes requires the Pi 5 AP to be up before the failure demo so a bundle can replicate off the node that later goes down.
 - To prove preservation, generate a bundle, verify it replicated to a surviving peer, then power down or isolate one node. Data that never left the failed node cannot be recovered by the mesh.
-- For physical multi-node testing, prefer direct Ethernet or USB networking first.
-- Venue Wi-Fi is usable only if it has no captive portal and allows device-to-device traffic.
+- If Jetson Wi-Fi fails, use Ethernet for `altiair-orin` when available.
+- Venue Wi-Fi is optional for later internet/uplink only; do not depend on it for node-to-node traffic.
 - Captive portal Wi-Fi usually does not work for headless first boot.
-- A phone hotspot, travel router, or simple WPA/WPA2 Wi-Fi network remains optional if someone brings one later.
+- A phone hotspot or travel router remains optional only as a backup or later uplink path.
+
+Pi 5 AP baseline:
+
+```bash
+sudo nmcli device wifi hotspot ifname wlan0 con-name altiair-lan ssid Altiair-LAN password "change-this-demo-password"
+```
+
+If the Pi 5 uses its Wi-Fi radio as the AP, do not depend on that same Wi-Fi radio for internet. The local mesh works without internet; Foundry/CASK sync queues until any gateway gets an uplink later.
 
 Example Wi-Fi customization, only when a normal SSID is available:
 

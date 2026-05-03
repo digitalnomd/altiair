@@ -78,12 +78,12 @@ function renderSummary(topology: MeshTopology): string {
 
   return [
     `Mission network: ${topology.missionNetworkId}`,
-    `Optional underlay LAN: ${topology.defaultLanCidr}${
+    `Pi 5 mission LAN: ${topology.defaultApSsid ?? "Altiair-LAN"} on ${topology.defaultLanCidr}${
       topology.defaultGatewayAddress === undefined ? "" : ` via gateway ${topology.defaultGatewayAddress}`
     }`,
     `WireGuard overlay: ${topology.overlayCidr}`,
-    "No router, hotspot, or internet path is required for the proof path.",
-    "Physical multi-node preservation still needs one local peer link first: Pi 5 AP, direct Ethernet/USB, or any peer-capable LAN.",
+    "Pi 5 private AP is the default physical underlay; no external router, phone hotspot, or internet path is required.",
+    "Pi 4B nodes join the Pi 5 AP; Jetson joins by Wi-Fi if available or Ethernet if needed.",
     "Loopback emulation proves the software contracts; it does not prove physical replication before node loss.",
     "",
     "Node              Platform            LAN              Overlay       Roles",
@@ -101,6 +101,9 @@ function renderSummary(topology: MeshTopology): string {
 function renderEnv(node: NodeDescriptor, topology: MeshTopology): string {
   return [
     `ALTIAIR_MISSION_NETWORK_ID=${topology.missionNetworkId}`,
+    `ALTIAIR_AP_SSID=${topology.defaultApSsid ?? ""}`,
+    `ALTIAIR_DEFAULT_LAN_CIDR=${topology.defaultLanCidr}`,
+    `ALTIAIR_DEFAULT_GATEWAY_ADDRESS=${topology.defaultGatewayAddress ?? ""}`,
     `ALTIAIR_NODE_ID=${node.id}`,
     `ALTIAIR_HOSTNAME=${node.hostname}`,
     `ALTIAIR_PLATFORM=${node.platform}`,

@@ -28,6 +28,7 @@ Current implementation choices are grounded in these public primary or vendor-pr
 - IBM Research DDIL edge MLOps: edge AI must explicitly handle denied, degraded, intermittent, and low-bandwidth conditions across model lifecycle, DDIL challenges, and application stack. Source: https://research.ibm.com/publications/mlops-at-the-edge-in-ddil-environments
 - WireGuard quick start: Linux overlay interface, explicit peer keys, narrow allowed IPs, and optional persistent keepalive for NAT/firewall cases. Source: https://www.wireguard.com/quickstart/
 - Raspberry Pi OS networking: Bookworm and newer use NetworkManager/`nmcli` for wireless configuration. Source: https://www.raspberrypi.com/documentation/computers/configuration.html
+- Raspberry Pi wireless access point setup: Raspberry Pi documents creating a hotspot with `nmcli`. Source: https://www.raspberrypi.com/documentation/configuration/wireless/wireless-access-point.md
 - NVIDIA Jetson Linux Orin docs: Orin Nano is the right node for accelerated camera/media/inference work and security-conscious platform setup. Source: https://docs.nvidia.com/jetson/archives/r36.5/DeveloperGuide/SO/JetsonOrinSeries.html
 - NATS edge architecture and JetStream: local leaf nodes plus JetStream mirroring are a future upgrade path for store-and-forward recovery after connectivity outages. Sources: https://docs.nats.io/nats-concepts/service_infrastructure/adaptive_edge_deployment and https://docs.nats.io/nats-concepts/jetstream
 - libp2p GossipSub: peer-to-peer pub/sub controls traffic with sparse full-message peerings and gossip metadata; useful as a future discovery/pubsub option, not day-one complexity. Source: https://libp2p.io/docs/pubsub/
@@ -35,29 +36,29 @@ Current implementation choices are grounded in these public primary or vendor-pr
 
 ## Day-One Architecture
 
-Assume no dedicated router, no phone hotspot, and no internet path. The day-one software proof does not depend on any of them. The stable mission model is node identity, local queueing, gateway selection, and policy-gated sync; the physical underlay can be loopback, direct Ethernet/USB, venue Wi-Fi if peer traffic is allowed, or a Pi 5 software AP.
+Assume no dedicated router, no phone hotspot, and no internet path. The Pi 5 is the local mission LAN: it broadcasts the private Wi-Fi AP `Altiair-LAN`, the two Pi 4Bs join it, and the Jetson joins by Wi-Fi if possible or Ethernet if needed. The stable mission model is node identity, local queueing, gateway selection, and policy-gated sync over this local link.
 
 For the physical node-loss preservation demo, loopback is only a fallback. Separate devices must share at least one local peer link before the simulated failure so a bundle can replicate off the node that later goes down. The mesh preserves evidence that has already reached another node; it cannot recover a bundle that existed only on a device that was powered off, isolated, or destroyed before replication.
 
 | Node | Day-one link assumption | Overlay | Role |
 | --- | --- | --- | --- |
-| `altiair-hub` | loopback or Pi 5 local API first; direct LAN when available | `10.77.0.10` | Pi 5 hub, queue owner, display host, preferred CASK/Foundry gateway |
-| `altiair-node-a` | logical node first; direct Ethernet/USB/venue LAN when available | `10.77.0.11` | Pi 4B sensor node |
-| `altiair-node-b` | logical node first; direct Ethernet/USB/venue LAN when available | `10.77.0.12` | Pi 4B sensor node |
-| `altiair-orin` | logical node first; direct Ethernet/USB/venue LAN when available | `10.77.0.20` | Jetson inference node, secondary CASK/Foundry gateway |
+| `altiair-hub` | Pi 5 creates `Altiair-LAN` private AP | `10.77.0.10` | Pi 5 hub, queue owner, display host, preferred CASK/Foundry gateway |
+| `altiair-node-a` | Pi 4B joins `Altiair-LAN` | `10.77.0.11` | Pi 4B sensor node |
+| `altiair-node-b` | Pi 4B joins `Altiair-LAN` | `10.77.0.12` | Pi 4B sensor node |
+| `altiair-orin` | Jetson joins `Altiair-LAN`; Ethernet fallback if Wi-Fi fails | `10.77.0.20` | Jetson inference node, secondary CASK/Foundry gateway |
 
 Network rules:
 
-- Do not require a hotspot or router for the proof.
-- Start with logical nodes on one host if physical node-to-node networking is blocked.
-- For physical distribution, establish one local peer link first: Pi 5 software AP, direct Ethernet, USB networking, or a peer-capable LAN.
-- Use direct Ethernet or USB networking before spending time on venue Wi-Fi.
-- Use venue Wi-Fi only if it has no captive portal and allows peer traffic.
-- Prefer Ethernet for `altiair-hub` and `altiair-orin` when hardware allows it.
+- Do not require an external hotspot, router, or internet path for the proof.
+- Start with logical nodes on one host only as a software fallback.
+- For physical distribution, bring up the Pi 5 `Altiair-LAN` AP before the simulated failure.
+- Use Jetson Ethernet as the fallback if Jetson Wi-Fi does not cooperate.
+- Use venue Wi-Fi only as an optional later uplink; do not depend on it for node-to-node traffic.
 - Use `wg0` overlay `10.77.0.0/24`; keep each peer `AllowedIPs` to one `/32` so routing stays narrow.
-- WireGuard templates use `<hostname>.local` endpoints for any LAN that supports mDNS. If mDNS fails, replace the endpoint with the current peer IP from `ip addr`, `arp -a`, or the venue/client list.
+- WireGuard templates use `<hostname>.local` endpoints on the Pi 5 LAN when mDNS works. If mDNS fails, replace the endpoint with the current peer IP from `ip addr`, `nmcli device show`, or `arp -a`.
 - Keep raw media local by default. Forward metadata, thumbnails, transcripts, or short clips first.
 - Every node keeps a local queue so hub or uplink loss does not halt capture.
+- Every reachable node stores the mission ledger from every node: observations, location fixes, peer intents, selected-role/tag-plan state, node health, policy state, hashes/references, and sync receipts.
 - A node-loss demo must show replication before failure: create a bundle, verify it exists on a surviving peer, then power down or isolate one node and confirm mission continuity remains degraded but operational.
 - CASK/Foundry upload is gateway-selected and policy-gated; local review continues when no gateway is eligible.
 - One-node failure is expected. The mesh is degraded but operational if at least one sensor node and either `altiair-hub` or `altiair-orin` remain online.
@@ -71,7 +72,7 @@ The mesh code lives in:
 - `src/mesh/types.ts`: topology, peer health, gateway, and congestion contracts.
 - `src/scripts/mesh-plan.ts`: prints the topology or per-node environment/WireGuard templates without secrets.
 - `src/scripts/mesh-smoke.ts`: simulates normal and degraded gateway selection.
-- `src/scripts/node-api.ts`: dependency-free prototype API for the edge-node contract before the Rust service lands.
+- `src/scripts/node-api.ts`: dependency-free prototype API for the edge-node contract before the Rust service lands, including bundle ingest, replication status, and local ledger views.
 
 Commands:
 
@@ -81,6 +82,22 @@ npm run mesh:plan -- --node altiair-hub --format env
 npm run mesh:plan -- --node altiair-hub --format wireguard
 npm run mesh:smoke
 npm run node:api -- --node altiair-hub --port 8080
+```
+
+Pi 5 AP setup:
+
+```bash
+sudo nmcli device wifi hotspot ifname wlan0 con-name altiair-lan ssid Altiair-LAN password "change-this-demo-password"
+```
+
+If the Pi 5 uses its Wi-Fi radio as the AP, do not depend on that same radio for internet. The local mesh still works; Foundry/CASK sync queues until any gateway gets internet later.
+
+Once a bundle is posted, the prototype API exposes the all-reachable-node replication contract:
+
+```bash
+curl -H "Authorization: Bearer $ALTIAIR_API_TOKEN" http://127.0.0.1:8080/replication
+curl -H "Authorization: Bearer $ALTIAIR_API_TOKEN" http://127.0.0.1:8080/replication/latest
+curl -H "Authorization: Bearer $ALTIAIR_API_TOKEN" http://127.0.0.1:8080/ledger
 ```
 
 The WireGuard output is a template. Generate keys on each device:
@@ -96,7 +113,7 @@ Do not commit generated keys, Foundry URLs, registry tokens, OAuth secrets, or p
 
 The implementation security plan is tracked in [Security Implementation Plan](security-implementation-plan.md). The short version:
 
-- Treat every underlay as untrusted, including loopback-to-LAN transitions, venue Wi-Fi, direct Ethernet, USB networking, and any optional hotspot/router. The trusted mission path is the WireGuard overlay plus per-node identity.
+- Treat every underlay as untrusted, including loopback-to-LAN transitions, the Pi 5 `Altiair-LAN` AP, venue Wi-Fi, Jetson Ethernet fallback, and any optional backup hotspot/router. The trusted mission path is the WireGuard overlay plus per-node identity.
 - Set `ALTIAIR_API_TOKEN` for every demo where the API is reachable beyond loopback. Protected API routes require `Authorization: Bearer <token>` when the token is configured.
 - Bind the node API deliberately with `ALTIAIR_API_HOST`; prefer the node's WireGuard overlay address instead of `0.0.0.0` for live demos.
 - Use a default-deny firewall and allow the node API only on `wg0`.
@@ -125,28 +142,35 @@ Mission continuity reporting classifies the mesh as `nominal`, `degraded_one_nod
 
 1. Flash Raspberry Pi OS Lite 64-bit on both Pi 4B nodes and the Pi 5; use Ubuntu/Jetson Linux on the Orin Nano.
 2. Set hostnames: `altiair-node-a`, `altiair-node-b`, `altiair-hub`, `altiair-orin`.
-3. Start with the no-router proof path: run logical nodes on one host, or connect the first physical node by direct Ethernet/USB.
-4. If venue Wi-Fi is used, confirm there is no captive portal and that peer-to-peer traffic works before depending on it.
-5. Before claiming physical preservation, verify one bundle replicated to a surviving peer and remains visible after a node is powered down or isolated.
-6. Patch each device and enable SSH key auth only; disable password SSH before public demo use.
-7. Install base tools on each node:
+3. Start with the no-router proof path: run logical nodes on one host if needed, then make the Pi 5 the local mission LAN.
+4. Create `Altiair-LAN` on the Pi 5:
+
+```bash
+sudo nmcli device wifi hotspot ifname wlan0 con-name altiair-lan ssid Altiair-LAN password "change-this-demo-password"
+```
+
+5. Join both Pi 4Bs to `Altiair-LAN`; join the Jetson by Wi-Fi if available or Ethernet if needed.
+6. Use venue Wi-Fi only as an optional uplink later; the local demo must not depend on venue peer traffic.
+7. Before claiming physical preservation, verify one bundle replicated to a surviving peer and remains visible after a node is powered down or isolated.
+8. Patch each device and enable SSH key auth only; disable password SSH before public demo use.
+9. Install base tools on each node:
 
 ```bash
 sudo apt update
 sudo apt install -y curl jq sqlite3 wireguard-tools iperf3
 ```
 
-8. Generate WireGuard keys on each device and exchange public keys out-of-band.
-9. Generate each `wg0.conf` template with `npm run mesh:plan -- --node <node-id> --format wireguard`.
-10. Replace placeholders with local private key and peer public keys on the device only.
-11. Set an API token locally on each node, outside git:
+10. Generate WireGuard keys on each device and exchange public keys out-of-band.
+11. Generate each `wg0.conf` template with `npm run mesh:plan -- --node <node-id> --format wireguard`.
+12. Replace placeholders with local private key and peer public keys on the device only.
+13. Set an API token locally on each node, outside git:
 
 ```bash
 export ALTIAIR_API_TOKEN="<demo-token>"
 export ALTIAIR_API_HOST="<node-overlay-ip>"
 ```
 
-12. Bring up the overlay:
+14. Bring up the overlay:
 
 ```bash
 sudo install -m 600 wg0.conf /etc/wireguard/wg0.conf
@@ -154,7 +178,7 @@ sudo systemctl enable --now wg-quick@wg0
 wg show
 ```
 
-13. Verify peer reachability:
+15. Verify peer reachability:
 
 ```bash
 ping -c 3 10.77.0.10

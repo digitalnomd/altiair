@@ -13,6 +13,7 @@
     "mesh:plan": "tsx src/scripts/mesh-plan.ts",
     "mesh:smoke": "tsx src/scripts/mesh-smoke.ts",
     "node:api": "tsx src/scripts/node-api.ts",
+    "replication:smoke": "tsx src/scripts/replication-smoke.ts",
     "tag:smoke": "tsx src/scripts/tag-smoke.ts",
     "smoke:mock": "tsx src/scripts/smoke.ts",
     "smoke:foundry": "FOUNDRY_MODE=osdk tsx src/scripts/smoke.ts --foundry"
