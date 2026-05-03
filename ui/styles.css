@@ -781,11 +781,11 @@ svg use {
 }
 
 .control-source-area {
-  fill: rgba(101, 199, 255, 0.08);
-  stroke: rgba(155, 215, 255, 0.5);
+  fill: var(--region-amber);
+  stroke: var(--region-amber-strong);
   stroke-width: 1.5;
   stroke-dasharray: 10 7;
-  filter: drop-shadow(0 0 14px rgba(101, 199, 255, 0.16));
+  filter: drop-shadow(0 0 14px rgba(232, 205, 123, 0.16));
 }
 
 .control-source-cross {
