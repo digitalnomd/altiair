@@ -13,6 +13,8 @@
     "fusion:smoke": "tsx src/scripts/fusion-smoke.ts",
     "mesh:plan": "tsx src/scripts/mesh-plan.ts",
     "mesh:smoke": "tsx src/scripts/mesh-smoke.ts",
+    "mock:scenario": "tsx src/scripts/mock-scenario.ts",
+    "mock:replay": "tsx src/scripts/mock-scenario.ts --replay",
     "node:api": "tsx src/scripts/node-api.ts",
     "replication:smoke": "tsx src/scripts/replication-smoke.ts",
     "sensor:merge": "tsx src/scripts/sensor-merge.ts",

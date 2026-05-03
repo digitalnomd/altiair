@@ -11,6 +11,7 @@ These scripts are the prepared Pi-side entry points for the CASK edge node runti
 | `write-altiair-sd-env.sh` | Copies a per-node env file onto a mounted SD boot partition for first install. |
 | `ssh-tunnel-to-node.sh` | Opens local SSH forwards to a remote node API and UI server. |
 | `post-sensor-events.sh` | Posts live adapter JSON to `POST /sensor-events`. |
+| `replay-mock-scenario.sh` | Replays the deterministic CASK mock sensor scenario into the local node API. |
 | `watch-local-instructions.sh` | Polls `GET /instructions/latest` for the current node's local CASK tag-plan assignment. |
 | `sample-live-events.json` | Smoke payload for RFID, microphone, and camera merge. |
 | `env/*.env` | Per-node starter env files for the two Pi 4Bs, Pi 5 hub, and Jetson Orin Nano. |
@@ -74,6 +75,14 @@ On a running node:
 scripts/pi/post-sensor-events.sh scripts/pi/sample-live-events.json
 curl -sS http://127.0.0.1:8080/instructions/latest
 curl -sS http://127.0.0.1:8080/insights/latest
+curl -sS http://127.0.0.1:8080/dashboard
+```
+
+Replay the full deterministic mock scenario:
+
+```bash
+scripts/pi/replay-mock-scenario.sh
+curl -sS http://127.0.0.1:8080/mission-continuity
 curl -sS http://127.0.0.1:8080/dashboard
 ```
 

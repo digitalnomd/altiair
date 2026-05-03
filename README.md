@@ -71,6 +71,7 @@ The deeper decision brief is here:
 - [Security Implementation Plan](docs/security-implementation-plan.md)
 - [DARPA Opportunity Alignment](docs/darpa-opportunity-alignment.md)
 - [Teammate Remote Pi and Frontend Handoff](docs/teammate-remote-pi-frontend-handoff.md)
+- [Mock CASK Demo Data](docs/mock-cask-demo-data.md)
 
 Shared data ideas and LLM context drop:
 
@@ -104,6 +105,7 @@ The repo now includes a runnable TypeScript integration scaffold for the Foundry
 - `src/scripts/mesh-plan.ts`: per-node environment and WireGuard template generator with no committed secrets.
 - `src/scripts/mesh-smoke.ts`: gateway failover and congestion smoke simulation.
 - `src/scripts/node-api.ts`: dependency-free prototype node API exposing health, peer, gateway, congestion, live sensor merge, local LLM insight, tag-plan instruction, replication, and ledger endpoints.
+- `src/mock/caskDemoScenario.ts` and `npm run mock:replay`: deterministic camera, microphone, RFID, provider-style location, and node-health mock events for the full CASK demo path.
 - `scripts/pi/`: Pi/Jetson deployment scripts, env templates, sensor-event poster, and local-instruction watcher.
 
 The current Atlas ontology has a narrow live path for `[Example] CASK GPS Position`. Use `FOUNDRY_UPLOAD_PROFILE=cask_gps_position` for the first live OSDK writeback smoke. Keep `FOUNDRY_UPLOAD_PROFILE=bundle_actions` for the full local CASK contract once matching ontology actions exist.

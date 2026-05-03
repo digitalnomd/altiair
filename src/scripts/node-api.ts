@@ -30,6 +30,14 @@ interface RuntimeState {
   apiToken?: string;
 }
 
+interface LiveSensorPost {
+  inputs: LiveSensorInput[];
+  missionId?: string;
+  sourceNodeId?: string;
+  bundleId?: string;
+  createdAt?: Date;
+}
+
 const config = loadConfig();
 const nodeId = argValue("--node") ?? process.env.ALTIAIR_NODE_ID ?? "altiair-hub";
 const node = defaultDdilMeshTopology.nodes.find((candidate) => candidate.id === nodeId);
@@ -253,15 +261,18 @@ async function handleRequest(
     }
 
     const rawBody = await readBody(request, defaultDdilMeshTopology.policy.maxBundleSizeBytes);
-    const inputs = parseLiveSensorInputsResponse(rawBody, response);
-    if (inputs === undefined) {
+    const livePost = parseLiveSensorPostResponse(rawBody, response);
+    if (livePost === undefined) {
       return;
     }
 
-    const bundle = buildCaskBundleFromLiveInputs(inputs, {
-      missionId: process.env.ALTIAIR_MISSION_ID,
-      sourceNodeId: state.node.id,
+    const bundle = buildCaskBundleFromLiveInputs(livePost.inputs, {
+      missionId: livePost.missionId ?? process.env.ALTIAIR_MISSION_ID,
+      sourceNodeId: livePost.sourceNodeId ?? state.node.id,
+      bundleId: livePost.bundleId,
+      createdAt: livePost.createdAt,
     });
+    applyLiveNodeHealthInputs(state, livePost.inputs);
     await acceptBundleResponse(state, bundle, Buffer.byteLength(rawBody), response);
     return;
   }
@@ -423,16 +434,22 @@ function parseBundleResponse(rawBody: string, response: ServerResponse): CaskBun
   }
 }
 
-function parseLiveSensorInputsResponse(rawBody: string, response: ServerResponse): LiveSensorInput[] | undefined {
+function parseLiveSensorPostResponse(rawBody: string, response: ServerResponse): LiveSensorPost | undefined {
   try {
     const parsed = JSON.parse(rawBody) as unknown;
     if (Array.isArray(parsed)) {
-      return parsed as LiveSensorInput[];
+      return { inputs: parsed as LiveSensorInput[] };
     }
     if (isRecord(parsed) && Array.isArray(parsed.events)) {
-      return parsed.events as LiveSensorInput[];
+      return {
+        inputs: parsed.events as LiveSensorInput[],
+        missionId: stringField(parsed, "missionId"),
+        sourceNodeId: stringField(parsed, "sourceNodeId"),
+        bundleId: stringField(parsed, "bundleId"),
+        createdAt: dateField(parsed, "createdAt"),
+      };
     }
-    return [parsed as LiveSensorInput];
+    return { inputs: [parsed as LiveSensorInput] };
   } catch (error: unknown) {
     writeJson(response, 400, {
       error: "Invalid sensor input.",
@@ -440,6 +457,65 @@ function parseLiveSensorInputsResponse(rawBody: string, response: ServerResponse
     });
     return undefined;
   }
+}
+
+function stringField(record: Record<string, unknown>, field: string): string | undefined {
+  const value = record[field];
+  return typeof value === "string" && value.length > 0 ? value : undefined;
+}
+
+function dateField(record: Record<string, unknown>, field: string): Date | undefined {
+  const value = stringField(record, field);
+  if (value === undefined) {
+    return undefined;
+  }
+  const date = new Date(value);
+  if (!Number.isFinite(date.getTime())) {
+    throw new Error(`${field} must be an ISO timestamp.`);
+  }
+  return date;
+}
+
+function applyLiveNodeHealthInputs(state: RuntimeState, inputs: LiveSensorInput[]): void {
+  for (const input of inputs) {
+    if (input.kind !== "node_health") {
+      continue;
+    }
+
+    const existing = state.observations.find((observation) => observation.nodeId === input.nodeId);
+    const online = input.networkReachable ?? existing?.online ?? true;
+    const nextObservation: PeerObservation = {
+      nodeId: input.nodeId,
+      online,
+      lastSeenSeconds: online ? 0 : defaultDdilMeshTopology.policy.maxClockSkewSeconds + 1,
+      linkClass: existing?.linkClass ?? "wifi_ap",
+      latencyMs: online ? existing?.latencyMs ?? 18 : 999,
+      packetLoss: online ? existing?.packetLoss ?? 0.02 : 1,
+      queueDepth: input.queueDepth ?? existing?.queueDepth ?? 0,
+      inFlightTransfers: existing?.inFlightTransfers ?? 0,
+      cpuLoad: input.cpuLoad ?? existing?.cpuLoad ?? 0,
+      memoryPressure: memoryPressureFrom(input.memoryUsedMb, existing?.memoryPressure),
+      internetReachable: existing?.internetReachable ?? false,
+      foundryReachable: input.foundryReachable ?? existing?.foundryReachable ?? false,
+      recentUploadSuccess: existing?.recentUploadSuccess ?? false,
+      uplinkKbps: online ? existing?.uplinkKbps ?? 0 : 0,
+      downlinkKbps: online ? existing?.downlinkKbps ?? 0 : 0,
+    };
+
+    const index = state.observations.findIndex((observation) => observation.nodeId === input.nodeId);
+    if (index >= 0) {
+      state.observations[index] = nextObservation;
+    } else {
+      state.observations.push(nextObservation);
+    }
+  }
+}
+
+function memoryPressureFrom(memoryUsedMb: number | undefined, fallback: number | undefined): number {
+  if (memoryUsedMb === undefined || !Number.isFinite(memoryUsedMb)) {
+    return fallback ?? 0;
+  }
+  return Math.max(0, Math.min(1, memoryUsedMb / 4096));
 }
 
 async function acceptBundleResponse(

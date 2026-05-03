@@ -5,6 +5,7 @@ This repo now includes a runnable local scaffold for the CASK edge path:
 - Typed sensor, cue, node-health, and insight contracts in `src/cask/types.ts`.
 - A sample Pi sensor bundle in `src/cask/sampleBundle.ts`.
 - A live sensor merge boundary in `src/sensors/liveMerge.ts`.
+- Deterministic demo-shaped sensor data in `src/mock/caskDemoScenario.ts`.
 - A local insight adapter in `src/llm/localInsight.ts`.
 - A Foundry OSDK uploader in `src/foundry/uploader.ts`.
 - A smoke runner in `src/scripts/smoke.ts`.
@@ -37,6 +38,26 @@ Accepted event kinds are `camera_detection`, `audio_window`, `rfid_read`, and `n
 `POST /sensor-events` and `POST /bundles` also run the configured local insight client on the receiving node. The response includes the local LLM mode/model, the generated `InsightDraft`, the CASK training tag objective summary, and this node's local instruction view. `GET /insights/latest`, `GET /tag-plan/latest`, and `GET /instructions/latest` return those latest runtime products.
 
 All four compute nodes are modeled as local-LLM capable: the two Pi 4B sensor nodes, the Pi 5 hub/display/gateway, and the Jetson Orin Nano inference node.
+
+## Mock Data Replay
+
+Use the built-in mock scenario to prove the whole integration path before hardware adapters are attached:
+
+```bash
+npm run mock:scenario -- --format summary
+npm run mock:scenario -- --format latest-events
+npm run mock:scenario -- --format bundle
+```
+
+Replay the scenario against a running node:
+
+```bash
+npm run mock:replay -- --post-url http://127.0.0.1:8080/sensor-events
+```
+
+The four replay steps emit RFID/provider-style location, audio, Jetson camera detection, and node-health degradation. The final dashboard snapshot should contain the CASK bundle, local LLM insight, controlled training tag plan, node-local instructions, replication report, and degraded mission-continuity state.
+
+See [Mock CASK Demo Data](mock-cask-demo-data.md) for the exact mock-to-real adapter contract.
 
 ## Foundry OSDK Setup
 

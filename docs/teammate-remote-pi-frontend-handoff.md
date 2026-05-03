@@ -31,6 +31,14 @@ POST /sensor-events
 
 The node merges those events into a CASK bundle, drafts a local LLM insight, creates a controlled training tag objective, builds per-node instructions, and records the replicated mission ledger state.
 
+Before real sensor adapters are available, use the deterministic mock scenario:
+
+```bash
+npm run mock:replay -- --post-url http://127.0.0.1:8080/sensor-events
+```
+
+That posts RFID, microphone, Jetson camera, provider-style location, and node-health degradation events through the same `/sensor-events` contract the real adapters will use.
+
 The local LLM profile is Gemma by default through Ollama-compatible config:
 
 ```text
@@ -195,6 +203,8 @@ Live frontend and teammate tooling should prefer `/dashboard`, but the lower-lev
 | `GET /tag-plan/latest` | Latest controlled training tag objective |
 | `GET /instructions/latest` | Current node's local instruction view |
 | `POST /sensor-events` | Live camera, microphone, RFID, provider-style location, and health ingest |
+
+Mock data contract details are in [Mock CASK Demo Data](mock-cask-demo-data.md).
 
 ## CASK and Foundry Status
 
