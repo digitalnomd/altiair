@@ -1,47 +1,75 @@
-# ============================================================
-# config.py — Change NODE_ID on each physical device
-# ============================================================
+"""
+Runtime configuration for one Altiair mesh node.
 
-NODE_ID = "node_1"  # node_1 / node_2 / node_3 / node_4
+Each physical node runs the same Python process. Override values with
+environment variables instead of editing this file on every device:
 
-# All nodes on the mesh WiFi network
+  ALTIAIR_NODE_ID=node_2 python models/main.py
+"""
+
+import os
+
+
+def env_str(name: str, fallback: str) -> str:
+    return os.environ.get(name, fallback)
+
+
+def env_int(name: str, fallback: int) -> int:
+    value = os.environ.get(name)
+    return fallback if value is None else int(value)
+
+
+def env_float(name: str, fallback: float) -> float:
+    value = os.environ.get(name)
+    return fallback if value is None else float(value)
+
+
+NODE_ID = env_str("ALTIAIR_NODE_ID", "node_1")
+
+# All nodes on the local Wi-Fi mesh. Add/remove entries to match the field set.
 NODES = {
-    "node_1": "192.168.42.1",
-    "node_2": "192.168.42.2",
-    "node_3": "192.168.42.3",
-    "node_4": "192.168.42.4",
+    "node_1": env_str("ALTIAIR_NODE_1_IP", "192.168.42.1"),
+    "node_2": env_str("ALTIAIR_NODE_2_IP", "192.168.42.2"),
+    "node_3": env_str("ALTIAIR_NODE_3_IP", "192.168.42.3"),
+    "node_4": env_str("ALTIAIR_NODE_4_IP", "192.168.42.4"),
 }
 
-MY_IP = NODES[NODE_ID]
+MY_IP = env_str("ALTIAIR_MY_IP", NODES.get(NODE_ID, "127.0.0.1"))
 
-# ---- Ports ----
-GOSSIP_PUB_PORT = 5555  # ZMQ PUB socket — we broadcast on this
-GOSSIP_SUB_PORT = 5555  # ZMQ SUB socket — we receive others on this
-RAFT_PORT = 4321  # Raft consensus port
-DASHBOARD_PORT = 8080  # iPad web dashboard
+# Ports.
+GOSSIP_PUB_PORT = env_int("ALTIAIR_GOSSIP_PORT", 5555)
+GOSSIP_SUB_PORT = GOSSIP_PUB_PORT
+RAFT_PORT = env_int("ALTIAIR_RAFT_PORT", 4321)
+DASHBOARD_PORT = env_int("ALTIAIR_DASHBOARD_PORT", 8080)
 
-# ---- Models ----
-FUSION_MODEL_PATH = "models/phi-3-mini-q4.gguf"
-COORDINATOR_MODEL_PATH = "models/phi-3-mini-q4.gguf"  # can be same model
+# Models. If these files or llama-cpp-python are missing, deterministic
+# fallbacks still run so the full pipeline and UI remain testable.
+FUSION_MODEL_PATH = env_str("ALTIAIR_FUSION_MODEL", "models/phi-3-mini-q4.gguf")
+COORDINATOR_MODEL_PATH = env_str("ALTIAIR_COORDINATOR_MODEL", FUSION_MODEL_PATH)
+LLM_GPU_LAYERS = env_int("ALTIAIR_LLM_GPU_LAYERS", 32)
 
-# ---- Sensors ----
-CAMERA_INDEX = 0
-YOLO_MODEL = "yolov8n.pt"  # auto-downloaded on first run
-AUDIO_SAMPLE_RATE = 16000
-AUDIO_CHUNK_SECONDS = 2
-RF_CENTER_FREQ = 2.437e9  # DJI primary band (2.4GHz)
-RF_SAMPLE_RATE = 2.4e6
+# Sensors. Missing hardware or libraries automatically fall back to simulation.
+CAMERA_INDEX = env_int("ALTIAIR_CAMERA_INDEX", 0)
+YOLO_MODEL = env_str("ALTIAIR_YOLO_MODEL", "yolov8n.pt")
+AUDIO_SAMPLE_RATE = env_int("ALTIAIR_AUDIO_SAMPLE_RATE", 16000)
+AUDIO_CHUNK_SECONDS = env_int("ALTIAIR_AUDIO_CHUNK_SECONDS", 2)
+RF_CENTER_FREQ = env_float("ALTIAIR_RF_CENTER_FREQ", 2.437e9)
+RF_SAMPLE_RATE = env_float("ALTIAIR_RF_SAMPLE_RATE", 2.4e6)
 
-# ---- Mission ----
-MISSION_OBJECTIVE = (
-    "Locate and track hostile drone operator. "
-    "Drone confirmed at bearing 047. "
-    "Find, fix, target the operator. "
-    "Drone operators stay within 500m — scan treeline."
+# Mission language stays non-kinetic: the system emits evidence, confidence,
+# verification checks, and operator acknowledgements only.
+MISSION_NAME = env_str("ALTIAIR_MISSION_NAME", "Locate aerial anomaly")
+MISSION_OBJECTIVE = env_str(
+    "ALTIAIR_MISSION_OBJECTIVE",
+    (
+        "Locate and maintain observation of an authorized training aerial cue. "
+        "Fuse camera, audio, and RF evidence, estimate confidence, and recommend "
+        "non-contact verification steps for human review."
+    ),
 )
 
-# ---- Timing ----
-GOSSIP_INTERVAL = 0.5  # seconds between gossip broadcasts
-FUSION_INTERVAL = 1.0  # seconds between fusion LLM cycles
-COORDINATOR_INTERVAL = 3.0  # seconds between coordinator LLM cycles
-NODE_TIMEOUT = 4.0  # seconds before a node is considered dead
+# Timing.
+GOSSIP_INTERVAL = env_float("ALTIAIR_GOSSIP_INTERVAL", 0.5)
+FUSION_INTERVAL = env_float("ALTIAIR_FUSION_INTERVAL", 2.0)
+COORDINATOR_INTERVAL = env_float("ALTIAIR_COORDINATOR_INTERVAL", 3.0)
+NODE_TIMEOUT = env_float("ALTIAIR_NODE_TIMEOUT", 4.0)
