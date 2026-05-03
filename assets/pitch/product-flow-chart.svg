@@ -10,7 +10,7 @@
     </marker>
     <style>
       .bg { fill: #0f1720; }
-      .title { font: 700 36px Arial, Helvetica, sans-serif; fill: #2f7d5b; }
+      .title { font: 700 36px Futura, "Avenir Next", "DIN Alternate", "Trebuchet MS", Arial, sans-serif; fill: #2f7d5b; }
       .subtitle { font: 18px Arial, Helvetica, sans-serif; fill: #b8c4cf; }
       .section { font: 700 16px Arial, Helvetica, sans-serif; fill: #d6dee7; text-transform: uppercase; }
       .box { fill: #1c2631; stroke: #657383; stroke-width: 2; rx: 12; }
