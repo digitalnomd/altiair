@@ -4,6 +4,8 @@
 
 ## A squad in a jammed, cloud-denied environment has eyes, ears, and personnel trackers — but no way to fuse them into a threat picture without a cloud connection.
 
+# MEMORY SAFE LANGUAGES     
+
 Right now a squad in a DDIL environment has:
 - A separate soldier who sees something
 - Another sensor that hears something
@@ -123,7 +125,7 @@ The current Atlas ontology has a narrow live path for `[Example] CASK GPS Positi
 
 Foundry is opportunistic, not required for decentralized operation. Use `GET /foundry/intelligence?refresh=true` only when a gateway node has connectivity and credentials; it pulls governed context into the local cache for the LLM and commander-facing evidence citations. When disconnected, the same node API continues from cached/local CASK records and queues commander sync until reconnection.
 
-For the best hackathon demo, keep the mesh/network layer live and let sensor/provider feeds be structurally mocked if needed: fake L3Harris-style LTE provider records and deterministic camera/audio/RFID fixtures. Use direct Foundry when `.env` and the generated SDK are available; fall back to cached/mock Foundry only when disconnected. The target runtime is node-local LLM inference on the two Pi 4Bs, the Pi 5, and the Jetson through each node's own Ollama-compatible endpoint at `LOCAL_LLM_BASE_URL=http://127.0.0.1:11434`. A Mac-hosted LLM is only an emergency bridge while a node runtime is being repaired. Do not depend on Modal, OpenAI, or any cloud LLM for the main demo path.
+For the best hackathon demo, keep the mesh/network layer live and let sensor/provider feeds be structurally mocked if needed: fake L3Harris-style LTE provider records and deterministic camera/audio/RFID fixtures. Use direct Foundry when `.env` and the generated SDK are available; fall back to cached/mock Foundry only when disconnected. Run the small local LLM on the Mac through the Ollama-compatible interface, for example `LOCAL_LLM_BASE_URL=http://<mac-altiair-lan-ip>:11434`, while Pi/Jetson nodes prove heartbeat, gossip, replication, failover, and coordinator election. Do not depend on Modal, OpenAI, or any cloud LLM for the main demo path.
 
 The always-on integration is the novel component. Every accepted CASK bundle now emits Kafka-shaped stream records on local topics:
 
