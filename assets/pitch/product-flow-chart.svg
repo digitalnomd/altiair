@@ -1,54 +1,57 @@
 <svg xmlns="http://www.w3.org/2000/svg" width="1500" height="1000" viewBox="0 0 1500 1000" role="img" aria-labelledby="title desc">
-  <title id="title">Altiair product flow chart</title>
-  <desc id="desc">A squad-level edge intelligence mesh where each soldier carries an edge device, devices share evidence in a ring, local fusion produces human-review cues, and a gateway syncs with Palantir Foundry when connected.</desc>
+  <title id="title">Darkmesh product flow chart</title>
+  <desc id="desc">A squad-level edge intelligence mesh where each soldier carries an edge device, devices share evidence in a ring, local fusion produces human-review cues, Anduril Hawkeye or EagleEye can act as a sensor feed, and a gateway syncs with Palantir Foundry when connected.</desc>
   <defs>
     <marker id="arrow" markerWidth="12" markerHeight="12" refX="10" refY="6" orient="auto">
-      <path d="M2,2 L10,6 L2,10 Z" fill="#263238"/>
+      <path d="M2,2 L10,6 L2,10 Z" fill="#c0cad5"/>
     </marker>
     <marker id="softArrow" markerWidth="12" markerHeight="12" refX="10" refY="6" orient="auto">
-      <path d="M2,2 L10,6 L2,10 Z" fill="#52616b"/>
+      <path d="M2,2 L10,6 L2,10 Z" fill="#9aa8b7"/>
     </marker>
     <style>
-      .bg { fill: #f6f7f2; }
-      .title { font: 700 36px Arial, Helvetica, sans-serif; fill: #14212b; }
-      .subtitle { font: 18px Arial, Helvetica, sans-serif; fill: #3d4850; }
-      .section { font: 700 16px Arial, Helvetica, sans-serif; fill: #3d4850; text-transform: uppercase; }
-      .box { fill: #ffffff; stroke: #263238; stroke-width: 2; rx: 12; }
-      .soldier { fill: #fff7de; stroke: #7a5b00; stroke-width: 2.2; rx: 14; }
-      .device { fill: #e7f0ff; stroke: #1f4b7a; stroke-width: 2.2; rx: 12; }
-      .mesh { fill: #e9f6ec; stroke: #2f6b3f; stroke-width: 2.2; rx: 12; }
-      .review { fill: #f0e9ff; stroke: #4b347a; stroke-width: 2.2; rx: 12; }
-      .cloud { fill: #f3f4f6; stroke: #4d565f; stroke-width: 2.2; rx: 14; }
-      .warn { fill: #fff0cc; stroke: #775800; stroke-width: 2.2; rx: 12; }
-      .badge { fill: #101113; rx: 8; }
-      .badgeAlt { fill: #123c69; rx: 8; }
-      .badgePi { fill: #c51a4a; rx: 8; }
-      .badgeJetson { fill: #76b900; rx: 8; }
-      .badgeText { font: 700 14px Arial, Helvetica, sans-serif; fill: #ffffff; }
-      .text { font: 700 18px Arial, Helvetica, sans-serif; fill: #14212b; }
-      .small { font: 14px Arial, Helvetica, sans-serif; fill: #39464f; }
-      .tiny { font: 12px Arial, Helvetica, sans-serif; fill: #50606a; }
-      .line { stroke: #263238; stroke-width: 2.6; fill: none; marker-end: url(#arrow); }
-      .ring { stroke: #1f4b7a; stroke-width: 3.2; fill: none; marker-end: url(#arrow); }
-      .soft { stroke: #52616b; stroke-width: 2.3; fill: none; marker-end: url(#softArrow); }
-      .dash { stroke: #52616b; stroke-width: 2.4; stroke-dasharray: 8 8; fill: none; marker-end: url(#softArrow); }
-      .ringArea { fill: #eef5ef; stroke: #b8c9bb; stroke-width: 1.5; rx: 24; }
-      .legend { fill: #ffffff; stroke: #c8cfc3; stroke-width: 1.5; rx: 10; }
+      .bg { fill: #0f1720; }
+      .title { font: 700 36px Arial, Helvetica, sans-serif; fill: #f5f7fa; }
+      .subtitle { font: 18px Arial, Helvetica, sans-serif; fill: #b8c4cf; }
+      .section { font: 700 16px Arial, Helvetica, sans-serif; fill: #d6dee7; text-transform: uppercase; }
+      .box { fill: #1c2631; stroke: #657383; stroke-width: 2; rx: 12; }
+      .soldier { fill: #1b2734; stroke: #8fa2b7; stroke-width: 2.2; rx: 14; }
+      .device { fill: #27384a; stroke: #9fb3c8; stroke-width: 2.2; rx: 12; }
+      .mesh { fill: #162535; stroke: #5d7894; stroke-width: 2.2; rx: 12; }
+      .review { fill: #20242b; stroke: #8a97a6; stroke-width: 2.2; rx: 12; }
+      .cloud { fill: #171b21; stroke: #9aa5b1; stroke-width: 2.2; rx: 14; }
+      .warn { fill: #252b33; stroke: #aab5c2; stroke-width: 2.2; rx: 12; }
+      .badge { fill: #05080c; stroke: #66727e; stroke-width: 1; rx: 8; }
+      .badgeAlt { fill: #0b1320; stroke: #8fa2b7; stroke-width: 1; rx: 8; }
+      .badgePi { fill: #232a33; stroke: #9aa5b1; stroke-width: 1; rx: 8; }
+      .badgeJetson { fill: #1a232d; stroke: #9aa5b1; stroke-width: 1; rx: 8; }
+      .badgeAnduril { fill: #12161c; stroke: #9aa5b1; stroke-width: 1; rx: 8; }
+      .badgeText { font: 700 14px Arial, Helvetica, sans-serif; fill: #f5f7fa; }
+      .text { font: 700 18px Arial, Helvetica, sans-serif; fill: #f5f7fa; }
+      .small { font: 14px Arial, Helvetica, sans-serif; fill: #c7d1dc; }
+      .tiny { font: 12px Arial, Helvetica, sans-serif; fill: #aeb9c5; }
+      .line { stroke: #c0cad5; stroke-width: 2.6; fill: none; marker-end: url(#arrow); }
+      .ring { stroke: #87a9ca; stroke-width: 3.2; fill: none; marker-end: url(#arrow); }
+      .soft { stroke: #9aa8b7; stroke-width: 2.3; fill: none; marker-end: url(#softArrow); }
+      .dash { stroke: #8b98a6; stroke-width: 2.4; stroke-dasharray: 8 8; fill: none; marker-end: url(#softArrow); }
+      .ringArea { fill: #141f2a; stroke: #344657; stroke-width: 1.5; rx: 24; }
+      .legend { fill: #171b21; stroke: #566474; stroke-width: 1.5; rx: 10; }
     </style>
   </defs>
 
   <rect class="bg" width="1500" height="1000"/>
-  <text x="70" y="72" class="title">Altiair Product Flow</text>
+  <text x="70" y="72" class="title">Darkmesh Product Flow</text>
   <text x="70" y="108" class="subtitle">Soldier-carried edge devices gather local signals, share compact evidence in a resilient ring, and sync with Foundry when a secure link exists.</text>
 
-  <rect x="70" y="138" width="112" height="32" class="badgeAlt"/>
-  <text x="91" y="159" class="badgeText">ALTIAIR</text>
-  <rect x="198" y="138" width="118" height="32" class="badgePi"/>
-  <text x="215" y="159" class="badgeText">Raspberry Pi</text>
-  <rect x="332" y="138" width="112" height="32" class="badgeJetson"/>
-  <text x="354" y="159" class="badgeText">Jetson</text>
-  <rect x="460" y="138" width="142" height="32" class="badge"/>
-  <text x="478" y="159" class="badgeText">Palantir Foundry</text>
+  <rect x="70" y="138" width="124" height="32" class="badgeAlt"/>
+  <text x="91" y="159" class="badgeText">DARKMESH</text>
+  <rect x="210" y="138" width="118" height="32" class="badgePi"/>
+  <text x="227" y="159" class="badgeText">Raspberry Pi</text>
+  <rect x="344" y="138" width="112" height="32" class="badgeJetson"/>
+  <text x="366" y="159" class="badgeText">Jetson</text>
+  <rect x="472" y="138" width="182" height="32" class="badgeAnduril"/>
+  <text x="491" y="159" class="badgeText">Anduril Hawkeye/EagleEye</text>
+  <rect x="670" y="138" width="142" height="32" class="badge"/>
+  <text x="688" y="159" class="badgeText">Palantir Foundry</text>
 
   <text x="80" y="215" class="section">Squad Edge Ring</text>
   <rect x="70" y="235" width="805" height="600" class="ringArea"/>
@@ -69,7 +72,7 @@
   <text x="646" y="540" class="text">Soldier C</text>
   <text x="625" y="564" class="small">edge device + sensors</text>
   <rect x="622" y="582" width="182" height="34" class="device"/>
-  <text x="641" y="604" class="small">camera | location</text>
+  <text x="622" y="604" class="small">Hawkeye/EagleEye feed</text>
 
   <rect x="350" y="690" width="245" height="134" class="soldier"/>
   <text x="405" y="725" class="text">Soldier D</text>
@@ -151,6 +154,6 @@
   <text x="1185" y="480" class="tiny">governed context back</text>
 
   <rect x="925" y="875" width="525" height="70" class="legend"/>
-  <text x="955" y="904" class="small">Product boundary: local edge devices keep operating in DDIL conditions.</text>
+  <text x="955" y="904" class="small">Darkmesh boundary: local edge devices keep operating in DDIL conditions.</text>
   <text x="955" y="926" class="small">Foundry/CASK is the governed command record when connectivity exists, not a dependency for local cueing.</text>
 </svg>
