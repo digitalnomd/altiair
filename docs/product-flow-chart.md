@@ -1,6 +1,6 @@
 # Darkmesh Product Flow Chart
 
-Darkmesh is a squad-level edge intelligence mesh. Each soldier carries an edge device that gathers local sensor data, filters it locally, exchanges compact evidence with nearby peers in a resilient ring, and syncs mission records to Palantir Foundry/CASK when a secure data link exists.
+Darkmesh is a squad-level edge intelligence mesh. Each soldier carries an edge device that gathers local sensor data, filters it locally, exchanges compact evidence with nearby peers in a resilient ring, and can upload to or download from Palantir Foundry/CASK when that device has the best secure internet path.
 
 ![Darkmesh product flow chart](../assets/pitch/product-flow-chart.svg)
 
@@ -27,8 +27,8 @@ flowchart TD
   Fusion --> Queue["Human-review cue queue"]
   Queue --> Display["Pi-hosted / wearable display"]
 
-  Ledger --> Gateway{"Secure uplink available?"}
-  Gateway -- "yes" --> Foundry["Palantir Foundry / CASK\nontology sync + after-action record"]
+  Ledger --> Gateway{"Which edge device has\nbest secure internet path?"}
+  Gateway -- "selected soldier device" --> Foundry["Palantir Foundry / CASK\nontology sync + after-action record"]
   Gateway -- "no" --> Local["Continue local DDIL operation\nqueue reconciliation"]
   Local --> Ledger
   Foundry --> Context["Governed mission context"]

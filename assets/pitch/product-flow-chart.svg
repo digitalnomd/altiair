@@ -95,14 +95,14 @@
   <text x="285" y="665" class="small">ring survives</text>
   <text x="290" y="685" class="small">node loss</text>
 
-  <rect x="392" y="485" width="160" height="92" class="mesh"/>
-  <text x="425" y="520" class="text">Edge Mesh</text>
-  <text x="414" y="545" class="small">local quorum</text>
-  <text x="401" y="565" class="small">replicated ledger</text>
+  <rect x="380" y="485" width="184" height="92" class="mesh"/>
+  <text x="406" y="520" class="text">Peer Ring</text>
+  <text x="413" y="545" class="small">store-forward</text>
+  <text x="400" y="565" class="small">replicated ledger</text>
 
   <path d="M472 409 L472 485" class="soft"/>
-  <path d="M355 572 L392 542" class="soft"/>
-  <path d="M590 572 L552 542" class="soft"/>
+  <path d="M355 572 L380 542" class="soft"/>
+  <path d="M590 572 L564 542" class="soft"/>
   <path d="M472 690 L472 577" class="soft"/>
 
   <text x="935" y="215" class="section">Product Intelligence Layer</text>
@@ -134,10 +134,10 @@
 
   <text x="1228" y="215" class="section">Data Link</text>
 
-  <rect x="1230" y="255" width="220" height="110" class="warn"/>
-  <text x="1281" y="294" class="text">Gateway Node</text>
-  <text x="1268" y="320" class="small">best available uplink</text>
-  <text x="1271" y="340" class="small">Pi 5 / Jetson / radio</text>
+  <rect x="1214" y="255" width="236" height="110" class="warn"/>
+  <text x="1238" y="292" class="text">Best-Connected</text>
+  <text x="1254" y="316" class="text">Edge Device</text>
+  <text x="1244" y="340" class="small">uploads + downloads</text>
 
   <rect x="1230" y="440" width="220" height="118" class="cloud"/>
   <text x="1272" y="480" class="text">Palantir Foundry</text>
@@ -149,7 +149,7 @@
   <text x="1273" y="694" class="small">governed context</text>
   <text x="1279" y="714" class="small">sync when online</text>
 
-  <path d="M1175 260 C1198 230 1208 230 1230 260" class="greenLine"/>
+  <path d="M1175 260 C1193 230 1202 230 1214 260" class="greenLine"/>
   <text x="1188" y="242" class="linkLabel">filtered evidence uplink</text>
   <path d="M1175 468 C1195 388 1208 388 1230 468" class="greenLine"/>
   <text x="1188" y="382" class="linkLabel">fused mission record</text>
@@ -158,7 +158,8 @@
   <path d="M1230 690 C1205 625 1200 540 1175 495" class="greenDash"/>
   <text x="1194" y="608" class="linkLabel">governed context back</text>
 
-  <rect x="925" y="875" width="525" height="70" class="legend"/>
+  <rect x="925" y="875" width="525" height="92" class="legend"/>
   <text x="955" y="904" class="small">Darkmesh boundary: local edge devices keep operating in DDIL conditions.</text>
-  <text x="955" y="926" class="small">Foundry/CASK is the governed command record when connectivity exists, not a dependency for local cueing.</text>
+  <text x="955" y="926" class="small">Foundry/CASK is the governed command record when connectivity exists,</text>
+  <text x="955" y="948" class="small">not a dependency for local cueing.</text>
 </svg>
