@@ -18,6 +18,18 @@ A human analyst behind a laptop that isn't at the tactical edge
 
 ---
 
+We've designed a decentralized on-edge mesh intelligent system that ingests and makes sense of signals from 3 inputs, and helps make decisions to achieve a mission
+
+1) Problem 1: Single Point of Failure in Command & Control (DARPA DICE; SBIR)
+2) Problem 2: Sensor Fusion at the Tactical Edge
+"processing sensor data close to where it is collected, rather than relying on a centralized data center" because "when data travels back to a central command, delays can undermine military operations" — and edge systems "can operate independently in communications-denied environments." 
+3) Problem 3: Multi-Modal Intelligence Fusion
+distributed sensing networks" where "swarm UAVs and smart sensor grids share real-time data for collaborative targeting" and "automated anomaly detection exploits AI-assisted correlation of sensor feeds to detect hidden threats." 
+
+OUR SYSTEM: camera + mic + RF → LLM fusion → coordinator → per-soldier instructions pipeline
+
+
+
 Altiair is a hackathon prototype for resilient edge sensing in unreliable network environments. Raspberry Pi nodes form a peer-to-peer mesh, collect sensor data, and forward video, image, audio, RFID, and other telemetry through whichever node currently has the best cloud path. If any node can reach Palantir Foundry, the rest of the mesh can daisy chain through it to synchronize data and receive cloud-enriched operator updates.
 
 This repo also includes the Palantir CASK/Foundry OSDK, local LLM, sensor-fusion, and Pi-hosted EagleEye-style display plan for producing evidence-grounded mission insight drafts in unreliable network environments.
