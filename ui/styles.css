@@ -1156,7 +1156,11 @@ svg use {
 }
 
 .coordinator-star {
-  color: var(--blue);
+  color: var(--amber);
+}
+
+.failover-row b {
+  color: var(--amber);
 }
 
 .order-divider {
