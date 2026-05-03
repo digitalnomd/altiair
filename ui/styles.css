@@ -1422,9 +1422,9 @@ svg use {
   min-height: 27px;
   align-items: center;
   padding: 0 10px;
-  border: 1px solid rgba(255, 255, 255, 0.18);
+  border: 1px solid rgba(211, 181, 104, 0.28);
   border-radius: 999px;
-  color: var(--text);
+  color: var(--amber);
   font-size: 0.72rem;
   font-weight: 820;
   text-transform: uppercase;
