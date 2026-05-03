@@ -11,11 +11,10 @@
 ## SECTION 1 - THE PAIN
 **Goal: make the problem visceral before you mention your product**
 
-- Squads today are **sensor-rich but coordination-poor**
-- One soldier sees a drone. Another hears rotor sound. A third gets an RF ping. A fourth files a report.
-- Those four signals never talk to each other. The squad leader has to mentally connect them — under fire, with degraded comms, in real time
-- The current solution? Either ship everything to the cloud (which dies the moment the network is jammed or intercepted) or rely on one central node device to coordinate the whole squad. Take out the leader, and the squad goes out.
-- DARPA just issued a program for this two weeks ago. The Army is searching for this solution in the DDIL environment.
+Imagine you have 4 soldiers in the field. One sees a drone. Another hears a rotor sound. A third gets an RF ping. 
+- How do you connect and make sense of these scattered signals, and fuse them under fire, degraded comms, and in real time.
+- The current solution either ships everything to cloud (which dies the moment the network is jammed) or relies on one central node device to coordinate the whole squad. Take out the leader, and the squad goes out.
+- squads lose their shared intelligence picture the moment their network or coordinator goes down."
 
 ---
 
@@ -28,7 +27,6 @@
 - Each soldier is a node in the field: raspberry pi runing camera, microphone, RF sensors, and Jerson running a local lightweight AI model, catching what is being seen and heard in the field.
 - These signals get shared across an encrypted local WiFi mesh between every soldier's node, putting together a coherent, full picture of what's happening.
 - A coordinator LLM is elected to fuse all signals and issue per-node instructions toward the stated mission objective
-- while modern systems rely on one centralized command node, we built a mesh system that fuses and coordinates all these signals together. If the coordinating device gets destroyed — a new one is elected automatically in under a second, with full context already replicated across the mesh. No data loss. No restart. Mission continues.
 
 ---
 
