@@ -47,14 +47,20 @@ DASHBOARD_PORT = env_int("ALTIAIR_DASHBOARD_PORT", 8080)
 FUSION_MODEL_PATH = env_str("ALTIAIR_FUSION_MODEL", "models/phi-3-mini-q4.gguf")
 COORDINATOR_MODEL_PATH = env_str("ALTIAIR_COORDINATOR_MODEL", FUSION_MODEL_PATH)
 LLM_GPU_LAYERS = env_int("ALTIAIR_LLM_GPU_LAYERS", 32)
+COORDINATOR_MODE = env_str("ALTIAIR_COORDINATOR_MODE", "local")
 
 # Sensors. Missing hardware or libraries automatically fall back to simulation.
 CAMERA_INDEX = env_int("ALTIAIR_CAMERA_INDEX", 0)
 YOLO_MODEL = env_str("ALTIAIR_YOLO_MODEL", "yolov8n.pt")
 AUDIO_SAMPLE_RATE = env_int("ALTIAIR_AUDIO_SAMPLE_RATE", 16000)
 AUDIO_CHUNK_SECONDS = env_int("ALTIAIR_AUDIO_CHUNK_SECONDS", 2)
-RF_CENTER_FREQ = env_float("ALTIAIR_RF_CENTER_FREQ", 2.437e9)
-RF_SAMPLE_RATE = env_float("ALTIAIR_RF_SAMPLE_RATE", 2.4e6)
+RFID_POLL_INTERVAL = env_float("ALTIAIR_RFID_POLL_INTERVAL", 0.5)
+RFID_SIMULATION_ENABLED = env_str("ALTIAIR_RFID_SIMULATION", "true").lower() in {"1", "true", "yes", "on"}
+
+# Backward-compatible placeholders for older calls. The current RF adapter is
+# RC522 RFID, not SDR spectrum scanning.
+RF_CENTER_FREQ = env_float("ALTIAIR_RF_CENTER_FREQ", 0.0)
+RF_SAMPLE_RATE = env_float("ALTIAIR_RF_SAMPLE_RATE", 0.0)
 
 # Mission language stays non-kinetic: the system emits evidence, confidence,
 # verification checks, and operator acknowledgements only.

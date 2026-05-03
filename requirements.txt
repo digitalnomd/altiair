@@ -2,3 +2,9 @@ pyzmq>=25.0.0
 flask>=3.0.0
 flask-cors>=4.0.0
 pysyncobj>=0.3.14
+mfrc522>=0.0.7; platform_machine == "armv7l" or platform_machine == "aarch64"
+spidev>=3.6; platform_machine == "armv7l" or platform_machine == "aarch64"
+RPi.GPIO>=0.7.1; platform_machine == "armv7l" or platform_machine == "aarch64"
+pyrtlsdr
+librtlsdr
+rtl-sdr

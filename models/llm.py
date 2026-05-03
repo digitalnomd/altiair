@@ -118,7 +118,7 @@ Analyze the three local sensor inputs and output concise JSON only.
 
 VISUAL INPUT: {sensor_inputs["visual"]}
 AUDIO INPUT: {sensor_inputs["audio"]}
-RF INPUT: {sensor_inputs["rf"]}
+RFID INPUT: {sensor_inputs["rf"]}
 
 Rules:
 - Increase confidence when independent sensors agree.
@@ -128,8 +128,8 @@ Rules:
 Output exactly this JSON shape:
 {{
   "threat_detected": true,
-  "threat_type": "drone",
-  "estimated_bearing": 47,
+  "threat_type": "rfid_tag",
+  "estimated_bearing": null,
   "estimated_distance": "near",
   "confidence": 88,
   "summary": "One sentence evidence-grounded description."
@@ -141,14 +141,19 @@ Output exactly this JSON shape:
         audio = sensor_inputs["audio"].lower()
         rf = sensor_inputs["rf"].lower()
 
+        has_rfid_tag = is_positive_rfid_read(rf)
         has_visual_drone = "drone" in visual or "airplane" in visual or "aerial" in visual
         has_audio_drone = "drone" in audio or "rotor" in audio or "overhead" in audio
-        has_rf_drone = "dji" in rf or "drone" in rf or "rc/video" in rf or "signal detected" in rf
+        has_rf_drone = False
         has_person = "person" in text or "operator" in text
         has_vehicle = any(word in text for word in ("vehicle", "truck", "car", "motorcycle"))
 
         agreement = sum([has_visual_drone, has_audio_drone, has_rf_drone])
-        if agreement > 0:
+        if has_rfid_tag:
+            threat_type = "rfid_tag"
+            confidence = 98 if "rfid(real)" in rf else 82
+            detected = True
+        elif agreement > 0:
             threat_type = "drone"
             confidence = min(96, 38 + agreement * 18 + signal_bonus(text))
             detected = confidence >= 45
@@ -168,7 +173,9 @@ Output exactly this JSON shape:
         bearing = extract_bearing(text)
         distance = extract_distance(text)
 
-        if detected:
+        if detected and threat_type == "rfid_tag":
+            summary = f"RFID tag detected by {self._node_id}; RC522 presence signal is active."
+        elif detected:
             source_count = agreement if threat_type == "drone" else 1
             summary = (
                 f"{threat_type.title()} cue at bearing {bearing:03d} with "
@@ -181,8 +188,8 @@ Output exactly this JSON shape:
         return {
             "threat_detected": detected,
             "threat_type": threat_type,
-            "estimated_bearing": bearing if detected else None,
-            "estimated_distance": distance if detected else "unknown",
+            "estimated_bearing": None if threat_type == "rfid_tag" else bearing if detected else None,
+            "estimated_distance": "near" if threat_type == "rfid_tag" else distance if detected else "unknown",
             "confidence": confidence,
             "summary": summary,
         }
@@ -194,7 +201,7 @@ Output exactly this JSON shape:
         result["threat_detected"] = bool(result.get("threat_detected"))
         result["threat_type"] = normalize_choice(
             result.get("threat_type"),
-            allowed={"drone", "person", "vehicle", "unknown", "none"},
+            allowed={"rfid_tag", "drone", "person", "vehicle", "unknown", "none"},
             fallback="unknown" if result["threat_detected"] else "none",
         )
         result["estimated_bearing"] = normalize_bearing(result.get("estimated_bearing"))
@@ -267,6 +274,12 @@ def signal_bonus(text: str) -> int:
     if rssi >= -65:
         return 7
     return 2
+
+
+def is_positive_rfid_read(text: str) -> bool:
+    if any(token in text for token in ("no tag", "no rfid", "unavailable", "error", "failed")):
+        return False
+    return "tag read" in text or "tag_id=" in text
 
 
 def normalize_choice(value: Any, allowed: set[str], fallback: str) -> str:

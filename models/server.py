@@ -254,6 +254,9 @@ def build_dashboard_state(
     threat_type = primary_state.get("threat_type", "none")
     bearing = primary_state.get("estimated_bearing")
     latest_event = (
+        f"RFID tag present at {display_node(primary_node)}"
+        if primary_state.get("threat_detected") and threat_type == "rfid_tag"
+        else
         f"Possible {threat_type} at bearing {format_bearing(bearing)}"
         if primary_state.get("threat_detected")
         else "No active fused event"
@@ -321,7 +324,7 @@ def evidence_metrics(snapshot: dict[str, Any], primary_node: str | None, primary
     agreement = sum(score >= 45 for score in [visual, audio, rf])
     return [
         {"id": "visual", "label": "Visual", "kind": "visual", "value": visual, "summary": sensor_inputs.get("visual", "No visual input")},
-        {"id": "rf", "label": "RF", "kind": "rf", "value": rf, "summary": sensor_inputs.get("rf", "No RF input")},
+        {"id": "rf", "label": "RFID", "kind": "rf", "value": rf, "summary": sensor_inputs.get("rf", "No RFID input")},
         {"id": "audio", "label": "Audio", "kind": "audio", "value": audio, "summary": sensor_inputs.get("audio", "No audio input")},
         {
             "id": "agreement",
@@ -338,7 +341,7 @@ def fusion_feed(snapshot: dict[str, Any], primary_node: str | None, primary_stat
     return [
         {"level": "warn" if primary_state.get("threat_detected") else "info", "title": "Fusion", "text": primary_state.get("summary", "Awaiting fused state.")},
         {"level": "info", "title": "Visual", "text": sensor_inputs.get("visual", "No visual input yet.")},
-        {"level": "info", "title": "RF/Audio", "text": f"{sensor_inputs.get('rf', 'No RF input yet.')} | {sensor_inputs.get('audio', 'No audio input yet.')}"},
+        {"level": "info", "title": "RFID/Audio", "text": f"{sensor_inputs.get('rf', 'No RFID input yet.')} | {sensor_inputs.get('audio', 'No audio input yet.')}"},
     ]
 
 
@@ -396,6 +399,14 @@ def mesh_links(known_nodes: list[str]) -> list[list[str]]:
 
 def sensor_score(text: str, default: int) -> int:
     text = str(text)
+    lowered = text.lower()
+    if any(token in lowered for token in ("no tag", "no rfid", "no signal", "background noise", "unavailable", "error", "failed")):
+        return 0
+    if "rfid(real)" in lowered and ("tag read" in lowered or "tag_id=" in lowered):
+        return 98
+    if "rfid(simulated)" in lowered and ("tag read" in lowered or "tag_id=" in lowered):
+        return 82
+
     match = re.search(r"conf=([01](?:\.\d+)?)", text)
     if match:
         return clamp(round(float(match.group(1)) * 100), 0, 100)

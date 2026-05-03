@@ -1,10 +1,9 @@
 """
 Coordinator leader election.
 
-When pysyncobj is installed this uses real Raft for leader election and
-instruction replication. When it is not installed, a deterministic lease
-fallback elects the lowest active node id from gossip so the prototype still
-runs end-to-end on laptops and Pis.
+By default this uses a local/gossip lease because the hardware bring-up path
+often has one reachable Pi. Set ALTIAIR_COORDINATOR_MODE=raft to use pysyncobj
+Raft for leader election and instruction replication.
 """
 
 from __future__ import annotations
@@ -35,7 +34,10 @@ except Exception:  # pragma: no cover - exercised when dependency missing
         return fn
 
 
-if HAVE_SYNC_OBJ:
+USE_SYNC_OBJ = HAVE_SYNC_OBJ and config.COORDINATOR_MODE.lower() == "raft"
+
+
+if USE_SYNC_OBJ:
 
     class MeshRaftNode(SyncObj):  # type: ignore[misc]
         def __init__(
@@ -100,9 +102,7 @@ else:
             self._node_id = node_id or address_to_node_id(self_address)
             self._world_state = world_state
             self._instructions: dict[str, str] = {}
-            logger.warning(
-                "[Raft] pysyncobj not installed; using gossip lease fallback for leader election"
-            )
+            logger.info("[Coordinator] Using local/gossip leader mode")
 
         def is_leader(self) -> bool:
             return self.get_leader_id() == self._node_id
@@ -115,7 +115,7 @@ else:
 
         def get_leader_id(self) -> str | None:
             candidates = self._candidate_node_ids()
-            return sorted(candidates, key=node_sort_key)[0] if candidates else self._node_id
+            return sorted(candidates, key=node_sort_key)[0] if candidates else None
 
         def set_instructions(self, instructions: dict[str, str]) -> None:
             self._instructions = dict(instructions or {})
