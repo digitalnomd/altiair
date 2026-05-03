@@ -186,9 +186,15 @@ WIFI_COUNTRY='__ALTIAIR_WIFI_COUNTRY__'
 WIFI_ADDRESS='__ALTIAIR_WIFI_ADDRESS__'
 WIFI_GATEWAY='__ALTIAIR_WIFI_GATEWAY__'
 WIFI_DNS='__ALTIAIR_WIFI_DNS__'
+WIFI_PSK_B64='__ALTIAIR_WIFI_PSK_B64__'
+
+decode_psk() {
+  printf '%s' "\$WIFI_PSK_B64" | base64 -d 2>/dev/null || printf '%s' "\$WIFI_PSK_B64" | base64 --decode 2>/dev/null
+}
 
 {
   echo "runtime start \$(date -Iseconds)"
+  psk="\$(decode_psk)"
   rfkill unblock wifi 2>/dev/null || true
   raspi-config nonint do_wifi_country "\$WIFI_COUNTRY" 2>/dev/null || true
   iw reg set "\$WIFI_COUNTRY" 2>/dev/null || true
@@ -201,7 +207,24 @@ WIFI_DNS='__ALTIAIR_WIFI_DNS__'
       while IFS= read -r con; do
         [ "\$con" = "altiair-lan" ] || nmcli connection delete "\$con" >/dev/null 2>&1 || true
       done
-    nmcli connection modify altiair-lan connection.autoconnect yes connection.autoconnect-priority 100 >/dev/null 2>&1 || true
+    nmcli connection show altiair-lan >/dev/null 2>&1 ||
+      nmcli connection add type wifi ifname wlan0 con-name altiair-lan ssid "\$WIFI_SSID" >/dev/null 2>&1 || true
+    nmcli -t -f NAME,TYPE connection show | awk -F: '\$2 == "802-11-wireless" || \$2 == "wifi" { print \$1 }' |
+      while IFS= read -r con; do
+        [ "\$con" = "altiair-lan" ] || nmcli connection delete "\$con" >/dev/null 2>&1 || true
+      done
+    nmcli connection modify altiair-lan \
+      connection.autoconnect yes \
+      connection.autoconnect-priority 100 \
+      802-11-wireless.mode infrastructure \
+      802-11-wireless.ssid "\$WIFI_SSID" \
+      wifi-sec.key-mgmt wpa-psk \
+      wifi-sec.psk "\$psk" \
+      ipv4.method manual \
+      ipv4.addresses "\$WIFI_ADDRESS" \
+      ipv4.gateway "\$WIFI_GATEWAY" \
+      ipv4.dns "\$WIFI_DNS" \
+      ipv6.method disabled >/dev/null 2>&1 || true
     nmcli connection up altiair-lan ifname wlan0 >/dev/null 2>&1 || true
   fi
 
@@ -219,6 +242,7 @@ RUNTIME_EOF
     -e "s|__ALTIAIR_WIFI_ADDRESS__|\$WIFI_ADDRESS|g" \\
     -e "s|__ALTIAIR_WIFI_GATEWAY__|\$WIFI_GATEWAY|g" \\
     -e "s|__ALTIAIR_WIFI_DNS__|\$WIFI_DNS|g" \\
+    -e "s|__ALTIAIR_WIFI_PSK_B64__|\$WIFI_PSK_B64|g" \\
     /usr/local/sbin/altiair-lan-repair-runtime.sh
   chmod +x /usr/local/sbin/altiair-lan-repair-runtime.sh
 
@@ -231,14 +255,28 @@ Wants=NetworkManager.service
 [Service]
 Type=oneshot
 ExecStart=/usr/local/sbin/altiair-lan-repair-runtime.sh
-RemainAfterExit=yes
 
 [Install]
 WantedBy=multi-user.target
 SERVICE_EOF
 
+  cat > /etc/systemd/system/altiair-lan-repair.timer <<'TIMER_EOF'
+[Unit]
+Description=Retry Altiair LAN Wi-Fi repair
+
+[Timer]
+OnBootSec=45
+OnUnitActiveSec=60
+AccuracySec=10
+Unit=altiair-lan-repair.service
+
+[Install]
+WantedBy=timers.target
+TIMER_EOF
+
   systemctl daemon-reload || true
   systemctl enable altiair-lan-repair.service || true
+  systemctl enable --now altiair-lan-repair.timer || true
 }
 
 configure_nm() {
@@ -289,6 +327,7 @@ configure_nm() {
 
 rm -f /boot/firmware/altiair-lan-repair.sh /boot/altiair-lan-repair.sh
 systemctl start altiair-lan-repair.service || true
+systemctl start altiair-lan-repair.timer || true
 exit 0
 EOF
 chmod +x "$repair"
