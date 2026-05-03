@@ -1,6 +1,7 @@
 export type FoundryMode = "mock" | "osdk";
 export type LocalLlmMode = "mock" | "ollama";
 export type FoundryActionPayloadStyle = "json" | "raw";
+export type FoundryUploadProfile = "bundle_actions" | "cask_gps_position";
 
 export interface FoundryActionMap {
   createSensorObservation: string;
@@ -8,10 +9,22 @@ export interface FoundryActionMap {
   createCounterUasCue: string;
   createInsightDraft: string;
   upsertNodeHealth: string;
+  createCaskGpsPosition: string;
+}
+
+export interface CaskGpsDefaults {
+  latitude: number;
+  longitude: number;
+  altitudeM: number;
+  speedKnots: number;
+  courseDeg: number;
+  fixQuality: number;
+  numSatellites: number;
 }
 
 export interface FoundryConfig {
   mode: FoundryMode;
+  uploadProfile: FoundryUploadProfile;
   foundryUrl?: string;
   ontologyRid?: string;
   clientId?: string;
@@ -19,6 +32,7 @@ export interface FoundryConfig {
   osdkPackage?: string;
   actionPayloadStyle: FoundryActionPayloadStyle;
   actions: FoundryActionMap;
+  caskGpsDefaults: CaskGpsDefaults;
 }
 
 export interface RequiredFoundryConfig extends FoundryConfig {
@@ -86,6 +100,30 @@ function parsePayloadStyle(value: string | undefined): FoundryActionPayloadStyle
   throw new Error(`FOUNDRY_ACTION_PAYLOAD_STYLE must be "json" or "raw"; received "${value}".`);
 }
 
+function parseUploadProfile(value: string | undefined): FoundryUploadProfile {
+  if (value === undefined || value === "bundle_actions" || value === "bundle") {
+    return "bundle_actions";
+  }
+  if (value === "cask_gps_position") {
+    return "cask_gps_position";
+  }
+  throw new Error(
+    `FOUNDRY_UPLOAD_PROFILE must be "bundle_actions" or "cask_gps_position"; received "${value}".`,
+  );
+}
+
+function numberEnv(name: string, fallback: number): number {
+  const raw = env(name);
+  if (raw === undefined) {
+    return fallback;
+  }
+  const value = Number(raw);
+  if (!Number.isFinite(value)) {
+    throw new Error(`${name} must be a finite number; received "${raw}".`);
+  }
+  return value;
+}
+
 export function assertAllowedLocalModel(model: string): void {
   const blockedBy = bannedModelPatterns.find((pattern) => pattern.test(model));
   if (blockedBy) {
@@ -102,6 +140,7 @@ export function loadConfig(): AppConfig {
   return {
     foundry: {
       mode: parseFoundryMode(env("FOUNDRY_MODE")),
+      uploadProfile: parseUploadProfile(env("FOUNDRY_UPLOAD_PROFILE")),
       foundryUrl: env("FOUNDRY_API_URL"),
       ontologyRid: env("FOUNDRY_ONTOLOGY_RID"),
       clientId: env("FOUNDRY_CLIENT_ID"),
@@ -120,6 +159,19 @@ export function loadConfig(): AppConfig {
         )!,
         createInsightDraft: env("FOUNDRY_ACTION_CREATE_INSIGHT_DRAFT", "createInsightDraft")!,
         upsertNodeHealth: env("FOUNDRY_ACTION_UPSERT_NODE_HEALTH", "upsertNodeHealth")!,
+        createCaskGpsPosition: env(
+          "FOUNDRY_ACTION_CREATE_CASK_GPS_POSITION",
+          "sampleCaskGpsPosition",
+        )!,
+      },
+      caskGpsDefaults: {
+        latitude: numberEnv("CASK_GPS_DEFAULT_LATITUDE", 0),
+        longitude: numberEnv("CASK_GPS_DEFAULT_LONGITUDE", 0),
+        altitudeM: numberEnv("CASK_GPS_DEFAULT_ALTITUDE_M", 0),
+        speedKnots: numberEnv("CASK_GPS_DEFAULT_SPEED_KNOTS", 0),
+        courseDeg: numberEnv("CASK_GPS_DEFAULT_COURSE_DEG", 0),
+        fixQuality: numberEnv("CASK_GPS_DEFAULT_FIX_QUALITY", 1),
+        numSatellites: numberEnv("CASK_GPS_DEFAULT_NUM_SATELLITES", 0),
       },
     },
     llm: {

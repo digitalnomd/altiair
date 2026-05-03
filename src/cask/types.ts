@@ -153,7 +153,7 @@ export interface CounterUasCue {
 
 export interface NodeHealth {
   nodeId: string;
-  nodeRole: "pi4_edge" | "pi5_hub" | "operator_display";
+  nodeRole: "pi4_edge" | "pi5_hub" | "jetson_orin_inference" | "operator_display";
   observedAt: IsoTimestamp;
   peerCount: number;
   queueDepth: number;

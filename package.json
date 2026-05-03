@@ -9,6 +9,9 @@
   },
   "scripts": {
     "build": "tsc --noEmit",
+    "mesh:plan": "tsx src/scripts/mesh-plan.ts",
+    "mesh:smoke": "tsx src/scripts/mesh-smoke.ts",
+    "node:api": "tsx src/scripts/node-api.ts",
     "smoke:mock": "tsx src/scripts/smoke.ts",
     "smoke:foundry": "FOUNDRY_MODE=osdk tsx src/scripts/smoke.ts --foundry"
   },

@@ -37,17 +37,22 @@ Canonical decisions:
 | Topic | Decision |
 | --- | --- |
 | Project spelling | Keep `Altiair` unless the full team renames the repo and shared assets. |
-| Hardware | Use 2x Raspberry Pi 4 Model B edge nodes and 1x Raspberry Pi 5 hub candidate. |
+| Hardware | Use 2x Raspberry Pi 4 Model B edge nodes, 1x Raspberry Pi 5 hub candidate, and 1x Jetson Orin Nano accelerated inference / secondary gateway node. |
 | UI target | Build a Pi-hosted EagleEye-style display shell first. Phones/tablets are fallback viewers only. |
 | Foundry path | Target CASK/Foundry OSDK. Use REST/mock upload only as a day-one fallback behind the same local API. |
 | Local models | No Chinese-origin model families. Do not use Qwen, DeepSeek, Yi, MiniCPM, Baichuan, ChatGLM, InternLM, or derivatives. |
 | Counter-UAS scope | Detection, attribution cueing, policy-gated review, and operator acknowledgement only. No target prosecution, engagement planning, or harmful action recommendations. |
 | Edge implementation | Rust-first for the durable node agent, queue, peer API, congestion guard, and uploader. Python scripts are acceptable for fast sensor prototypes behind stable JSON contracts. |
+| Security posture | Secure-by-design demo baseline: WireGuard overlay, explicit API token for protected routes, no committed secrets, least-privilege Foundry/CASK credentials, local-first retention, and policy-gated uploads. |
 
 The deeper decision brief is here:
 
 - [CASK OSDK and Local LLM Brief](docs/cask-osdk-local-llm-brief.md)
 - [CASK Edge Implementation](docs/cask-implementation.md)
+- [Foundry Atlas Status](docs/foundry-atlas-status.md)
+- [DDIL Edge Mesh Implementation](docs/ddil-edge-mesh-implementation.md)
+- [Security Implementation Plan](docs/security-implementation-plan.md)
+- [DARPA Opportunity Alignment](docs/darpa-opportunity-alignment.md)
 
 Shared data ideas and LLM context drop:
 
@@ -76,6 +81,12 @@ The repo now includes a runnable TypeScript integration scaffold for the Foundry
 - `src/foundry/osdkClient.ts`: OSDK client creation through `@osdk/client` and confidential OAuth through `@osdk/oauth`.
 - `src/llm/localInsight.ts`: local LLM adapter with mock mode and Ollama-compatible mode.
 - `src/scripts/smoke.ts`: end-to-end smoke path that builds a sample Pi bundle, drafts an insight, and queues/uploads it.
+- `src/mesh/*`: four-node Pi/Jetson DDIL topology, gateway scoring, and congestion decisions.
+- `src/scripts/mesh-plan.ts`: per-node environment and WireGuard template generator with no committed secrets.
+- `src/scripts/mesh-smoke.ts`: gateway failover and congestion smoke simulation.
+- `src/scripts/node-api.ts`: dependency-free prototype node API exposing health, peer, gateway, congestion, and bundle endpoints.
+
+The current Atlas ontology has a narrow live path for `[Example] CASK GPS Position`. Use `FOUNDRY_UPLOAD_PROFILE=cask_gps_position` for the first live OSDK writeback smoke. Keep `FOUNDRY_UPLOAD_PROFILE=bundle_actions` for the full local CASK contract once matching ontology actions exist.
 
 Run locally without Foundry secrets:
 
@@ -123,6 +134,14 @@ Demo phrasing:
 - A Faraday bag/cage remains a resilience demo beat: isolate one display client or cloud path and show the Pi/CASK edge still queues, syncs, and informs nearby operators.
 - "EagleEye integration" means the Pi-hosted display emulates cue overlays and acknowledgement flow that could later map to a headborne C2 display. Do not claim direct EagleEye access unless it is actually granted.
 
+DARPA framing:
+
+- Tie the networking thesis to DARPA MINC-style mission-integrated network control: always-on overlay, mission-aware information flows, and self-healing adaptation when one node or uplink fails.
+- Cite SHARE as the tactical-edge secure sharing / TAK transition precedent.
+- Cite EdgeCT for mission-aware edge network adaptation.
+- Cite CJADC2 edge-fusion industry framing for local sensor fusion, local storage, delayed forwarding, data standardization, security, and scaling requirements.
+- Be precise: current DARPA SBIR/STTR listings are active, but a current open MINC SBIR was not verified on May 3, 2026.
+
 ## Hardware Inventory
 
 Confirmed demo hardware:
@@ -131,6 +150,7 @@ Confirmed demo hardware:
 | --- | --- | --- |
 | 2 | Raspberry Pi 4 Model B | Edge sensor nodes for camera, microphone, RFID, local event extraction, LLM/rules filtering, and store-and-forward. |
 | 1 | Raspberry Pi 5 | Hub candidate for local cache, queue, model runtime, WebSocket fanout, CASK/Foundry sync, and Pi-hosted display. |
+| 1 | Jetson Orin Nano | Accelerated local vision/media inference, thumbnail generation, and secondary CASK/Foundry gateway when the Pi 5 hub is isolated or saturated. |
 | 1+ | Arduino RFID kit / RFID readers | Mock provider-style location and tag presence events. |
 | 1+ | Camera inputs | Visual observations through Pi camera or USB camera. |
 | 1+ | Microphone inputs | Voice activity, transcript, acoustic event, or note capture. |
@@ -163,6 +183,11 @@ flowchart LR
     LocalStore["local bundle store"]
   end
 
+  subgraph Accel["Tier 1.5: Jetson Orin Nano"]
+    Orin["altiair-orin\nvision/media inference"]
+    SecondaryGateway["secondary gateway"]
+  end
+
   subgraph Future["Future integrations"]
     EagleEye["EagleEye / headborne C2 display"]
     Lattice["Lattice-style entities / objects / tasks"]
@@ -171,6 +196,9 @@ flowchart LR
   NodeA --> LocalStore
   NodeB --> LocalStore
   LocalStore --> API
+  LocalStore --> Orin
+  Orin --> SecondaryGateway
+  SecondaryGateway --> Guard
   API --> DB
   DB --> Filter
   Filter --> Guard
@@ -187,12 +215,24 @@ flowchart LR
 
 Recommended day-one topology:
 
-- Closed LAN through a travel router with AP isolation off.
+- Closed LAN through a phone Wi-Fi hotspot or travel router with AP isolation off. Use the hotspot instead of SHack15/captive-portal Wi-Fi for headless Pis.
 - `altiair-node-a` and `altiair-node-b` are Pi 4B edge nodes.
 - `altiair-hub` is the Pi 5 gateway, local LLM host, queue owner, and display host.
+- `altiair-orin` is the Jetson Orin Nano inference accelerator and secondary CASK/Foundry gateway.
+- Use hotspot DHCP or static LAN reservations under a narrow WireGuard overlay: `10.77.0.10` hub, `10.77.0.11` node A, `10.77.0.12` node B, `10.77.0.20` Orin.
 - The primary operator display is built off the Pi: attached screen, kiosk browser, or chest-worn compute/display rig that resembles EagleEye cueing.
 - Phones and tablets are fallback viewers only.
-- Use static peer configuration first; automatic discovery, libp2p, Wi-Fi Direct, or MANET behavior are stretch goals.
+- Use static peer configuration first; NATS JetStream leaf nodes, libp2p GossipSub, Wi-Fi Direct, or MANET behavior are stretch goals after the wired/closed-LAN demo is stable.
+
+Mesh implementation helpers:
+
+```bash
+npm run mesh:plan -- --format summary
+npm run mesh:plan -- --node altiair-hub --format env
+npm run mesh:plan -- --node altiair-hub --format wireguard
+npm run mesh:smoke
+npm run node:api -- --node altiair-hub --port 8080
+```
 
 ## Consolidated Workflows
 
@@ -213,9 +253,10 @@ Owner focus: local connectivity, peer identity, health reporting, durable queue,
 
 Tasks:
 
-- Assign stable node names: `altiair-node-a`, `altiair-node-b`, and `altiair-hub`.
+- Assign stable node names: `altiair-node-a`, `altiair-node-b`, `altiair-hub`, and `altiair-orin`.
 - Use Rust `axum` and `tokio` for the node API.
 - Track peer state: online/offline, last seen, IP address, latency, packet success, queue depth, and current gateway.
+- Use the TypeScript mesh topology/scoring scaffold as the contract for the first Rust implementation.
 - Store bundle metadata in SQLite through `sqlx` or `rusqlite`; store media blobs on disk.
 - Start the node agent via `systemd` or a simple launch script.
 
@@ -485,16 +526,16 @@ Runtime tests:
 ## Build Plan
 
 1. Prepare the Pis.
-   - Verify Raspberry Pi OS on both Pi 4B nodes and the Pi 5.
-   - Set hostnames: `altiair-node-a`, `altiair-node-b`, and `altiair-hub`.
+   - Verify Raspberry Pi OS on both Pi 4B nodes and the Pi 5; verify Jetson Linux on the Orin Nano.
+   - Set hostnames: `altiair-node-a`, `altiair-node-b`, `altiair-hub`, and `altiair-orin`.
    - Enable SSH, camera support, microphone access, and RFID interfaces.
-   - Install Rust toolchain, SQLite tooling, camera utilities, networking tools, and `llama.cpp`.
+   - Install Rust toolchain, SQLite tooling, camera utilities, networking tools, WireGuard tools, and `llama.cpp`.
 
 2. Bring up the local LAN.
-   - Configure travel router with AP isolation off.
-   - Connect both Pi 4B nodes, Pi 5, and the Pi-hosted operator display shell.
-   - Add static peer config if discovery takes too long.
-   - Verify `GET /health`, `GET /peers`, and `GET /congestion` across devices.
+   - Configure the phone hotspot or travel router with AP isolation off. Do not use SHack15/captive-portal Wi-Fi for headless first boot.
+   - Connect both Pi 4B nodes, Pi 5, Jetson Orin Nano, and the Pi-hosted operator display shell.
+   - Generate static peer/WireGuard templates with `npm run mesh:plan`.
+   - Verify `GET /health`, `GET /peers`, `GET /mission-continuity`, and `GET /congestion` across devices.
 
 3. Capture sensor bundles.
    - Normalize camera, microphone, RFID, and mock provider location events.
@@ -542,6 +583,8 @@ Runtime tests:
 
 - No credentials, access details, tokens, client secrets, or private Foundry URLs in git.
 - No Chinese-origin model families.
+- No unauthenticated write/control API exposed on the hotspot LAN; use WireGuard plus `ALTIAIR_API_TOKEN` for protected routes.
+- No CUI or classified data in the demo environment unless a separate authorization boundary and protection plan are in place.
 - LLM output is advisory. Mission-critical actions must stay behind deterministic checks, policy gates, and operator review.
 - Raw camera/audio retention must follow policy. Prefer structured detections, transcripts, and redacted references over storing raw media.
 - No kill-chain automation. Human review is required for every consequential output.
@@ -584,6 +627,7 @@ Each proposal should include:
 8. Add an EagleEye-style display fixture that renders cue overlays from the same `CounterUasCue` schema.
 9. Benchmark the first non-Chinese local model pair on the two Pi 4 Model B nodes and one Pi 5.
 10. Define the first structured `InsightDraft`, local forwarding decision, and `CounterUasCue` JSON schemas with acceptance tests.
+11. Apply the security checklist in `docs/security-implementation-plan.md`: API token, firewall, SSH key-only access, WireGuard-only API exposure, dependency audit, and no-secret scan.
 
 ## Success Criteria
 

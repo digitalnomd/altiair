@@ -90,9 +90,22 @@ The script supports both newer Raspberry Pi OS images that expose `user-data` an
 
 - The Pi must join a network before it has an IP address.
 - Captive portal Wi-Fi usually does not work for headless first boot.
+- Use the phone hotspot for the Altiair demo instead of SHack15/captive-portal Wi-Fi.
 - A phone hotspot, travel router, or simple WPA/WPA2 Wi-Fi network is much more reliable.
 - If using a travel router, turn off AP/client isolation so laptops and phones can reach the Pi.
 - Ethernet is the simplest fallback if the Pi model has an Ethernet port.
+
+Example hotspot customization:
+
+```bash
+./scripts/customize_raspberry_pi_sd.sh \
+  --boot /Volumes/bootfs \
+  --hostname altiair-node-a \
+  --username piuser \
+  --wifi-ssid "YOUR_PHONE_HOTSPOT_NAME" \
+  --wifi-country US \
+  --timezone America/Los_Angeles
+```
 
 ## First Connection Checklist
 

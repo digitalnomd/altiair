@@ -17,13 +17,27 @@ export interface FoundryUploader {
 
 export function createFoundryUploader(config: FoundryConfig): FoundryUploader {
   if (config.mode === "mock") {
-    return new MockFoundryUploader();
+    return new MockFoundryUploader(config);
   }
   return new OsdkFoundryUploader(config);
 }
 
 class MockFoundryUploader implements FoundryUploader {
+  constructor(private readonly config: FoundryConfig) {}
+
   async uploadBundle(bundle: CaskBundle, insight: InsightDraft): Promise<UploadAck> {
+    if (this.config.uploadProfile === "cask_gps_position") {
+      return {
+        id: `mock-gps-ack-${bundle.id}`,
+        bundleId: bundle.id,
+        mode: "mock",
+        uploadedAt: new Date().toISOString(),
+        status: "queued",
+        appliedActions: [`mock:${this.config.actions.createCaskGpsPosition}`],
+        message: `Mock accepted ${bundle.locationFixes.length} location fixes for the narrow CASK GPS Position profile.`,
+      };
+    }
+
     return {
       id: `mock-ack-${bundle.id}`,
       bundleId: bundle.id,
@@ -48,6 +62,10 @@ class OsdkFoundryUploader implements FoundryUploader {
   constructor(private readonly config: FoundryConfig) {}
 
   async uploadBundle(bundle: CaskBundle, insight: InsightDraft): Promise<UploadAck> {
+    if (this.config.uploadProfile === "cask_gps_position") {
+      return this.uploadCaskGpsPositions(bundle);
+    }
+
     const runtime = await this.runtime();
     const edits: unknown[] = [];
     const appliedActions: string[] = [];
@@ -83,6 +101,34 @@ class OsdkFoundryUploader implements FoundryUploader {
       status: "accepted",
       appliedActions,
       foundryEdits: edits,
+    };
+  }
+
+  private async uploadCaskGpsPositions(bundle: CaskBundle): Promise<UploadAck> {
+    const runtime = await this.runtime();
+    const edits: unknown[] = [];
+    const appliedActions: string[] = [];
+
+    for (const fix of bundle.locationFixes) {
+      edits.push(
+        await runtime.applyAction(
+          this.config.actions.createCaskGpsPosition,
+          this.toCaskGpsPositionPayload(fix),
+        ),
+      );
+      appliedActions.push(this.config.actions.createCaskGpsPosition);
+    }
+
+    return {
+      id: `foundry-gps-ack-${bundle.id}`,
+      bundleId: bundle.id,
+      mode: "osdk",
+      uploadedAt: new Date().toISOString(),
+      status: "accepted",
+      appliedActions,
+      foundryEdits: edits,
+      message:
+        "Uploaded location fixes through the narrow CASK GPS Position OSDK profile. Sensor, cue, health, and insight bundle records remain local/mock until matching ontology actions are available.",
     };
   }
 
@@ -130,6 +176,26 @@ class OsdkFoundryUploader implements FoundryUploader {
         maybeInsight.policyState ??
         maybeCue.policyGate,
       payloadJson: JSON.stringify(item),
+    };
+  }
+
+  private toCaskGpsPositionPayload(fix: LocationFix): Record<string, unknown> {
+    const coordinates = fix.coordinates ?? {
+      latitude: this.config.caskGpsDefaults.latitude,
+      longitude: this.config.caskGpsDefaults.longitude,
+    };
+
+    return {
+      positionID: fix.id,
+      deviceID: fix.entityId,
+      latitude: coordinates.latitude,
+      longitude: coordinates.longitude,
+      altitudeM: this.config.caskGpsDefaults.altitudeM,
+      speedKnots: this.config.caskGpsDefaults.speedKnots,
+      courseDeg: this.config.caskGpsDefaults.courseDeg,
+      fixQuality: this.config.caskGpsDefaults.fixQuality,
+      numSatellites: this.config.caskGpsDefaults.numSatellites,
+      timestamp: fix.observedAt,
     };
   }
 }

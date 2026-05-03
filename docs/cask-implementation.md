@@ -43,7 +43,14 @@ Then run:
 npm run smoke:foundry
 ```
 
+Current Atlas status is tracked in [Foundry Atlas Status](foundry-atlas-status.md). The visible hackathon ontology currently supports a narrow live smoke through `[Example] CASK GPS Position`; it does not yet expose the full CASK bundle ontology.
+
 ## Expected Foundry Action Contract
+
+Choose the upload profile first:
+
+- `FOUNDRY_UPLOAD_PROFILE=bundle_actions`: full local CASK contract, for when the ontology has matching typed actions.
+- `FOUNDRY_UPLOAD_PROFILE=cask_gps_position`: current Atlas-compatible smoke profile that writes only `LocationFix` records to `[Example] CASK GPS Position`.
 
 Until we lock the exact ontology action parameter names in Foundry, the uploader supports two payload styles:
 
@@ -59,6 +66,7 @@ The current default action export names are:
 | Counter-UAS cues | `FOUNDRY_ACTION_CREATE_COUNTER_UAS_CUE` | `createCounterUasCue` |
 | Insight drafts | `FOUNDRY_ACTION_CREATE_INSIGHT_DRAFT` | `createInsightDraft` |
 | Node health | `FOUNDRY_ACTION_UPSERT_NODE_HEALTH` | `upsertNodeHealth` |
+| CASK GPS Position smoke | `FOUNDRY_ACTION_CREATE_CASK_GPS_POSITION` | `sampleCaskGpsPosition` |
 
 If the hackathon ontology already has action names with different API names, set the env overrides instead of changing code.
 
