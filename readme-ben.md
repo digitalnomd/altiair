@@ -34,7 +34,7 @@ Closed LAN via travel router (AP isolation OFF). mkcert TLS so mobile browsers a
 1. Project name: **Altair** (not Altiair)
 2. Repo: `~/code/altair/` → `github.com/<handle>/altair` public
 3. Demo phone OS: **Android** (Chrome WebGPU stable; iOS fragile)
-4. LLM on Pi: **gemma4:e2b** primary, 4B fallback
+4. LLM on Pi: **gemma4:e2b** primary, e4b fallback
 5. Voice: **whisper.cpp on Pi** primary; browser Web Speech API fallback
 6. **Voice deferred to Sunday morning** for the 9 PM Saturday MVP cut — text + photo only first
 7. Foundry SDK: **raw REST API + bearer token** for v1 (skip OSDK code-gen)

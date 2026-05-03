@@ -549,7 +549,7 @@ Current non-Chinese shortlist:
 | Pi 4B control-plane filter | `HuggingFaceTB/SmolLM2-360M-Instruct` quantized GGUF | `llama.cpp` | Fast text/metadata triage, JSON forwarding decisions, dedupe, summarization. |
 | Pi 4B/Pi 5 fallback | `meta-llama/Llama-3.2-1B-Instruct` quantized GGUF | `llama.cpp` or Ollama-style API | Concise classification, rewriting, and small summaries. |
 | Pi 5 hub default candidate | `ibm-granite/granite-3.3-2b-instruct` quantized if available | `llama.cpp` or compatible runtime | Insight drafts, RAG, tool/function-style structured output. |
-| Pi 5 low-latency candidate | `google/gemma-3-1b-it` or Ollama `gemma4:e2b` if available locally | `llama.cpp` or Ollama | Fast cue summaries and UI-facing explanations. |
+| Pi 5 low-latency candidate | `google/gemma-4-E2B-it` or Ollama `gemma4:e2b` if available locally | `llama.cpp` or Ollama | Fast cue summaries and UI-facing explanations. |
 | Pi 5 quality alternatives | `meta-llama/Llama-3.2-3B-Instruct`, `HuggingFaceTB/SmolLM3-3B`, `microsoft/Phi-4-mini-instruct` | Quantized local runtime | Quality upgrades after the first loop works. |
 | Microphone / ASR | Whisper tiny/base/small via `whisper.cpp`, or IBM Granite Speech after benchmarking | Native or containerized runtime | VAD windows, transcripts, and acoustic labels. |
 | Retrieval | `google/embeddinggemma-300m`, `nomic-ai/nomic-embed-text-v1.5`, or IBM Granite embeddings | Local embedding runtime | RAG over cleared Drive context, Foundry objects, and event evidence. |
