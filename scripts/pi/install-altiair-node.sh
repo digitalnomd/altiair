@@ -39,7 +39,6 @@ if [[ ! -f "$ENV_FILE" ]]; then
 
   if [[ -n "$BOOT_ENV_FILE" ]]; then
     sudo cp "$BOOT_ENV_FILE" "$ENV_FILE"
-    sudo chmod 600 "$ENV_FILE"
   else
     sudo tee "$ENV_FILE" >/dev/null <<EOF
 ALTIAIR_NODE_ID=${NODE_ID}
@@ -55,8 +54,9 @@ FOUNDRY_UPLOAD_PROFILE=cask_gps_position
 FOUNDRY_ACTION_CREATE_CASK_GPS_POSITION=createExampleCaskGpsPosition
 FOUNDRY_ACTION_PAYLOAD_STYLE=raw
 EOF
-    sudo chmod 600 "$ENV_FILE"
   fi
+  sudo chown "${USER}:${USER}" "$ENV_FILE"
+  sudo chmod 600 "$ENV_FILE"
 fi
 
 sudo tee "/etc/systemd/system/${SERVICE_NAME}.service" >/dev/null <<EOF
