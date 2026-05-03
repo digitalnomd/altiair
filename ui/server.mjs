@@ -11,6 +11,10 @@ const host = args.host ?? process.env.ALTIAIR_UI_HOST ?? "127.0.0.1";
 const port = Number(args.port ?? process.env.ALTIAIR_UI_PORT ?? 4173);
 const target = stripTrailingSlash(args.target ?? process.env.ALTIAIR_NODE_API ?? "http://127.0.0.1:8080");
 const token = process.env.ALTIAIR_API_TOKEN;
+const tileTemplate = args["tile-template"] ??
+  process.env.ALTIAIR_MAP_TILE_TEMPLATE ??
+  "https://tile.openstreetmap.org/{z}/{x}/{y}.png";
+const tileToken = process.env.ALTIAIR_MAP_TILE_TOKEN;
 
 if (!Number.isInteger(port) || port < 1 || port > 65535) {
   throw new Error(`Invalid UI port: ${port}`);
@@ -31,6 +35,7 @@ server.listen(port, host, () => {
         ui: `http://${host}:${port}/`,
         target,
         apiProxy: "/api/*",
+        tileProxy: tileTemplate ? "/tiles/{z}/{x}/{y}.png" : null,
       },
       null,
       2,
@@ -48,6 +53,11 @@ async function handleRequest(request, response) {
 
   if (url.pathname.startsWith("/api/")) {
     await proxyApi(request, response, url);
+    return;
+  }
+
+  if (url.pathname.startsWith("/tiles/")) {
+    await proxyTile(response, url);
     return;
   }
 
@@ -157,6 +167,59 @@ async function proxyApi(request, response, url) {
     ...Object.fromEntries(upstream.headers.entries()),
     ...securityHeaders("json"),
   });
+  if (upstream.body) {
+    const reader = upstream.body.getReader();
+    while (true) {
+      const { done, value } = await reader.read();
+      if (done) {
+        break;
+      }
+      response.write(Buffer.from(value));
+    }
+  }
+  response.end();
+}
+
+async function proxyTile(response, url) {
+  if (!tileTemplate) {
+    writeJson(response, 404, { error: "No tile template configured." });
+    return;
+  }
+
+  const match = url.pathname.match(/^\/tiles\/(\d+)\/(\d+)\/(\d+)\.(png|jpg|jpeg|webp)$/);
+  if (!match) {
+    writeJson(response, 400, { error: "Tile path must be /tiles/{z}/{x}/{y}.png." });
+    return;
+  }
+
+  const [, z, x, y] = match;
+  const targetUrl = tileTemplate
+    .replaceAll("{z}", z)
+    .replaceAll("{x}", x)
+    .replaceAll("{y}", y);
+  const headers = {
+    "user-agent": "Altiair-Hawkeye-Mission-Copilot/0.1 local-map-proxy",
+  };
+  if (tileToken) {
+    headers.authorization = `Bearer ${tileToken}`;
+  }
+
+  const upstream = await fetch(targetUrl, { headers });
+  if (!upstream.ok) {
+    writeJson(response, upstream.status, {
+      error: `Tile upstream returned ${upstream.status}.`,
+    });
+    return;
+  }
+
+  response.writeHead(200, {
+    "content-type": upstream.headers.get("content-type") ?? "image/png",
+    "cache-control": "public, max-age=300",
+    "x-content-type-options": "nosniff",
+    "referrer-policy": "no-referrer",
+    "cross-origin-resource-policy": "same-origin",
+  });
+
   if (upstream.body) {
     const reader = upstream.body.getReader();
     while (true) {

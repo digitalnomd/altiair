@@ -1,0 +1,131 @@
+#!/usr/bin/env expect -f
+set timeout 20
+log_user 1
+
+set port "/dev/cu.usbmodem14232250811173"
+set user "altiair"
+set use_sudo 0
+set command_file ""
+
+for {set i 0} {$i < $argc} {incr i} {
+  set arg [lindex $argv $i]
+  switch -- $arg {
+    "--port" {
+      incr i
+      set port [lindex $argv $i]
+    }
+    "--user" {
+      incr i
+      set user [lindex $argv $i]
+    }
+    "--sudo" {
+      set use_sudo 1
+    }
+    "--command-file" {
+      incr i
+      set command_file [lindex $argv $i]
+    }
+    default {
+      puts stderr "Unknown argument: $arg"
+      exit 2
+    }
+  }
+}
+
+if {$command_file eq ""} {
+  puts stderr "Usage: serial-run.expect [--port PATH] [--user USER] [--sudo] --command-file PATH"
+  exit 2
+}
+
+if {![info exists env(ALTIAIR_SERIAL_PASSWORD)] || $env(ALTIAIR_SERIAL_PASSWORD) eq ""} {
+  puts stderr "ALTIAIR_SERIAL_PASSWORD is required"
+  exit 2
+}
+
+set fh [open $command_file r]
+set remote_script [read $fh]
+close $fh
+
+proc wait_for_prompt {} {
+  expect {
+    -re {[\r\n][^@\r\n]+@[^:\r\n]+:[^\r\n]*[#$] $} { return 0 }
+    -re {[\r\n]root@[^:\r\n]+:[^\r\n]*# $} { return 0 }
+    timeout { return 1 }
+    eof { exit 3 }
+  }
+}
+
+exec stty -f $port 115200 cs8 -cstopb -parenb -ixon -ixoff -crtscts raw -echo
+set fd [open $port r+]
+fconfigure $fd -blocking 0 -buffering none -translation binary
+spawn -open $fd
+
+send "\r"
+expect {
+  -re {[\r\n][^@\r\n]+@[^:\r\n]+:[^\r\n]*[#$] $} {}
+  -re {[\r\n][^\r\n]* login: $} {
+    send "$user\r"
+    expect -re {Password: $}
+    send "$env(ALTIAIR_SERIAL_PASSWORD)\r"
+    if {[wait_for_prompt]} {
+      puts stderr "Timed out waiting for shell prompt after login"
+      exit 4
+    }
+  }
+  timeout {
+    send "\r"
+    expect {
+      -re {[\r\n][^@\r\n]+@[^:\r\n]+:[^\r\n]*[#$] $} {}
+      -re {[\r\n][^\r\n]* login: $} {
+        send "$user\r"
+        expect -re {Password: $}
+        send "$env(ALTIAIR_SERIAL_PASSWORD)\r"
+        if {[wait_for_prompt]} {
+          puts stderr "Timed out waiting for shell prompt after login"
+          exit 4
+        }
+      }
+      timeout {
+        puts stderr "Timed out waiting for login or shell prompt"
+        exit 4
+      }
+    }
+  }
+  eof { exit 3 }
+}
+
+send "export TERM=dumb\r"
+wait_for_prompt
+
+if {$use_sudo} {
+  send "sudo -S -p '__ALTIAIR_SUDO_PROMPT__' bash\r"
+  expect -re {__ALTIAIR_SUDO_PROMPT__}
+  send "$env(ALTIAIR_SERIAL_PASSWORD)\r"
+  if {[wait_for_prompt]} {
+    puts stderr "Timed out waiting for root shell"
+    exit 5
+  }
+}
+
+send "cat > /tmp/altiair-serial-command.sh <<'__ALTIAIR_REMOTE_EOF__'\r"
+send -- $remote_script
+send "\r__ALTIAIR_REMOTE_EOF__\r"
+send "bash /tmp/altiair-serial-command.sh; rc=\$?; printf '\\n__ALTIAIR_SERIAL_RC__:%s\\n' \"\$rc\"; rm -f /tmp/altiair-serial-command.sh\r"
+expect {
+  -re {__ALTIAIR_SERIAL_RC__:[0-9]+} {}
+  timeout {
+    puts stderr "Timed out waiting for remote command completion"
+    exit 6
+  }
+  eof { exit 3 }
+}
+
+if {$use_sudo} {
+  send "exit\r"
+  wait_for_prompt
+}
+send "exit\r"
+expect {
+  -re {login: $} {}
+  timeout {}
+}

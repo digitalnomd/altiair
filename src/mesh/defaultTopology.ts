@@ -5,8 +5,18 @@ export const defaultDdilMeshTopology: MeshTopology = {
   overlayCidr: "10.77.0.0/24",
   defaultApSsid: "Altiair-LAN",
   defaultLanCidr: "192.168.42.0/24",
-  defaultGatewayAddress: "192.168.42.10",
+  defaultGatewayAddress: "192.168.42.20",
   underlayCells: [
+    {
+      id: "jetson-demo-mission-lan",
+      role: "demo_mission_lan",
+      hostNodeId: "altiair-orin",
+      ssid: "Altiair-LAN",
+      cidr: "192.168.42.0/24",
+      gatewayAddress: "192.168.42.20",
+      preferredLinkClass: "wifi_ap",
+      purpose: "Current hackathon baseline: Jetson hosts the private local LAN until the Pi 5 is available, while coordination remains quorum based.",
+    },
     {
       id: "pi5-demo-mission-lan",
       role: "demo_mission_lan",
@@ -15,7 +25,7 @@ export const defaultDdilMeshTopology: MeshTopology = {
       cidr: "192.168.42.0/24",
       gatewayAddress: "192.168.42.10",
       preferredLinkClass: "wifi_ap",
-      purpose: "Hackathon physical baseline: Pi 5 hosts the private local LAN and the Pi 4Bs plus Jetson join it.",
+      purpose: "Pi 5 addition path: Pi 5 can host or join the private local LAN as hub/display/gateway capacity comes online.",
     },
     {
       id: "field-drone-lan-template",
@@ -81,7 +91,7 @@ export const defaultDdilMeshTopology: MeshTopology = {
       id: "altiair-hub",
       hostname: "altiair-hub",
       platform: "raspberry_pi_5",
-      roles: ["mesh_hub", "operator_display", "foundry_gateway"],
+      roles: ["mission_lan_host", "mesh_hub", "operator_display", "foundry_gateway"],
       lanAddress: "192.168.42.10",
       overlayAddress: "10.77.0.10",
       apiPort: 8080,
@@ -89,6 +99,10 @@ export const defaultDdilMeshTopology: MeshTopology = {
       publicKeyEnv: "ALTIAIR_HUB_WG_PUBLIC_KEY",
       preferredLinks: ["wifi_ap", "ethernet", "wireguard_overlay"],
       capabilities: [
+        {
+          name: "mission_lan_host",
+          detail: "Can host or join Altiair-LAN as additional hub/display capacity once available.",
+        },
         {
           name: "durable_queue",
           detail: "Primary SQLite queue owner and WebSocket fanout for the operator display.",
@@ -103,7 +117,7 @@ export const defaultDdilMeshTopology: MeshTopology = {
         },
       ],
       constraints: [
-        "Create the Altiair-LAN private Wi-Fi AP for the day-one physical mission LAN.",
+        "Create or join the Altiair-LAN private Wi-Fi cell without becoming a single point of authority.",
         "Do not make the hub a single point of failure; edge nodes keep local queues.",
         "Throttle media first when queue depth or CPU pressure rises.",
       ],
@@ -171,7 +185,7 @@ export const defaultDdilMeshTopology: MeshTopology = {
       id: "altiair-orin",
       hostname: "altiair-orin",
       platform: "jetson_orin_nano",
-      roles: ["accelerated_inference", "foundry_gateway"],
+      roles: ["mission_lan_host", "accelerated_inference", "foundry_gateway"],
       lanAddress: "192.168.42.20",
       overlayAddress: "10.77.0.20",
       apiPort: 8080,
@@ -179,6 +193,10 @@ export const defaultDdilMeshTopology: MeshTopology = {
       publicKeyEnv: "ALTIAIR_ORIN_WG_PUBLIC_KEY",
       preferredLinks: ["wifi_ap", "ethernet", "wireguard_overlay"],
       capabilities: [
+        {
+          name: "mission_lan_host",
+          detail: "Current Altiair-LAN host until the Pi 5 is available; still participates as a peer, not a central authority.",
+        },
         {
           name: "vision_inference",
           detail: "Accelerated local video/image inference and thumbnail generation.",
@@ -189,10 +207,11 @@ export const defaultDdilMeshTopology: MeshTopology = {
         },
         {
           name: "secondary_gateway",
-          detail: "Secondary CASK/Foundry gateway when the Pi 5 hub is isolated or saturated.",
+          detail: "CASK/Foundry gateway candidate when policy and uplink allow it; Pi 5 can also join as another gateway.",
         },
       ],
       constraints: [
+        "Hosting Altiair-LAN does not make this node authoritative; peer quorum still owns resolution.",
         "GPU inference must respect queue backpressure and thermal limits.",
         "Run adapter services in containers when practical for repeatable deployment.",
       ],

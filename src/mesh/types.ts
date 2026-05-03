@@ -5,6 +5,7 @@ export type NodePlatform =
 
 export type NodeRole =
   | "edge_sensor"
+  | "mission_lan_host"
   | "mesh_hub"
   | "accelerated_inference"
   | "operator_display"

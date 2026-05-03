@@ -1,6 +1,7 @@
 const SVG_NS = "http://www.w3.org/2000/svg";
 const MAP_WIDTH = 1200;
 const MAP_HEIGHT = 390;
+const TILE_SIZE = 256;
 const DEFAULT_REFRESH_MS = 5000;
 
 const fallbackState = {
@@ -12,24 +13,30 @@ const fallbackState = {
   fusion: {
     confidenceLabel: "Medium",
     confidenceScore: 0.74,
-    latestEvent: "Possible aerial object NW",
-    eventLabel: "Fused Detection",
-    position: { x: 39.3, y: 15.2 },
+    latestEvent: "UAS track crossing northwest approach",
+    eventLabel: "UAS Track",
+    position: { x: 39.3, y: 15.2, latitude: 37.79125, longitude: -122.40355 },
     trackTrail: [
-      { x: 39.7, y: 15.8 },
-      { x: 42.5, y: 20.5 },
-      { x: 46.8, y: 24.4 },
-      { x: 52.4, y: 28.2 },
-      { x: 59.7, y: 32.1 },
-      { x: 66.6, y: 33.6 },
+      { x: 39.7, y: 15.8, latitude: 37.79115, longitude: -122.40365 },
+      { x: 42.5, y: 20.5, latitude: 37.79085, longitude: -122.40285 },
+      { x: 46.8, y: 24.4, latitude: 37.79055, longitude: -122.4019 },
+      { x: 52.4, y: 28.2, latitude: 37.79025, longitude: -122.40095 },
+      { x: 59.7, y: 32.1, latitude: 37.79, longitude: -122.4001 },
+      { x: 66.6, y: 33.6, latitude: 37.7897, longitude: -122.3992 },
     ],
     rfBearings: [
       [
-        { x: 39.8, y: 16.6 },
-        { x: 49.8, y: 40.5 },
-        { x: 72.2, y: 65.8 },
+        { x: 39.8, y: 16.6, latitude: 37.79125, longitude: -122.40355 },
+        { x: 49.8, y: 40.5, latitude: 37.78935, longitude: -122.40125 },
+        { x: 72.2, y: 65.8, latitude: 37.78722, longitude: -122.39775 },
       ],
     ],
+    controlSource: {
+      label: "Probable UAS Control Source",
+      confidenceLabel: "Medium",
+      coordinates: { latitude: 37.78928, longitude: -122.39795 },
+      radiusMeters: 115,
+    },
     evidence: [
       { id: "visual", label: "Visual", kind: "visual", value: 82, summary: "Camera has intermittent visual track." },
       { id: "rf", label: "RF", kind: "rf", value: 74, summary: "RF bearing intersects visual cue." },
@@ -66,18 +73,20 @@ const fallbackState = {
       { level: "info", title: "Gateway", text: "Node 1 remains current local coordinator." },
     ],
     nodes: [
-      { id: "N1", label: "Node 1", x: 49.6, y: 48.8, status: "active", labelOffset: { x: -18, y: 30 } },
+      { id: "N1", label: "Node 1", x: 49.6, y: 48.8, latitude: 37.78806, longitude: -122.40095, status: "active", labelOffset: { x: -18, y: 30 } },
       {
         id: "N2",
         label: "Node 2",
         x: 71.7,
         y: 66.3,
+        latitude: 37.78722,
+        longitude: -122.39775,
         status: "active",
         labelOffset: { x: 20, y: 0 },
         fov: [
-          { x: 72.2, y: 67.2 },
-          { x: 78.5, y: 74.0 },
-          { x: 73.8, y: 87.0 },
+          { x: 72.2, y: 67.2, latitude: 37.78722, longitude: -122.39775 },
+          { x: 78.5, y: 74.0, latitude: 37.78835, longitude: -122.39935 },
+          { x: 73.8, y: 87.0, latitude: 37.78655, longitude: -122.39935 },
         ],
       },
       {
@@ -85,12 +94,14 @@ const fallbackState = {
         label: "Node 3",
         x: 33.1,
         y: 74.6,
+        latitude: 37.78655,
+        longitude: -122.40355,
         status: "active",
         labelOffset: { x: -65, y: 8 },
         fov: [
-          { x: 32.9, y: 75.4 },
-          { x: 28.8, y: 86.8 },
-          { x: 33.4, y: 93.4 },
+          { x: 32.9, y: 75.4, latitude: 37.78655, longitude: -122.40355 },
+          { x: 28.8, y: 86.8, latitude: 37.78762, longitude: -122.40235 },
+          { x: 33.4, y: 93.4, latitude: 37.78735, longitude: -122.40475 },
         ],
       },
       {
@@ -98,12 +109,14 @@ const fallbackState = {
         label: "Node 4",
         x: 28.0,
         y: 20.5,
+        latitude: 37.79172,
+        longitude: -122.40478,
         status: "active",
         labelOffset: { x: -56, y: -4 },
         fov: [
-          { x: 28.6, y: 21.3 },
-          { x: 33.2, y: 29.5 },
-          { x: 30.0, y: 37.2 },
+          { x: 28.6, y: 21.3, latitude: 37.79172, longitude: -122.40478 },
+          { x: 33.2, y: 29.5, latitude: 37.79118, longitude: -122.40338 },
+          { x: 30.0, y: 37.2, latitude: 37.79035, longitude: -122.40505 },
         ],
       },
       {
@@ -111,15 +124,17 @@ const fallbackState = {
         label: "Node 5",
         x: 23.6,
         y: 51.8,
+        latitude: 37.78832,
+        longitude: -122.4058,
         status: "active",
         labelOffset: { x: -54, y: -3 },
         fov: [
-          { x: 23.3, y: 52.6 },
-          { x: 18.9, y: 60.0 },
-          { x: 22.2, y: 67.2 },
+          { x: 23.3, y: 52.6, latitude: 37.78832, longitude: -122.4058 },
+          { x: 18.9, y: 60.0, latitude: 37.78915, longitude: -122.40445 },
+          { x: 22.2, y: 67.2, latitude: 37.7873, longitude: -122.40452 },
         ],
       },
-      { id: "N6", label: "Node 6", x: 74.9, y: 29.8, status: "degraded", stateLabel: "Degraded", labelOffset: { x: 18, y: 0 } },
+      { id: "N6", label: "Node 6", x: 74.9, y: 29.8, latitude: 37.79095, longitude: -122.3979, status: "degraded", stateLabel: "Degraded", labelOffset: { x: 18, y: 0 } },
     ],
     links: [
       ["N4", "N5"],
@@ -132,32 +147,44 @@ const fallbackState = {
   },
   map: {
     objectiveAreaLabel: "Objective Area",
+    geo: {
+      center: { latitude: 37.78984, longitude: -122.40128 },
+      zoom: 15,
+      metersPerPercentX: 10,
+      metersPerPercentY: 8,
+      tileTemplate: "/tiles/{z}/{x}/{y}.png",
+      attribution: "OpenStreetMap / local tile proxy",
+      sourceLabel: "Foundry GPS / OSM fallback",
+    },
     objectiveArea: [
-      { x: 45.4, y: 73.7 },
-      { x: 43.2, y: 70.0 },
-      { x: 42.9, y: 64.2 },
-      { x: 44.3, y: 58.4 },
-      { x: 47.2, y: 54.6 },
-      { x: 49.0, y: 51.0 },
-      { x: 52.2, y: 53.0 },
-      { x: 54.4, y: 52.2 },
-      { x: 55.4, y: 56.4 },
-      { x: 57.4, y: 58.0 },
-      { x: 57.0, y: 63.4 },
-      { x: 55.1, y: 66.8 },
-      { x: 55.0, y: 72.0 },
-      { x: 52.6, y: 78.4 },
-      { x: 49.7, y: 82.0 },
-      { x: 46.6, y: 81.0 },
-      { x: 44.4, y: 78.0 },
+      { x: 45.4, y: 73.7, latitude: 37.7885, longitude: -122.40185 },
+      { x: 43.2, y: 70.0, latitude: 37.7885, longitude: -122.4005 },
+      { x: 42.9, y: 64.2, latitude: 37.78795, longitude: -122.39998 },
+      { x: 44.3, y: 58.4, latitude: 37.78725, longitude: -122.40015 },
+      { x: 47.2, y: 54.6, latitude: 37.78682, longitude: -122.4012 },
+      { x: 49.0, y: 51.0, latitude: 37.7872, longitude: -122.40205 },
+      { x: 52.2, y: 53.0, latitude: 37.7879, longitude: -122.40218 },
+      { x: 54.4, y: 52.2, latitude: 37.78835, longitude: -122.40155 },
     ],
   },
 };
 
 const elements = {
+  appShell: document.querySelector(".app-shell"),
+  mapPanel: document.querySelector(".map-panel"),
+  baseMap: document.querySelector("#baseMap"),
   sourceStatus: document.querySelector("#sourceStatus"),
   refreshButton: document.querySelector("#refreshButton"),
   pauseButton: document.querySelector("#pauseButton"),
+  missionClock: document.querySelector("#missionClock"),
+  readinessScore: document.querySelector("#readinessScore"),
+  lastUpdate: document.querySelector("#lastUpdate"),
+  currentViewMode: document.querySelector("#currentViewMode"),
+  mapFeedLabel: document.querySelector("#mapFeedLabel"),
+  mapCoordinateReadout: document.querySelector("#mapCoordinateReadout"),
+  mapAttribution: document.querySelector("#mapAttribution"),
+  scanCadence: document.querySelector("#scanCadence"),
+  viewModeButtons: document.querySelectorAll(".view-mode-button"),
   missionName: document.querySelector("#missionName"),
   meshStatus: document.querySelector("#meshStatus"),
   confidenceLabel: document.querySelector("#confidenceLabel"),
@@ -171,12 +198,24 @@ const elements = {
   fusionFeed: document.querySelector("#fusionFeed"),
   coordinatorFeed: document.querySelector("#coordinatorFeed"),
   gossipFeed: document.querySelector("#gossipFeed"),
+  confidenceDial: document.querySelector("#confidenceDial"),
+  targetConfidenceScore: document.querySelector("#targetConfidenceScore"),
+  targetConfidenceLabel: document.querySelector("#targetConfidenceLabel"),
+  targetBearing: document.querySelector("#targetBearing"),
+  targetGrid: document.querySelector("#targetGrid"),
+  targetPolicy: document.querySelector("#targetPolicy"),
+  targetMapFeed: document.querySelector("#targetMapFeed"),
+  targetCallsign: document.querySelector("#targetCallsign"),
+  sensorStack: document.querySelector("#sensorStack"),
+  cueChain: document.querySelector("#cueChain"),
 };
 
 const app = {
   paused: false,
   timer: null,
   lastSource: "demo",
+  viewMode: "fusion",
+  currentState: null,
 };
 
 elements.refreshButton.addEventListener("click", () => {
@@ -188,11 +227,27 @@ elements.pauseButton.addEventListener("click", () => {
   elements.pauseButton.title = app.paused ? "Resume polling" : "Pause polling";
   elements.pauseButton.setAttribute("aria-label", elements.pauseButton.title);
   elements.pauseButton.innerHTML = `<svg><use href="#${app.paused ? "icon-play" : "icon-pause"}"></use></svg>`;
+  elements.scanCadence.textContent = app.paused ? "polling paused / passive observe" : "5s poll / passive observe";
   if (!app.paused) {
     scheduleRefresh();
   }
 });
 
+for (const button of elements.viewModeButtons) {
+  button.addEventListener("click", () => {
+    setViewMode(button.dataset.viewMode ?? "fusion");
+  });
+}
+
+setViewMode(app.viewMode);
+updateClock();
+window.setInterval(updateClock, 1000);
+window.addEventListener("resize", () => {
+  if (!app.currentState) {
+    return;
+  }
+  window.requestAnimationFrame(() => renderDashboard(app.currentState));
+});
 void refreshDashboard();
 
 async function refreshDashboard() {
@@ -232,6 +287,26 @@ function scheduleRefresh() {
   app.timer = window.setTimeout(() => {
     void refreshDashboard();
   }, DEFAULT_REFRESH_MS);
+}
+
+function setViewMode(mode) {
+  app.viewMode = ["fusion", "spectrum", "command"].includes(mode) ? mode : "fusion";
+  elements.appShell.dataset.view = app.viewMode;
+  elements.currentViewMode.textContent = capitalize(app.viewMode);
+  for (const button of elements.viewModeButtons) {
+    const isActive = button.dataset.viewMode === app.viewMode;
+    button.classList.toggle("is-active", isActive);
+    button.setAttribute("aria-pressed", String(isActive));
+  }
+}
+
+function updateClock() {
+  elements.missionClock.textContent = new Intl.DateTimeFormat("en-US", {
+    hour: "2-digit",
+    minute: "2-digit",
+    second: "2-digit",
+    hour12: false,
+  }).format(new Date());
 }
 
 async function loadLivePayload() {
@@ -352,7 +427,11 @@ function normalizeState(payload) {
   }
 
   if (payload?.mission && payload?.fusion && payload?.coordinator && payload?.gossip) {
-    return mergeDeep(fallbackState, payload);
+    const merged = mergeDeep(fallbackState, payload);
+    const deploymentOrder = merged.deploymentOrder ?? merged.missionDeployment ?? merged.deployment;
+    merged.deploymentOrder = deploymentOrder ?? merged.deploymentOrder;
+    applyFoundryGeoContext(merged, merged.foundryIntelligence, null, deploymentOrder);
+    return merged;
   }
 
   if (payload?.nodeApi) {
@@ -375,7 +454,8 @@ function fromNodeApiSnapshot(snapshot) {
   const latestInsight = snapshot.insight && !snapshot.insight.error ? snapshot.insight : null;
   const latestTagPlan = snapshot.tagPlan && !snapshot.tagPlan.error ? snapshot.tagPlan : null;
   const missionInstruction = snapshot.missionInstruction && !snapshot.missionInstruction.error ? snapshot.missionInstruction : null;
-  const deploymentOrder = snapshot.deploymentOrder && !snapshot.deploymentOrder.error ? snapshot.deploymentOrder : null;
+  const deploymentOrderPayload = snapshot.deploymentOrder ?? snapshot.missionDeployment ?? snapshot.deployment;
+  const deploymentOrder = deploymentOrderPayload && !deploymentOrderPayload.error ? deploymentOrderPayload : null;
   const foundryIntelligence = snapshot.foundryIntelligence && !snapshot.foundryIntelligence.error ? snapshot.foundryIntelligence : null;
   const foundrySync = snapshot.foundrySync && !snapshot.foundrySync.error ? snapshot.foundrySync : null;
   const localInstructions = snapshot.instructions && !snapshot.instructions.error ? snapshot.instructions : null;
@@ -437,6 +517,8 @@ function fromNodeApiSnapshot(snapshot) {
     null;
 
   base.updatedAt = snapshot.capturedAt ?? new Date().toISOString();
+  base.foundryIntelligence = foundryIntelligence;
+  base.deploymentOrder = deploymentOrder;
   base.mission.name = missionInstruction?.title ?? deploymentOrder?.title ?? base.mission.name;
   base.mission.status = missionContinuity
     ? `${onlineCount}/${totalCount} nodes active - ${formatToken(missionContinuity.status)}`
@@ -580,6 +662,8 @@ function fromNodeApiSnapshot(snapshot) {
       : []),
   ];
 
+  applyFoundryGeoContext(base, foundryIntelligence, latestBundle, deploymentOrder);
+
   return base;
 }
 
@@ -681,35 +765,41 @@ function percent(value) {
 
 function liveNodePoint(nodeId, index) {
   const points = {
-    "altiair-hub": { x: 49.6, y: 48.8, labelOffset: { x: -18, y: 30 } },
+    "altiair-hub": { x: 49.6, y: 48.8, latitude: 37.78806, longitude: -122.40095, labelOffset: { x: -18, y: 30 } },
     "altiair-node-a": {
       x: 33.1,
       y: 74.6,
+      latitude: 37.78655,
+      longitude: -122.40355,
       labelOffset: { x: -65, y: 8 },
       fov: [
-        { x: 32.9, y: 75.4 },
-        { x: 28.8, y: 86.8 },
-        { x: 33.4, y: 93.4 },
+        { x: 32.9, y: 75.4, latitude: 37.78655, longitude: -122.40355 },
+        { x: 28.8, y: 86.8, latitude: 37.78762, longitude: -122.40235 },
+        { x: 33.4, y: 93.4, latitude: 37.78735, longitude: -122.40475 },
       ],
     },
     "altiair-node-b": {
       x: 23.6,
       y: 51.8,
+      latitude: 37.78832,
+      longitude: -122.4058,
       labelOffset: { x: -54, y: -3 },
       fov: [
-        { x: 23.3, y: 52.6 },
-        { x: 18.9, y: 60.0 },
-        { x: 22.2, y: 67.2 },
+        { x: 23.3, y: 52.6, latitude: 37.78832, longitude: -122.4058 },
+        { x: 18.9, y: 60.0, latitude: 37.78915, longitude: -122.40445 },
+        { x: 22.2, y: 67.2, latitude: 37.7873, longitude: -122.40452 },
       ],
     },
     "altiair-orin": {
       x: 71.7,
       y: 66.3,
+      latitude: 37.78722,
+      longitude: -122.39775,
       labelOffset: { x: 20, y: 0 },
       fov: [
-        { x: 72.2, y: 67.2 },
-        { x: 78.5, y: 74.0 },
-        { x: 73.8, y: 87.0 },
+        { x: 72.2, y: 67.2, latitude: 37.78722, longitude: -122.39775 },
+        { x: 78.5, y: 74.0, latitude: 37.78835, longitude: -122.39935 },
+        { x: 73.8, y: 87.0, latitude: 37.78655, longitude: -122.39935 },
       ],
     },
   };
@@ -730,7 +820,433 @@ function buildLiveLinks(nodes) {
     .map((node) => [hub.id, node.id]);
 }
 
+function applyFoundryGeoContext(base, foundryIntelligence, latestBundle, deploymentOrder) {
+  const deploymentGeo = geoDeploymentFromPayload(deploymentOrder) ?? geoDeploymentFromFoundry(foundryIntelligence);
+  const bundleGeo = geoLocationFromBundle(latestBundle);
+  const foundryGeo = geoLocationFromFoundry(foundryIntelligence);
+  const selected = deploymentGeo ?? bundleGeo ?? foundryGeo;
+  if (!selected) {
+    return;
+  }
+
+  if (selected.objectiveArea?.length) {
+    base.map.objectiveArea = selected.objectiveArea;
+    base.map.objectiveAreaLabel = selected.objectiveAreaLabel ?? base.map.objectiveAreaLabel;
+  }
+  if (selected.nodes?.length) {
+    applyNodeGeoOverrides(base.gossip.nodes, selected.nodes);
+  }
+  if (selected.trackTrail?.length) {
+    base.fusion.trackTrail = selected.trackTrail;
+    base.fusion.position = selected.position ?? selected.trackTrail[selected.trackTrail.length - 1];
+    base.fusion.latestEvent = selected.latestEvent ?? base.fusion.latestEvent;
+    base.fusion.eventLabel = selected.eventLabel ?? base.fusion.eventLabel;
+  } else if (selected.position) {
+    base.fusion.position = selected.position;
+  }
+  if (selected.controlSource) {
+    base.fusion.controlSource = selected.controlSource;
+  }
+
+  base.map.geo = {
+    ...base.map.geo,
+    center: selected.center ?? base.map.geo.center ?? fallbackState.map.geo.center,
+    zoom: selected.zoom ?? base.map.geo.zoom,
+    sourceLabel: selected.sourceLabel,
+    attribution: selected.attribution ?? base.map.geo.attribution,
+  };
+}
+
+function mapGeoContext(state) {
+  const base = {
+    ...fallbackState.map.geo,
+    ...(state.map?.geo ?? {}),
+  };
+  const deploymentGeo = geoDeploymentFromPayload(state.deploymentOrder) ?? geoDeploymentFromFoundry(state.foundryIntelligence);
+  if (deploymentGeo?.center) {
+    return {
+      ...base,
+      center: deploymentGeo.center,
+      zoom: deploymentGeo.zoom ?? base.zoom,
+      sourceLabel: deploymentGeo.sourceLabel,
+      attribution: deploymentGeo.attribution ?? base.attribution,
+    };
+  }
+  const foundryGeo = geoLocationFromFoundry(state.foundryIntelligence);
+  if (!foundryGeo) {
+    return base;
+  }
+  return {
+    ...base,
+    center: foundryGeo.center,
+    zoom: foundryGeo.zoom ?? base.zoom,
+    sourceLabel: foundryGeo.sourceLabel,
+    attribution: foundryGeo.attribution ?? base.attribution,
+  };
+}
+
+function geoDeploymentFromFoundry(foundryIntelligence) {
+  const records = Array.isArray(foundryIntelligence?.records) ? foundryIntelligence.records : [];
+  for (const record of records) {
+    const objectName = `${record.objectApiName ?? ""} ${record.objectExportName ?? ""}`;
+    if (!/(deployment|mission|zone|track|cue|coordinator|map)/i.test(objectName)) {
+      continue;
+    }
+    const geo = geoDeploymentFromPayload(record.payloadJson ?? record.payload ?? record.properties ?? record);
+    if (!geo) {
+      continue;
+    }
+    const sourcePrefix = foundryIntelligence.connected ? "Foundry OSDK deployment" : "Foundry deployment fixture";
+    return {
+      ...geo,
+      sourceLabel: `${sourcePrefix}: ${record.objectApiName ?? record.objectExportName ?? "mission geo"}`,
+      attribution: geo.attribution ?? "Foundry mission deployment / local tile proxy",
+    };
+  }
+  return null;
+}
+
+function geoDeploymentFromPayload(payload) {
+  payload = payloadObject(payload);
+  if (!isPlainObject(payload)) {
+    return null;
+  }
+
+  const map = isPlainObject(payload.map) ? payload.map : {};
+  const geo = isPlainObject(payload.geo) ? payload.geo : {};
+  const center = coordinateFromValue(map.center) ??
+    coordinateFromValue(geo.center) ??
+    coordinateFromValue(payload.center) ??
+    coordinateFromValue(payload.location) ??
+    geoFromPayload(payload);
+  const objectiveArea = geoPolygonFromValue(payload.objectiveArea) ??
+    geoPolygonFromValue(payload.authorizedZone) ??
+    geoPolygonFromValue(payload.missionArea) ??
+    geoPolygonFromValue(payload.area) ??
+    geoPolygonFromValue(payload.bounds) ??
+    geoPolygonFromValue(payload.geometry) ??
+    geoPolygonFromValue(geo.objectiveArea) ??
+    geoPolygonFromValue(map.objectiveArea);
+  const nodes = geoNodesFromPayload(payload.nodes) ??
+    geoNodesFromPayload(payload.nodeLeases) ??
+    geoNodesFromPayload(payload.leases);
+  const trackTrail = geoTrackFromValue(payload.uasTrack) ??
+    geoTrackFromValue(payload.droneTrack) ??
+    geoTrackFromValue(payload.trackTrail) ??
+    geoTrackFromValue(payload.flightPath) ??
+    geoTrackFromValue(payload.geometry);
+  const position = coordinateFromValue(payload.uasPosition) ??
+    coordinateFromValue(payload.dronePosition) ??
+    coordinateFromValue(payload.latestPosition);
+  const controlSourceCoordinate = coordinateFromValue(payload.controlSource) ??
+    coordinateFromValue(payload.controlSourceEstimate);
+  const controlSource = controlSourceCoordinate
+    ? {
+        ...(isPlainObject(payload.controlSource) ? payload.controlSource : {}),
+        label: stringValue(payload.controlSource?.label) ?? "Probable UAS Control Source",
+        coordinates: controlSourceCoordinate,
+        radiusMeters: numberValue(payload.controlSource?.radiusMeters ?? payload.controlSourceEstimate?.confidenceRingMeters) ?? 115,
+      }
+    : null;
+
+  if (!center && !objectiveArea?.length && !nodes?.length && !trackTrail?.length && !position && !controlSource) {
+    return null;
+  }
+
+  return {
+    center: center ?? position ?? trackTrail?.[trackTrail.length - 1] ?? objectiveArea?.[0] ?? controlSourceCoordinate,
+    zoom: numberValue(map.zoom ?? geo.zoom ?? payload.zoom) ?? undefined,
+    sourceLabel: stringValue(payload.sourceLabel) ?? "Mission deployment geospatial",
+    attribution: stringValue(payload.attribution) ?? undefined,
+    objectiveArea,
+    objectiveAreaLabel: stringValue(payload.objectiveAreaLabel ?? payload.authorizedZoneId) ?? undefined,
+    nodes,
+    trackTrail,
+    position,
+    controlSource,
+    latestEvent: stringValue(payload.latestEvent) ?? undefined,
+    eventLabel: stringValue(payload.eventLabel) ?? undefined,
+  };
+}
+
+function payloadObject(value) {
+  if (isPlainObject(value)) {
+    return value;
+  }
+  if (typeof value !== "string") {
+    return null;
+  }
+  try {
+    const parsed = JSON.parse(value);
+    return isPlainObject(parsed) ? parsed : null;
+  } catch {
+    return null;
+  }
+}
+
+function geoPolygonFromValue(value) {
+  if (Array.isArray(value)) {
+    const points = value.map(coordinateFromValue).filter(Boolean);
+    return points.length >= 3 ? points : null;
+  }
+  if (isPlainObject(value)) {
+    if (value.type === "Feature") {
+      return geoPolygonFromValue(value.geometry);
+    }
+    if (value.type === "Polygon" && Array.isArray(value.coordinates?.[0])) {
+      const points = value.coordinates[0]
+        .map(([longitude, latitude]) => isFiniteCoordinate(latitude, longitude) ? { latitude, longitude } : null)
+        .filter(Boolean);
+      return points.length >= 3 ? points : null;
+    }
+    if (value.type === "MultiPolygon" && Array.isArray(value.coordinates?.[0]?.[0])) {
+      const points = value.coordinates[0][0]
+        .map(([longitude, latitude]) => isFiniteCoordinate(latitude, longitude) ? { latitude, longitude } : null)
+        .filter(Boolean);
+      return points.length >= 3 ? points : null;
+    }
+    return geoPolygonFromValue(value.coordinates ?? value.points ?? value.vertices);
+  }
+  return null;
+}
+
+function geoTrackFromValue(value) {
+  if (isPlainObject(value)) {
+    if (value.type === "Feature") {
+      return geoTrackFromValue(value.geometry);
+    }
+    if (value.type === "LineString" && Array.isArray(value.coordinates)) {
+      const points = value.coordinates
+        .map(([longitude, latitude]) => isFiniteCoordinate(latitude, longitude) ? { latitude, longitude } : null)
+        .filter(Boolean);
+      return points.length >= 2 ? points : null;
+    }
+  }
+  if (!Array.isArray(value)) {
+    return null;
+  }
+  const points = value.map(coordinateFromValue).filter(Boolean);
+  return points.length >= 2 ? points : null;
+}
+
+function geoNodesFromPayload(value) {
+  const entries = Array.isArray(value)
+    ? value.map((item) => [null, item])
+    : isPlainObject(value)
+      ? Object.entries(value)
+      : null;
+  if (!entries) {
+    return null;
+  }
+  const nodes = entries
+    .map(([key, item]) => {
+      const coordinate = coordinateFromValue(item);
+      if (!coordinate) {
+        return null;
+      }
+      return {
+        id: stringValue(item.id ?? item.nodeId ?? item.sourceId ?? key),
+        sourceId: stringValue(item.sourceId ?? item.nodeId ?? item.id ?? key),
+        label: stringValue(item.label ?? item.hostname ?? item.nodeId ?? key),
+        latitude: coordinate.latitude,
+        longitude: coordinate.longitude,
+        fov: geoPolygonFromValue(item.fov),
+      };
+    })
+    .filter(Boolean);
+  return nodes.length ? nodes : null;
+}
+
+function applyNodeGeoOverrides(nodes, geoNodes) {
+  const byId = new Map();
+  for (const node of geoNodes) {
+    for (const key of [node.id, node.sourceId, node.label].filter(Boolean)) {
+      byId.set(String(key), node);
+    }
+  }
+  for (const node of nodes) {
+    const override = byId.get(node.id) ?? byId.get(node.sourceId) ?? byId.get(node.label);
+    if (!override) {
+      continue;
+    }
+    node.latitude = override.latitude;
+    node.longitude = override.longitude;
+    if (override.fov?.length) {
+      node.fov = override.fov;
+    }
+  }
+}
+
+function geoLocationFromBundle(bundle) {
+  const fix = bundle?.locationFixes?.find((item) => item?.coordinates?.latitude !== undefined && item?.coordinates?.longitude !== undefined);
+  if (!fix) {
+    return null;
+  }
+  return {
+    center: {
+      latitude: fix.coordinates.latitude,
+      longitude: fix.coordinates.longitude,
+    },
+    zoom: 16,
+    sourceLabel: `CASK ${formatToken(fix.sourceType)} fix`,
+    attribution: "CASK location fix / local tile proxy",
+  };
+}
+
+function geoLocationFromFoundry(foundryIntelligence) {
+  const records = Array.isArray(foundryIntelligence?.records) ? foundryIntelligence.records : [];
+  for (const record of records) {
+    const center = geoFromPayload(record.payloadJson);
+    if (!center) {
+      continue;
+    }
+    const sourcePrefix = foundryIntelligence.connected ? "Foundry OSDK" : "Foundry mock";
+    return {
+      center,
+      zoom: 15,
+      sourceLabel: `${sourcePrefix}: ${record.objectApiName ?? record.objectExportName ?? "Geo object"}`,
+      attribution: "Foundry geospatial object / local tile proxy",
+    };
+  }
+  return null;
+}
+
+function geoFromPayload(value, depth = 0) {
+  if (!isPlainObject(value) || depth > 4) {
+    return null;
+  }
+
+  const direct = latLonFromObject(value);
+  if (direct) {
+    return direct;
+  }
+
+  const coordinates = value.coordinates;
+  if (isPlainObject(coordinates)) {
+    const nested = latLonFromObject(coordinates);
+    if (nested) {
+      return nested;
+    }
+  }
+
+  const geometry = value.geometry;
+  if (isPlainObject(geometry) && geometry.type === "Point" && Array.isArray(geometry.coordinates)) {
+    const [longitude, latitude] = geometry.coordinates;
+    if (isFiniteCoordinate(latitude, longitude)) {
+      return { latitude, longitude };
+    }
+  }
+
+  for (const child of Object.values(value)) {
+    const nested = geoFromPayload(child, depth + 1);
+    if (nested) {
+      return nested;
+    }
+  }
+  return null;
+}
+
+function latLonFromObject(value) {
+  const latitude = numberValue(value.latitude ?? value.lat);
+  const longitude = numberValue(value.longitude ?? value.lon ?? value.lng);
+  return isFiniteCoordinate(latitude, longitude) ? { latitude, longitude } : null;
+}
+
+function isFiniteCoordinate(latitude, longitude) {
+  return typeof latitude === "number" &&
+    typeof longitude === "number" &&
+    Number.isFinite(latitude) &&
+    Number.isFinite(longitude) &&
+    latitude >= -85 &&
+    latitude <= 85 &&
+    longitude >= -180 &&
+    longitude <= 180;
+}
+
+function renderBaseMap(geoContext, dimensions) {
+  const template = geoContext.tileTemplate ?? fallbackState.map.geo.tileTemplate;
+  const zoom = Math.max(1, Math.min(19, Math.round(geoContext.zoom ?? 15)));
+  const center = geoToWorldPixel(geoContext.center, zoom);
+  const topLeft = {
+    x: center.x - dimensions.width / 2,
+    y: center.y - dimensions.height / 2,
+  };
+  const startX = Math.floor(topLeft.x / TILE_SIZE);
+  const endX = Math.floor((topLeft.x + dimensions.width) / TILE_SIZE);
+  const startY = Math.floor(topLeft.y / TILE_SIZE);
+  const endY = Math.floor((topLeft.y + dimensions.height) / TILE_SIZE);
+  const tileCount = 2 ** zoom;
+  const tiles = [];
+
+  for (let tileY = startY; tileY <= endY; tileY += 1) {
+    if (tileY < 0 || tileY >= tileCount) {
+      continue;
+    }
+    for (let tileX = startX; tileX <= endX; tileX += 1) {
+      const wrappedX = modulo(tileX, tileCount);
+      const image = document.createElement("img");
+      image.className = "base-map-tile";
+      image.alt = "";
+      image.decoding = "async";
+      image.loading = "lazy";
+      image.referrerPolicy = "no-referrer";
+      image.src = tileUrl(template, zoom, wrappedX, tileY);
+      image.style.left = `${(((tileX * TILE_SIZE) - topLeft.x) / dimensions.width) * 100}%`;
+      image.style.top = `${(((tileY * TILE_SIZE) - topLeft.y) / dimensions.height) * 100}%`;
+      image.style.width = `${(TILE_SIZE / dimensions.width) * 100}%`;
+      image.style.height = `${(TILE_SIZE / dimensions.height) * 100}%`;
+      tiles.push(image);
+    }
+  }
+
+  elements.baseMap.replaceChildren(...tiles);
+}
+
+function geoToWorldPixel(coordinate, zoom) {
+  const latitude = clamp(coordinate.latitude, -85.05112878, 85.05112878);
+  const sinLatitude = Math.sin((latitude * Math.PI) / 180);
+  const scale = TILE_SIZE * 2 ** zoom;
+  return {
+    x: ((coordinate.longitude + 180) / 360) * scale,
+    y: (0.5 - Math.log((1 + sinLatitude) / (1 - sinLatitude)) / (4 * Math.PI)) * scale,
+  };
+}
+
+function percentToGeo(percentPoint, geoContext) {
+  const center = geoContext.center;
+  const dxMeters = (percentPoint.x - 50) * (geoContext.metersPerPercentX ?? 14);
+  const dyMeters = (50 - percentPoint.y) * (geoContext.metersPerPercentY ?? 10);
+  const latitude = center.latitude + dyMeters / 111_320;
+  const longitude = center.longitude + dxMeters / (111_320 * Math.cos((center.latitude * Math.PI) / 180));
+  return { latitude, longitude };
+}
+
+function tileUrl(template, zoom, x, y) {
+  return template
+    .replaceAll("{z}", String(zoom))
+    .replaceAll("{x}", String(x))
+    .replaceAll("{y}", String(y));
+}
+
+function measureMapDimensions() {
+  const rect = elements.mapPanel?.getBoundingClientRect();
+  return {
+    width: Math.max(280, Math.round(rect?.width || MAP_WIDTH)),
+    height: Math.max(220, Math.round(rect?.height || MAP_HEIGHT)),
+  };
+}
+
+function isCompactMap(dimensions) {
+  return dimensions.width < 560;
+}
+
 function renderDashboard(state) {
+  app.currentState = state;
+  const confidenceScore = percent(state.fusion.confidenceScore ?? 0);
+  const readinessScore = computeReadinessScore(state);
+  const geoContext = mapGeoContext(state);
+  const targetGeo = coordinateFromValue(state.fusion.position) ?? percentToGeo(state.fusion.position, geoContext);
+
   elements.missionName.textContent = state.mission.name;
   elements.meshStatus.textContent = state.mission.status;
   elements.confidenceLabel.textContent = state.fusion.confidenceLabel;
@@ -740,41 +1256,82 @@ function renderDashboard(state) {
   elements.operatorAction.textContent = state.coordinator.operatorNextAction;
   elements.policyGate.textContent = formatPolicy(state.fusion.policyGate);
   elements.policyGate.className = `policy-pill ${policyClass(state.fusion.policyGate)}`;
+  elements.lastUpdate.textContent = formatUpdatedAt(state.updatedAt);
+  elements.readinessScore.textContent = `${readinessScore}%`;
+  elements.scanCadence.textContent = app.paused ? "polling paused / passive observe" : "5s poll / passive observe";
+  elements.targetCallsign.textContent = state.fusion.eventLabel ? callsignFromLabel(state.fusion.eventLabel) : "HK-FUSED-01";
+  elements.targetConfidenceScore.textContent = `${confidenceScore}%`;
+  elements.targetConfidenceLabel.textContent = `${state.fusion.confidenceLabel} confidence`;
+  elements.confidenceDial.style.setProperty("--score", `${confidenceScore}%`);
+  elements.targetBearing.textContent = bearingFromPosition(state.fusion.position, geoContext);
+  elements.targetGrid.textContent = formatLatLon(targetGeo);
+  elements.targetPolicy.textContent = formatPolicy(state.fusion.policyGate);
+  elements.targetMapFeed.textContent = geoContext.sourceLabel;
+  elements.mapFeedLabel.textContent = geoContext.sourceLabel;
+  elements.mapCoordinateReadout.textContent = `Center ${formatLatLon(geoContext.center)} / z${geoContext.zoom}`;
+  elements.mapAttribution.textContent = geoContext.attribution;
 
-  renderMap(state);
+  const mapDimensions = measureMapDimensions();
+  elements.mapSvg.setAttribute("viewBox", `0 0 ${mapDimensions.width} ${mapDimensions.height}`);
+  renderBaseMap(geoContext, mapDimensions);
+  renderMap(state, mapDimensions);
   renderTeamPulse(state.coordinator.teamPulse);
   renderEvidence(state.fusion.evidence);
+  renderSensorStack(state.fusion.evidence);
+  renderCueChain(state, confidenceScore);
   renderFeed(elements.fusionFeed, state.fusion.feed);
   renderFeed(elements.coordinatorFeed, state.coordinator.feed);
   renderFeed(elements.gossipFeed, state.gossip.feed);
 }
 
-function renderMap(state) {
+function renderMap(state, dimensions) {
   const svg = elements.mapSvg;
+  const geoContext = mapGeoContext(state);
+  const compact = isCompactMap(dimensions);
   clearNode(svg);
   appendDefs(svg);
-  renderGrid(svg);
-  renderTerrain(svg);
+  renderGrid(svg, dimensions);
+  if (!compact) {
+    renderTerrain(svg, dimensions);
+  }
+  renderRangeRings(svg, state.fusion.position, geoContext, dimensions);
+  if (!compact) {
+    renderSectorSweep(svg, dimensions);
+  }
 
-  const objective = state.map.objectiveArea.map(point);
+  const objective = state.map.objectiveArea.map((item) => mapPoint(item, geoContext, dimensions));
   append("polygon", svg, {
     class: "objective-area",
     points: objective.map((p) => `${p.x},${p.y}`).join(" "),
   });
   renderObjectiveHatch(svg, objective);
 
-  append("text", svg, {
-    class: "map-objective-label",
-    x: point({ x: 47.4, y: 78 }).x,
-    y: point({ x: 47.4, y: 78 }).y,
-  }, state.map.objectiveAreaLabel);
+  if (!compact) {
+    const objectiveLabelPoint = polygonCenter(objective, dimensions);
+    append("text", svg, {
+      class: "map-objective-label",
+      x: objectiveLabelPoint.x,
+      y: objectiveLabelPoint.y,
+    }, state.map.objectiveAreaLabel);
+  }
 
   const nodeById = new Map(state.gossip.nodes.map((node) => [node.id, node]));
-  for (const node of state.gossip.nodes) {
-    if (Array.isArray(node.fov)) {
-      append("polygon", svg, {
-        class: "fov-shape",
-        points: node.fov.map(point).map((p) => `${p.x},${p.y}`).join(" "),
+  if (!compact) {
+    for (const node of state.gossip.nodes) {
+      if (Array.isArray(node.fov)) {
+        append("polygon", svg, {
+          class: "fov-shape",
+          points: node.fov.map((item) => mapPoint(item, geoContext, dimensions)).map((p) => `${p.x},${p.y}`).join(" "),
+        });
+      }
+    }
+  }
+
+  if (!compact) {
+    for (const bearing of state.fusion.rfBearings ?? []) {
+      append("path", svg, {
+        class: "rf-bearing-path",
+        d: polylinePath(bearing.map((item) => mapPoint(item, geoContext, dimensions))),
       });
     }
   }
@@ -785,28 +1342,24 @@ function renderMap(state) {
     if (!from || !to) {
       continue;
     }
-    append("path", svg, {
-      class: "mesh-link-path",
-      d: `M ${point(from).x} ${point(from).y} L ${point(to).x} ${point(to).y}`,
-    });
-  }
-
-  for (const bearing of state.fusion.rfBearings ?? []) {
-    append("path", svg, {
-      class: "rf-bearing-path",
-      d: polylinePath(bearing.map(point)),
-    });
+    const fromPoint = mapPoint(from, geoContext, dimensions);
+    const toPoint = mapPoint(to, geoContext, dimensions);
+    const linkPath = `M ${fromPoint.x} ${fromPoint.y} L ${toPoint.x} ${toPoint.y}`;
+    append("path", svg, { class: "mesh-link-path", d: linkPath });
+    append("path", svg, { class: "mesh-link-flow", d: linkPath });
   }
 
   append("path", svg, {
     class: "track-path",
-    d: polylinePath((state.fusion.trackTrail ?? []).map(point)),
+    d: polylinePath((state.fusion.trackTrail ?? []).map((item) => mapPoint(item, geoContext, dimensions))),
   });
+  renderTrackPips(svg, state.fusion.trackTrail ?? [], geoContext, dimensions);
+  renderControlSource(svg, state.fusion.controlSource, geoContext, dimensions);
 
-  renderDetection(svg, state.fusion);
+  renderDetection(svg, state.fusion, geoContext, dimensions);
 
   for (const node of state.gossip.nodes) {
-    renderNode(svg, node);
+    renderNode(svg, node, geoContext, dimensions);
   }
 }
 
@@ -817,38 +1370,119 @@ function appendDefs(svg) {
   const merge = append("feMerge", glow);
   append("feMergeNode", merge, { in: "blur" });
   append("feMergeNode", merge, { in: "SourceGraphic" });
+  const sweep = append("linearGradient", defs, { id: "sweepGradient", x1: "0%", y1: "0%", x2: "100%", y2: "0%" });
+  append("stop", sweep, { offset: "0%", "stop-color": "rgba(0, 0, 0, 0)" });
+  append("stop", sweep, { offset: "55%", "stop-color": "rgba(29, 215, 223, 0.08)" });
+  append("stop", sweep, { offset: "100%", "stop-color": "rgba(255, 192, 67, 0.2)" });
 }
 
-function renderGrid(svg) {
-  for (let x = 140; x < MAP_WIDTH; x += 140) {
+function renderGrid(svg, dimensions) {
+  const xStep = Math.max(80, Math.round(dimensions.width / 8));
+  const yStep = Math.max(58, Math.round(dimensions.height / 6));
+  for (let x = xStep; x < dimensions.width; x += xStep) {
     append("line", svg, {
-      class: `map-grid-line ${x % 280 === 0 ? "map-grid-major" : ""}`,
+      class: `map-grid-line ${Math.round(x / xStep) % 2 === 0 ? "map-grid-major" : ""}`,
       x1: x,
       y1: 0,
       x2: x,
-      y2: MAP_HEIGHT,
+      y2: dimensions.height,
     });
   }
-  for (let y = 46; y < MAP_HEIGHT; y += 66) {
+  for (let y = yStep; y < dimensions.height; y += yStep) {
     append("line", svg, {
-      class: `map-grid-line ${y % 132 === 46 ? "map-grid-major" : ""}`,
+      class: `map-grid-line ${Math.round(y / yStep) % 2 === 0 ? "map-grid-major" : ""}`,
       x1: 0,
       y1: y,
-      x2: MAP_WIDTH,
+      x2: dimensions.width,
       y2: y,
     });
   }
 }
 
-function renderTerrain(svg) {
-  for (let i = 0; i < 28; i += 1) {
-    const startY = 16 + i * 14;
+function renderTerrain(svg, dimensions) {
+  const lineCount = Math.max(12, Math.round(dimensions.height / 18));
+  for (let i = 0; i < lineCount; i += 1) {
+    const startY = 16 + i * (dimensions.height / lineCount);
     let d = `M 0 ${startY}`;
-    for (let x = 0; x <= MAP_WIDTH; x += 60) {
+    for (let x = 0; x <= dimensions.width; x += 60) {
       const y = startY + Math.sin((x + i * 31) / 74) * 10 + Math.cos((x + i * 19) / 39) * 4;
       d += ` L ${x} ${y.toFixed(1)}`;
     }
     append("path", svg, { class: "terrain-line", d });
+  }
+}
+
+function renderRangeRings(svg, position, geoContext, dimensions) {
+  const center = mapPoint(position, geoContext, dimensions);
+  for (const [index, radiusMeters] of [120, 240, 360, 480].entries()) {
+    const radius = metersToMapPixels(radiusMeters, geoContext);
+    append("circle", svg, {
+      class: `range-ring range-ring-${index + 1}`,
+      cx: center.x,
+      cy: center.y,
+      r: radius,
+    });
+  }
+  append("path", svg, {
+    class: "range-axis",
+    d: `M ${center.x} 0 L ${center.x} ${dimensions.height} M 0 ${center.y} L ${dimensions.width} ${center.y}`,
+  });
+}
+
+function renderSectorSweep(svg, dimensions) {
+  append("polygon", svg, {
+    class: "sector-sweep",
+    points: [
+      `${dimensions.width * 0.05},0`,
+      `${dimensions.width * 0.86},0`,
+      `${dimensions.width * 0.68},${dimensions.height}`,
+      `${dimensions.width * 0.0},${dimensions.height}`,
+    ].join(" "),
+  });
+  if (!isCompactMap(dimensions)) {
+    append("text", svg, {
+      class: "sector-label",
+      x: dimensions.width - 156,
+      y: 34,
+    }, "HAWKEYE PASSIVE FUSION");
+  }
+}
+
+function renderTrackPips(svg, trail, geoContext, dimensions) {
+  trail.map((item) => mapPoint(item, geoContext, dimensions)).forEach((trailPoint, index) => {
+    append("circle", svg, {
+      class: "track-pip",
+      cx: trailPoint.x,
+      cy: trailPoint.y,
+      r: 3 + index * 0.32,
+      style: `--pip-delay: ${index * 80}ms`,
+    });
+  });
+}
+
+function renderControlSource(svg, controlSource, geoContext, dimensions) {
+  if (!controlSource) {
+    return;
+  }
+  const center = mapPoint(controlSource.coordinates ?? controlSource, geoContext, dimensions);
+  const radius = metersToMapPixels(controlSource.radiusMeters ?? 90, geoContext);
+  append("ellipse", svg, {
+    class: "control-source-area",
+    cx: center.x,
+    cy: center.y,
+    rx: radius * 1.45,
+    ry: radius * 0.82,
+  });
+  append("path", svg, {
+    class: "control-source-cross",
+    d: `M ${center.x - 12} ${center.y} L ${center.x + 12} ${center.y} M ${center.x} ${center.y - 12} L ${center.x} ${center.y + 12}`,
+  });
+  if (!isCompactMap(dimensions)) {
+    append("text", svg, {
+      class: "control-source-label",
+      x: center.x + radius * 0.9,
+      y: center.y - radius * 0.65,
+    }, controlSource.label ?? "Probable control source");
   }
 }
 
@@ -874,9 +1508,29 @@ function renderObjectiveHatch(svg, polygonPoints) {
   }
 }
 
-function renderDetection(svg, fusion) {
-  const center = point(fusion.position);
-  for (const radius of [22, 36, 50]) {
+function renderDetection(svg, fusion, geoContext, dimensions) {
+  const center = mapPoint(fusion.position, geoContext, dimensions);
+  const compact = isCompactMap(dimensions);
+  const windowWidth = compact ? 82 : 128;
+  const windowHeight = compact ? 62 : 90;
+  append("rect", svg, {
+    class: "target-window",
+    x: center.x - windowWidth / 2,
+    y: center.y - windowHeight / 2,
+    width: windowWidth,
+    height: windowHeight,
+    rx: 2,
+  });
+  append("path", svg, {
+    class: "target-brackets",
+    d: [
+      `M ${center.x - windowWidth / 2 - 12} ${center.y - windowHeight / 2 - 9} h 22 M ${center.x - windowWidth / 2 - 12} ${center.y - windowHeight / 2 - 9} v 22`,
+      `M ${center.x + windowWidth / 2 + 12} ${center.y - windowHeight / 2 - 9} h -22 M ${center.x + windowWidth / 2 + 12} ${center.y - windowHeight / 2 - 9} v 22`,
+      `M ${center.x - windowWidth / 2 - 12} ${center.y + windowHeight / 2 + 9} h 22 M ${center.x - windowWidth / 2 - 12} ${center.y + windowHeight / 2 + 9} v -22`,
+      `M ${center.x + windowWidth / 2 + 12} ${center.y + windowHeight / 2 + 9} h -22 M ${center.x + windowWidth / 2 + 12} ${center.y + windowHeight / 2 + 9} v -22`,
+    ].join(" "),
+  });
+  for (const radius of (compact ? [18, 30] : [22, 36, 50])) {
     append("circle", svg, {
       class: "detection-ring",
       cx: center.x,
@@ -902,24 +1556,40 @@ function renderDetection(svg, fusion) {
     cy: center.y,
     r: 5.5,
   });
-  append("text", svg, {
-    class: "detection-label",
-    x: center.x + 56,
-    y: center.y - 14,
-  }, fusion.eventLabel);
-  append("text", svg, {
-    class: "detection-label",
-    x: center.x + 56,
-    y: center.y + 4,
-  }, `Confidence: ${fusion.confidenceLabel}`);
+  append("path", svg, {
+    class: "uas-glyph",
+    d: `M ${center.x} ${center.y - 18} l 8 18 h -5 l -3 8 l -3 -8 h -5 z`,
+  });
+  if (!compact) {
+    append("text", svg, {
+      class: "detection-label",
+      x: center.x + 56,
+      y: center.y - 14,
+    }, fusion.eventLabel);
+    append("text", svg, {
+      class: "detection-label",
+      x: center.x + 56,
+      y: center.y + 4,
+    }, `Confidence: ${fusion.confidenceLabel}`);
+    append("text", svg, {
+      class: "detection-meta",
+      x: center.x + 56,
+      y: center.y + 24,
+    }, formatLatLon(coordinateFromValue(fusion.position) ?? percentToGeo(fusion.position, geoContext)));
+  }
 }
 
-function renderNode(svg, node) {
-  const pos = point(node);
+function renderNode(svg, node, geoContext, dimensions) {
+  const pos = mapPoint(node, geoContext, dimensions);
+  const compact = isCompactMap(dimensions);
   const group = append("g", svg, { class: `node-group ${node.status === "degraded" ? "degraded" : ""}` });
-  append("circle", group, { class: "node-outer", cx: pos.x, cy: pos.y, r: 10, filter: "url(#softGlow)" });
-  append("circle", group, { class: "node-middle", cx: pos.x, cy: pos.y, r: 6.5 });
-  append("circle", group, { class: "node-core", cx: pos.x, cy: pos.y, r: 3.3 });
+  append("circle", group, { class: "node-halo", cx: pos.x, cy: pos.y, r: compact ? 13 : 19 });
+  append("circle", group, { class: "node-outer", cx: pos.x, cy: pos.y, r: compact ? 7 : 10, filter: "url(#softGlow)" });
+  append("circle", group, { class: "node-middle", cx: pos.x, cy: pos.y, r: compact ? 4.8 : 6.5 });
+  append("circle", group, { class: "node-core", cx: pos.x, cy: pos.y, r: compact ? 2.5 : 3.3 });
+  if (compact) {
+    return;
+  }
 
   const labelOffset = node.labelOffset ?? { x: 16, y: -10 };
   append("text", group, {
@@ -997,6 +1667,45 @@ function renderEvidence(metrics) {
   }));
 }
 
+function renderSensorStack(metrics) {
+  elements.sensorStack.replaceChildren(...metrics.map((metric, index) => {
+    const row = document.createElement("div");
+    row.className = `sensor-bar metric-${metric.kind}`;
+    row.style.setProperty("--value", `${metric.value}%`);
+    row.style.setProperty("--delay", `${index * 65}ms`);
+
+    const label = document.createElement("span");
+    label.textContent = metric.label;
+
+    const track = document.createElement("i");
+    track.append(document.createElement("b"));
+
+    const value = document.createElement("strong");
+    value.textContent = metric.kind === "agreement" ? "quorum" : `${metric.value}%`;
+
+    row.append(label, track, value);
+    return row;
+  }));
+}
+
+function renderCueChain(state, confidenceScore) {
+  const policy = state.fusion.policyGate;
+  const chain = [
+    { label: "Detect", state: confidenceScore >= 20 ? "complete" : "pending" },
+    { label: "Correlate", state: confidenceScore >= 45 ? "complete" : "pending" },
+    { label: "Review gate", state: policy === "blocked" ? "blocked" : confidenceScore >= 45 ? "active" : "pending" },
+    { label: "Task nodes", state: state.coordinator.recommendedNextAction ? "active" : "pending" },
+  ];
+
+  elements.cueChain.replaceChildren(...chain.map((item, index) => {
+    const step = document.createElement("span");
+    step.className = `cue-step ${item.state}`;
+    step.style.setProperty("--delay", `${index * 90}ms`);
+    step.textContent = item.label;
+    return step;
+  }));
+}
+
 function metricIcon(kind) {
   if (kind === "rf") {
     return '<svg><use href="#icon-radio"></use></svg>';
@@ -1052,10 +1761,68 @@ function clearNode(node) {
   }
 }
 
-function point(percentPoint) {
+function point(percentPoint, dimensions = { width: MAP_WIDTH, height: MAP_HEIGHT }) {
   return {
-    x: (percentPoint.x / 100) * MAP_WIDTH,
-    y: (percentPoint.y / 100) * MAP_HEIGHT,
+    x: (percentPoint.x / 100) * dimensions.width,
+    y: (percentPoint.y / 100) * dimensions.height,
+  };
+}
+
+function mapPoint(value, geoContext, dimensions = { width: MAP_WIDTH, height: MAP_HEIGHT }) {
+  const coordinate = coordinateFromValue(value);
+  if (coordinate) {
+    return geoToMapPoint(coordinate, geoContext, dimensions);
+  }
+  return point(value, dimensions);
+}
+
+function coordinateFromValue(value) {
+  if (!isPlainObject(value)) {
+    return null;
+  }
+  const direct = latLonFromObject(value);
+  if (direct) {
+    return direct;
+  }
+  if (value.type === "Feature") {
+    return coordinateFromValue(value.geometry);
+  }
+  if (value.type === "Point" && Array.isArray(value.coordinates)) {
+    const [longitude, latitude] = value.coordinates;
+    return isFiniteCoordinate(latitude, longitude) ? { latitude, longitude } : null;
+  }
+  if (isPlainObject(value.geometry)) {
+    return coordinateFromValue(value.geometry);
+  }
+  if (isPlainObject(value.coordinates)) {
+    return latLonFromObject(value.coordinates);
+  }
+  return null;
+}
+
+function geoToMapPoint(coordinate, geoContext, dimensions = { width: MAP_WIDTH, height: MAP_HEIGHT }) {
+  const zoom = Math.max(1, Math.min(19, Math.round(geoContext.zoom ?? 15)));
+  const center = geoToWorldPixel(geoContext.center, zoom);
+  const world = geoToWorldPixel(coordinate, zoom);
+  return {
+    x: dimensions.width / 2 + (world.x - center.x),
+    y: dimensions.height / 2 + (world.y - center.y),
+  };
+}
+
+function metersToMapPixels(meters, geoContext) {
+  const zoom = Math.max(1, Math.min(19, Math.round(geoContext.zoom ?? 15)));
+  const metersPerPixel = (Math.cos((geoContext.center.latitude * Math.PI) / 180) * 40_075_016.686) / (TILE_SIZE * 2 ** zoom);
+  return meters / metersPerPixel;
+}
+
+function polygonCenter(points, dimensions = { width: MAP_WIDTH, height: MAP_HEIGHT }) {
+  if (!points.length) {
+    return { x: dimensions.width / 2, y: dimensions.height / 2 };
+  }
+  return {
+    x: points.reduce((total, item) => total + item.x, 0) / points.length,
+    y: points.reduce((total, item) => total + item.y, 0) / points.length,
   };
 }
 
@@ -1114,6 +1881,107 @@ function policyClass(policyGate) {
     return "blocked";
   }
   return "";
+}
+
+function computeReadinessScore(state) {
+  const confidence = percent(state.fusion.confidenceScore ?? 0);
+  const activeNodes = state.gossip.nodes.filter((node) => node.status !== "degraded").length;
+  const nodeScore = state.gossip.nodes.length > 0 ? Math.round((activeNodes / state.gossip.nodes.length) * 100) : 0;
+  const evidenceScore = Math.round(average(state.fusion.evidence.map((metric) => metric.value ?? 0)));
+  return Math.round(confidence * 0.38 + nodeScore * 0.34 + evidenceScore * 0.28);
+}
+
+function average(values) {
+  if (!values.length) {
+    return 0;
+  }
+  return values.reduce((total, value) => total + value, 0) / values.length;
+}
+
+function bearingFromPosition(position, geoContext) {
+  if (!position) {
+    return "--";
+  }
+  const coordinate = coordinateFromValue(position);
+  if (coordinate && geoContext?.center) {
+    return bearingFromCoordinate(geoContext.center, coordinate);
+  }
+  const dx = position.x - 50;
+  const dy = 50 - position.y;
+  const degrees = Math.round((Math.atan2(dx, dy) * 180) / Math.PI + 360) % 360;
+  return `${cardinalFromDegrees(degrees)} / ${String(degrees).padStart(3, "0")} deg`;
+}
+
+function bearingFromCoordinate(from, to) {
+  const lat1 = (from.latitude * Math.PI) / 180;
+  const lat2 = (to.latitude * Math.PI) / 180;
+  const deltaLon = ((to.longitude - from.longitude) * Math.PI) / 180;
+  const y = Math.sin(deltaLon) * Math.cos(lat2);
+  const x = Math.cos(lat1) * Math.sin(lat2) - Math.sin(lat1) * Math.cos(lat2) * Math.cos(deltaLon);
+  const degrees = Math.round(((Math.atan2(y, x) * 180) / Math.PI + 360) % 360);
+  return `${cardinalFromDegrees(degrees)} / ${String(degrees).padStart(3, "0")} deg`;
+}
+
+function cardinalFromDegrees(degrees) {
+  const cardinals = ["N", "NE", "E", "SE", "S", "SW", "W", "NW"];
+  return cardinals[Math.round(degrees / 45) % cardinals.length];
+}
+
+function formatLatLon(coordinate) {
+  if (!coordinate) {
+    return "--";
+  }
+  const latCardinal = coordinate.latitude >= 0 ? "N" : "S";
+  const lonCardinal = coordinate.longitude >= 0 ? "E" : "W";
+  return `${Math.abs(coordinate.latitude).toFixed(5)}${latCardinal}, ${Math.abs(coordinate.longitude).toFixed(5)}${lonCardinal}`;
+}
+
+function gridFromPosition(position) {
+  if (!position) {
+    return "--";
+  }
+  const x = Math.round(position.x * 10).toString().padStart(4, "0");
+  const y = Math.round(position.y * 10).toString().padStart(4, "0");
+  return `NW07 ${x} ${y}`;
+}
+
+function numberValue(value) {
+  const parsed = typeof value === "number" ? value : Number(value);
+  return Number.isFinite(parsed) ? parsed : undefined;
+}
+
+function stringValue(value) {
+  return typeof value === "string" && value.trim().length > 0 ? value.trim() : undefined;
+}
+
+function clamp(value, min, max) {
+  return Math.max(min, Math.min(max, value));
+}
+
+function modulo(value, divisor) {
+  return ((value % divisor) + divisor) % divisor;
+}
+
+function callsignFromLabel(label) {
+  return `HK-${String(label).replace(/[^a-z0-9]+/gi, "-").replace(/^-|-$/g, "").slice(0, 12).toUpperCase() || "FUSED"}-01`;
+}
+
+function formatUpdatedAt(value) {
+  const date = new Date(value);
+  if (Number.isNaN(date.getTime())) {
+    return "--";
+  }
+  return new Intl.DateTimeFormat("en-US", {
+    hour: "2-digit",
+    minute: "2-digit",
+    second: "2-digit",
+    hour12: false,
+  }).format(date);
+}
+
+function capitalize(value) {
+  const text = String(value ?? "");
+  return text.charAt(0).toUpperCase() + text.slice(1);
 }
 
 function formatPolicy(policyGate) {

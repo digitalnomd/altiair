@@ -78,12 +78,13 @@ function renderSummary(topology: MeshTopology): string {
 
   return [
     `Mission network: ${topology.missionNetworkId}`,
-    `Pi 5 mission LAN: ${topology.defaultApSsid ?? "Altiair-LAN"} on ${topology.defaultLanCidr}${
+    `Default mission LAN: ${topology.defaultApSsid ?? "Altiair-LAN"} on ${topology.defaultLanCidr}${
       topology.defaultGatewayAddress === undefined ? "" : ` via gateway ${topology.defaultGatewayAddress}`
     }`,
     `WireGuard overlay: ${topology.overlayCidr}`,
-    "Pi 5 private AP is the default physical underlay; no external router, phone hotspot, or internet path is required.",
-    "Pi 4B nodes join the Pi 5 AP; Jetson joins by Wi-Fi if available or Ethernet if needed.",
+    "A private Altiair-LAN AP is the default physical underlay; no external router, phone hotspot, or internet path is required.",
+    "Jetson hosts Altiair-LAN for the current setup. The Pi 5 can host or join that cell when it arrives.",
+    "Pi 4B nodes join Altiair-LAN; coordination remains peer/quorum based rather than bound to the AP host.",
     "Field deployments can add drone, Hawkeye, vehicle, or operator-compute LAN cells under the same overlay.",
     "Loopback emulation proves the software contracts; it does not prove physical replication before node loss.",
     "",

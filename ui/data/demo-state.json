@@ -1,5 +1,92 @@
 {
   "updatedAt": "2026-05-02T19:35:00-07:00",
+  "foundryIntelligence": {
+    "mode": "mock",
+    "connected": false,
+    "pulledAt": "2026-05-02T19:35:00-07:00",
+    "missionId": "mission-live-edge",
+    "requestedObjectExports": ["ExampleCaskGpsPosition"],
+    "generatedObjectExports": ["ExampleCaskGpsPosition"],
+    "generatedActionExports": ["createExampleCaskGpsPosition"],
+    "unavailableObjectExports": [],
+    "records": [
+      {
+        "source": "mock",
+        "objectExportName": "ExampleCaskGpsPosition",
+        "objectApiName": "ExampleCaskGpsPosition",
+        "primaryKey": "gps-training-tag-001",
+        "title": "Training tag GPS fix",
+        "observedAt": "2026-05-02T19:35:00-07:00",
+        "summary": "Foundry GPS-position object anchors the map overlay to a real latitude/longitude frame.",
+        "payloadJson": {
+          "deviceId": "training-tag-001",
+          "latitude": 37.78984,
+          "longitude": -122.40128,
+          "altitudeM": 18,
+          "speedKnots": 0,
+          "courseDeg": 343,
+          "fixQuality": 1,
+          "numSatellites": 9
+        }
+      },
+      {
+        "source": "mock",
+        "objectExportName": "CaskDeploymentOrder",
+        "objectApiName": "CaskDeploymentOrder",
+        "primaryKey": "deploy-mission-live-edge-map",
+        "title": "Hawkeye UAS observation deployment",
+        "observedAt": "2026-05-02T19:35:00-07:00",
+        "summary": "Mission deployment includes the map anchor, authorized observation area, node coordinates, UAS track, and review-gated control-source estimate.",
+        "payloadJson": {
+          "deploymentId": "deploy-mission-live-edge-map",
+          "missionId": "mission-live-edge",
+          "authorizedZoneId": "training-zone-alpha",
+          "sourceLabel": "Foundry deployment: training-zone-alpha",
+          "map": {
+            "center": { "latitude": 37.78984, "longitude": -122.40128 },
+            "zoom": 15
+          },
+          "objectiveAreaLabel": "Authorized Observation Area",
+          "objectiveArea": [
+            { "latitude": 37.7885, "longitude": -122.40185 },
+            { "latitude": 37.7885, "longitude": -122.4005 },
+            { "latitude": 37.78795, "longitude": -122.39998 },
+            { "latitude": 37.78725, "longitude": -122.40015 },
+            { "latitude": 37.78682, "longitude": -122.4012 },
+            { "latitude": 37.7872, "longitude": -122.40205 },
+            { "latitude": 37.7879, "longitude": -122.40218 },
+            { "latitude": 37.78835, "longitude": -122.40155 }
+          ],
+          "nodes": [
+            { "nodeId": "N1", "latitude": 37.78806, "longitude": -122.40095 },
+            { "nodeId": "N2", "latitude": 37.78722, "longitude": -122.39775 },
+            { "nodeId": "N3", "latitude": 37.78655, "longitude": -122.40355 },
+            { "nodeId": "N4", "latitude": 37.79172, "longitude": -122.40478 },
+            { "nodeId": "N5", "latitude": 37.78832, "longitude": -122.4058 },
+            { "nodeId": "N6", "latitude": 37.79095, "longitude": -122.3979 }
+          ],
+          "uasTrack": [
+            { "latitude": 37.79115, "longitude": -122.40365 },
+            { "latitude": 37.79085, "longitude": -122.40285 },
+            { "latitude": 37.79055, "longitude": -122.4019 },
+            { "latitude": 37.79025, "longitude": -122.40095 },
+            { "latitude": 37.79, "longitude": -122.4001 },
+            { "latitude": 37.7897, "longitude": -122.3992 }
+          ],
+          "controlSource": {
+            "label": "Probable UAS Control Source",
+            "latitude": 37.78928,
+            "longitude": -122.39795,
+            "radiusMeters": 115
+          },
+          "eventLabel": "UAS Track",
+          "latestEvent": "UAS track crossing northwest approach"
+        }
+      }
+    ],
+    "intelligenceBrief": ["ExampleCaskGpsPosition provides the current map anchor for the Hawkeye view."],
+    "recommendedLocalUses": ["Use the governed GPS object to align local mesh observations against the map overlay."]
+  },
   "mission": {
     "name": "Locate aerial anomaly",
     "status": "5/6 nodes active - mesh stable"
@@ -7,24 +94,30 @@
   "fusion": {
     "confidenceLabel": "Medium",
     "confidenceScore": 0.74,
-    "latestEvent": "Possible aerial object NW",
-    "eventLabel": "Fused Detection",
-    "position": { "x": 39.3, "y": 15.2 },
+    "latestEvent": "UAS track crossing northwest approach",
+    "eventLabel": "UAS Track",
+    "position": { "x": 39.3, "y": 15.2, "latitude": 37.79125, "longitude": -122.40355 },
     "trackTrail": [
-      { "x": 39.7, "y": 15.8 },
-      { "x": 42.5, "y": 20.5 },
-      { "x": 46.8, "y": 24.4 },
-      { "x": 52.4, "y": 28.2 },
-      { "x": 59.7, "y": 32.1 },
-      { "x": 66.6, "y": 33.6 }
+      { "x": 39.7, "y": 15.8, "latitude": 37.79115, "longitude": -122.40365 },
+      { "x": 42.5, "y": 20.5, "latitude": 37.79085, "longitude": -122.40285 },
+      { "x": 46.8, "y": 24.4, "latitude": 37.79055, "longitude": -122.4019 },
+      { "x": 52.4, "y": 28.2, "latitude": 37.79025, "longitude": -122.40095 },
+      { "x": 59.7, "y": 32.1, "latitude": 37.79, "longitude": -122.4001 },
+      { "x": 66.6, "y": 33.6, "latitude": 37.7897, "longitude": -122.3992 }
     ],
     "rfBearings": [
       [
-        { "x": 39.8, "y": 16.6 },
-        { "x": 49.8, "y": 40.5 },
-        { "x": 72.2, "y": 65.8 }
+        { "x": 39.8, "y": 16.6, "latitude": 37.79125, "longitude": -122.40355 },
+        { "x": 49.8, "y": 40.5, "latitude": 37.78935, "longitude": -122.40125 },
+        { "x": 72.2, "y": 65.8, "latitude": 37.78722, "longitude": -122.39775 }
       ]
     ],
+    "controlSource": {
+      "label": "Probable UAS Control Source",
+      "confidenceLabel": "Medium",
+      "coordinates": { "latitude": 37.78928, "longitude": -122.39795 },
+      "radiusMeters": 115
+    },
     "evidence": [
       {
         "id": "visual",
@@ -121,18 +214,20 @@
       }
     ],
     "nodes": [
-      { "id": "N1", "label": "Node 1", "x": 49.6, "y": 48.8, "status": "active", "labelOffset": { "x": -18, "y": 30 } },
+      { "id": "N1", "label": "Node 1", "x": 49.6, "y": 48.8, "latitude": 37.78806, "longitude": -122.40095, "status": "active", "labelOffset": { "x": -18, "y": 30 } },
       {
         "id": "N2",
         "label": "Node 2",
         "x": 71.7,
         "y": 66.3,
+        "latitude": 37.78722,
+        "longitude": -122.39775,
         "status": "active",
         "labelOffset": { "x": 20, "y": 0 },
         "fov": [
-          { "x": 72.2, "y": 67.2 },
-          { "x": 78.5, "y": 74.0 },
-          { "x": 73.8, "y": 87.0 }
+          { "x": 72.2, "y": 67.2, "latitude": 37.78722, "longitude": -122.39775 },
+          { "x": 78.5, "y": 74.0, "latitude": 37.78835, "longitude": -122.39935 },
+          { "x": 73.8, "y": 87.0, "latitude": 37.78655, "longitude": -122.39935 }
         ]
       },
       {
@@ -140,12 +235,14 @@
         "label": "Node 3",
         "x": 33.1,
         "y": 74.6,
+        "latitude": 37.78655,
+        "longitude": -122.40355,
         "status": "active",
         "labelOffset": { "x": -65, "y": 8 },
         "fov": [
-          { "x": 32.9, "y": 75.4 },
-          { "x": 28.8, "y": 86.8 },
-          { "x": 33.4, "y": 93.4 }
+          { "x": 32.9, "y": 75.4, "latitude": 37.78655, "longitude": -122.40355 },
+          { "x": 28.8, "y": 86.8, "latitude": 37.78762, "longitude": -122.40235 },
+          { "x": 33.4, "y": 93.4, "latitude": 37.78735, "longitude": -122.40475 }
         ]
       },
       {
@@ -153,12 +250,14 @@
         "label": "Node 4",
         "x": 28.0,
         "y": 20.5,
+        "latitude": 37.79172,
+        "longitude": -122.40478,
         "status": "active",
         "labelOffset": { "x": -56, "y": -4 },
         "fov": [
-          { "x": 28.6, "y": 21.3 },
-          { "x": 33.2, "y": 29.5 },
-          { "x": 30.0, "y": 37.2 }
+          { "x": 28.6, "y": 21.3, "latitude": 37.79172, "longitude": -122.40478 },
+          { "x": 33.2, "y": 29.5, "latitude": 37.79118, "longitude": -122.40338 },
+          { "x": 30.0, "y": 37.2, "latitude": 37.79035, "longitude": -122.40505 }
         ]
       },
       {
@@ -166,15 +265,17 @@
         "label": "Node 5",
         "x": 23.6,
         "y": 51.8,
+        "latitude": 37.78832,
+        "longitude": -122.4058,
         "status": "active",
         "labelOffset": { "x": -54, "y": -3 },
         "fov": [
-          { "x": 23.3, "y": 52.6 },
-          { "x": 18.9, "y": 60.0 },
-          { "x": 22.2, "y": 67.2 }
+          { "x": 23.3, "y": 52.6, "latitude": 37.78832, "longitude": -122.4058 },
+          { "x": 18.9, "y": 60.0, "latitude": 37.78915, "longitude": -122.40445 },
+          { "x": 22.2, "y": 67.2, "latitude": 37.7873, "longitude": -122.40452 }
         ]
       },
-      { "id": "N6", "label": "Node 6", "x": 74.9, "y": 29.8, "status": "degraded", "stateLabel": "Degraded", "labelOffset": { "x": 18, "y": 0 } }
+      { "id": "N6", "label": "Node 6", "x": 74.9, "y": 29.8, "latitude": 37.79095, "longitude": -122.3979, "status": "degraded", "stateLabel": "Degraded", "labelOffset": { "x": 18, "y": 0 } }
     ],
     "links": [
       ["N4", "N5"],
@@ -188,23 +289,14 @@
   "map": {
     "objectiveAreaLabel": "Objective Area",
     "objectiveArea": [
-      { "x": 45.4, "y": 73.7 },
-      { "x": 43.2, "y": 70.0 },
-      { "x": 42.9, "y": 64.2 },
-      { "x": 44.3, "y": 58.4 },
-      { "x": 47.2, "y": 54.6 },
-      { "x": 49.0, "y": 51.0 },
-      { "x": 52.2, "y": 53.0 },
-      { "x": 54.4, "y": 52.2 },
-      { "x": 55.4, "y": 56.4 },
-      { "x": 57.4, "y": 58.0 },
-      { "x": 57.0, "y": 63.4 },
-      { "x": 55.1, "y": 66.8 },
-      { "x": 55.0, "y": 72.0 },
-      { "x": 52.6, "y": 78.4 },
-      { "x": 49.7, "y": 82.0 },
-      { "x": 46.6, "y": 81.0 },
-      { "x": 44.4, "y": 78.0 }
+      { "x": 45.4, "y": 73.7, "latitude": 37.7885, "longitude": -122.40185 },
+      { "x": 43.2, "y": 70.0, "latitude": 37.7885, "longitude": -122.4005 },
+      { "x": 42.9, "y": 64.2, "latitude": 37.78795, "longitude": -122.39998 },
+      { "x": 44.3, "y": 58.4, "latitude": 37.78725, "longitude": -122.40015 },
+      { "x": 47.2, "y": 54.6, "latitude": 37.78682, "longitude": -122.4012 },
+      { "x": 49.0, "y": 51.0, "latitude": 37.7872, "longitude": -122.40205 },
+      { "x": 52.2, "y": 53.0, "latitude": 37.7879, "longitude": -122.40218 },
+      { "x": 54.4, "y": 52.2, "latitude": 37.78835, "longitude": -122.40155 }
     ]
   }
 }

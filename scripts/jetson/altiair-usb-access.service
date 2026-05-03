@@ -1,0 +1,12 @@
+[Unit]
+Description=Altiair USB-C access bridge stabilizer
+After=nv-l4t-usb-device-mode.service ssh.service
+Wants=nv-l4t-usb-device-mode.service ssh.service
+
+[Service]
+Type=oneshot
+ExecStart=/usr/local/sbin/altiair-usb-access.sh
+RemainAfterExit=yes
+
+[Install]
+WantedBy=multi-user.target

@@ -218,8 +218,12 @@ write_cloud_init() {
   {
     echo "network:"
     echo "  version: 2"
+    echo "  renderer: NetworkManager"
+    echo "  ethernets:"
+    echo "    eth0:"
+    echo "      dhcp4: true"
+    echo "      optional: true"
     echo "  wifis:"
-    echo "    renderer: NetworkManager"
     echo "    wlan0:"
     echo "      dhcp4: true"
     echo "      regulatory-domain: $(yaml_quote "$WIFI_COUNTRY")"
@@ -235,9 +239,21 @@ write_cloud_init() {
   } > "$meta_data"
 }
 
+legacy_firstrun_target() {
+  local issue="$BOOT_DIR/issue.txt"
+
+  # Raspberry Pi OS Bookworm and newer mount the firmware partition here.
+  if [[ -f "$issue" ]] && grep -Eq 'Raspberry Pi reference 202[3-9]|Debian GNU/Linux (12|13|14|15)' "$issue"; then
+    printf '/boot/firmware/firstrun.sh'
+  else
+    printf '/boot/firstrun.sh'
+  fi
+}
+
 write_legacy() {
   local cmdline="$BOOT_DIR/cmdline.txt"
   local firstrun="$BOOT_DIR/firstrun.sh"
+  local firstrun_target
   local tmp_cmdline
 
   if [[ ! -f "$cmdline" ]]; then
@@ -325,12 +341,13 @@ EOF
 
   chmod +x "$firstrun"
 
-  if ! grep -q 'systemd.run=' "$cmdline"; then
-    tmp_cmdline="$(mktemp)"
-    tr -d '\n' < "$cmdline" > "$tmp_cmdline"
-    printf ' systemd.run=/boot/firstrun.sh systemd.run_success_action=reboot systemd.unit=kernel-command-line.target\n' >> "$tmp_cmdline"
-    mv "$tmp_cmdline" "$cmdline"
-  fi
+  firstrun_target="$(legacy_firstrun_target)"
+  tmp_cmdline="$(mktemp)"
+  tr -d '\n' < "$cmdline" \
+    | sed -E 's| systemd\.run=[^ ]*||g; s| systemd\.run_success_action=[^ ]*||g; s| systemd\.unit=kernel-command-line.target||g' \
+    > "$tmp_cmdline"
+  printf ' systemd.run=%s systemd.run_success_action=reboot systemd.unit=kernel-command-line.target\n' "$firstrun_target" >> "$tmp_cmdline"
+  mv "$tmp_cmdline" "$cmdline"
 }
 
 if [[ "$MODE" == "auto" ]]; then

@@ -62,13 +62,46 @@
       <symbol id="icon-play" viewBox="0 0 24 24">
         <path d="M8 5l11 7-11 7V5z"></path>
       </symbol>
+      <symbol id="icon-radar" viewBox="0 0 24 24">
+        <path d="M4 20a8 8 0 1 1 16 0"></path>
+        <path d="M8 20a4 4 0 1 1 8 0"></path>
+        <path d="M12 20V4l7 9"></path>
+        <circle cx="12" cy="20" r="1.6"></circle>
+      </symbol>
+      <symbol id="icon-cpu" viewBox="0 0 24 24">
+        <rect x="7" y="7" width="10" height="10" rx="1.8"></rect>
+        <path d="M10 1v4M14 1v4M10 19v4M14 19v4M1 10h4M1 14h4M19 10h4M19 14h4"></path>
+      </symbol>
+      <symbol id="icon-lock" viewBox="0 0 24 24">
+        <rect x="5" y="10" width="14" height="10" rx="2"></rect>
+        <path d="M8 10V7a4 4 0 0 1 8 0v3M12 14v2"></path>
+      </symbol>
     </svg>
 
-    <div class="app-shell">
+    <div class="ambient-field" aria-hidden="true"></div>
+
+    <div class="app-shell" data-view="fusion">
       <header class="titlebar">
-        <div>
-          <p class="eyebrow">Altiair local mesh</p>
-          <h1>Option 1 - Mission Copilot</h1>
+        <div class="brand-lockup">
+          <span class="brand-mark">HK</span>
+          <div>
+            <p class="eyebrow">DARPA field prototype / Altiair local mesh</p>
+            <h1>HAWKEYE Mission Copilot</h1>
+          </div>
+        </div>
+        <div class="command-readout" aria-label="Runtime telemetry">
+          <span>
+            <b id="missionClock">--:--:--</b>
+            <small>Local clock</small>
+          </span>
+          <span>
+            <b id="readinessScore">--</b>
+            <small>Mission readiness</small>
+          </span>
+          <span>
+            <b id="lastUpdate">--</b>
+            <small>Last fusion</small>
+          </span>
         </div>
         <div class="source-controls" aria-label="Dashboard controls">
           <span id="sourceStatus" class="source-status" title="Current data source">
@@ -83,6 +116,21 @@
           </button>
         </div>
       </header>
+
+      <nav class="viewport-tabs" aria-label="Map mode">
+        <button class="view-mode-button is-active" type="button" data-view-mode="fusion">
+          <svg><use href="#icon-radar"></use></svg>
+          Fusion
+        </button>
+        <button class="view-mode-button" type="button" data-view-mode="spectrum">
+          <svg><use href="#icon-wave"></use></svg>
+          Spectrum
+        </button>
+        <button class="view-mode-button" type="button" data-view-mode="command">
+          <svg><use href="#icon-cpu"></use></svg>
+          Command
+        </button>
+      </nav>
 
       <section class="mission-strip" aria-label="Mission summary">
         <article class="summary-cell">
@@ -122,39 +170,99 @@
         </article>
       </section>
 
-      <main class="map-panel" aria-label="Mission map">
-        <div class="legend" aria-label="Map legend">
-          <div><span class="legend-mark node-friendly"></span>Friendly Node</div>
-          <div><span class="legend-mark node-degraded"></span>Degraded Node</div>
-          <div><span class="legend-line mesh-link"></span>Mesh Link</div>
-          <div><span class="legend-mark fov-mark"></span>Camera FOV</div>
-          <div><span class="legend-line rf-line"></span>RF Bearing</div>
-          <div><span class="legend-mark fused-mark"></span>Fused Detection</div>
-          <div><span class="legend-mark objective-mark"></span>Objective Area</div>
-          <div><span class="legend-line trail-line"></span>Track Trail</div>
-        </div>
-
-        <svg id="mapSvg" class="map-svg" viewBox="0 0 1200 390" role="img" aria-labelledby="mapTitle mapDesc">
-          <title id="mapTitle">Mission mesh map</title>
-          <desc id="mapDesc">Nodes, mesh links, sensor fields of view, objective area, and fused event estimate.</desc>
-        </svg>
-
-        <div class="compass" aria-hidden="true">
-          <span>N</span>
-          <svg viewBox="0 0 24 24">
-            <path d="M12 2l4.8 19L12 17.8 7.2 21 12 2z"></path>
-          </svg>
-        </div>
-
-        <div class="scale" aria-hidden="true">
-          <span>0</span>
-          <span>500m</span>
-          <span>1km</span>
-          <div class="scale-bar">
-            <i></i><i></i><i></i>
+      <section class="ops-grid" aria-label="Hawkeye operations workspace">
+        <main class="map-panel" aria-label="Mission map">
+          <div class="map-system-bar" aria-label="Map status">
+            <span>Sector NW-07</span>
+            <strong id="currentViewMode">Fusion</strong>
+            <span id="mapFeedLabel">Map feed pending</span>
+            <span id="scanCadence">5s poll / passive observe</span>
           </div>
-        </div>
-      </main>
+
+          <div class="legend" aria-label="Map legend">
+            <div><span class="legend-mark node-friendly"></span>Friendly Node</div>
+            <div><span class="legend-mark node-degraded"></span>Degraded Node</div>
+            <div><span class="legend-line mesh-link"></span>Mesh Link</div>
+            <div><span class="legend-mark fov-mark"></span>Camera FOV</div>
+            <div><span class="legend-line rf-line"></span>RF Bearing</div>
+            <div><span class="legend-mark fused-mark"></span>Fused Detection</div>
+            <div><span class="legend-mark objective-mark"></span>Objective Area</div>
+            <div><span class="legend-line trail-line"></span>Track Trail</div>
+          </div>
+
+          <div id="baseMap" class="base-map" aria-hidden="true"></div>
+
+          <svg id="mapSvg" class="map-svg" viewBox="0 0 1200 390" preserveAspectRatio="none" role="img" aria-labelledby="mapTitle mapDesc">
+            <title id="mapTitle">Mission mesh map</title>
+            <desc id="mapDesc">Nodes, mesh links, sensor fields of view, objective area, and fused event estimate.</desc>
+          </svg>
+
+          <div class="scan-beam" aria-hidden="true"></div>
+          <div class="map-noise" aria-hidden="true"></div>
+
+          <div class="compass" aria-hidden="true">
+            <span>N</span>
+            <svg viewBox="0 0 24 24">
+              <path d="M12 2l4.8 19L12 17.8 7.2 21 12 2z"></path>
+            </svg>
+          </div>
+
+          <div class="scale" aria-hidden="true">
+            <span>0</span>
+            <span>500m</span>
+            <span>1km</span>
+            <div class="scale-bar">
+              <i></i><i></i><i></i>
+            </div>
+          </div>
+
+          <div class="map-footer" aria-hidden="true">
+            <span id="mapCoordinateReadout">Coordinate grid: pending</span>
+            <span>Autonomy: review gated</span>
+            <span id="mapAttribution">Map tiles via local proxy</span>
+          </div>
+        </main>
+
+        <aside class="target-panel" aria-label="Target dossier">
+          <div class="target-header">
+            <span class="target-kicker">Track dossier</span>
+            <strong id="targetCallsign">HK-FUSED-01</strong>
+          </div>
+          <div class="confidence-dial" aria-label="Confidence score">
+            <div class="dial-ring" id="confidenceDial"></div>
+            <div>
+              <b id="targetConfidenceScore">--%</b>
+              <span id="targetConfidenceLabel">Confidence</span>
+            </div>
+          </div>
+          <dl class="target-facts">
+            <div>
+              <dt>Bearing</dt>
+              <dd id="targetBearing">--</dd>
+            </div>
+            <div>
+              <dt>Grid</dt>
+              <dd id="targetGrid">--</dd>
+            </div>
+            <div>
+              <dt>Policy</dt>
+              <dd id="targetPolicy">--</dd>
+            </div>
+            <div>
+              <dt>Map feed</dt>
+              <dd id="targetMapFeed">--</dd>
+            </div>
+          </dl>
+          <div class="sensor-stack">
+            <p class="panel-label">Sensor stack</p>
+            <div id="sensorStack" class="sensor-bars"></div>
+          </div>
+          <div class="cue-chain">
+            <p class="panel-label">Cue chain</p>
+            <div id="cueChain" class="cue-steps"></div>
+          </div>
+        </aside>
+      </section>
 
       <section class="team-pulse" aria-label="Team pulse">
         <span class="pulse-title">Team pulse</span>
