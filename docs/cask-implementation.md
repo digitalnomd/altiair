@@ -38,7 +38,7 @@ curl -X POST http://127.0.0.1:8080/sensor-events \
 
 Accepted event kinds are `camera_detection`, `audio_window`, `rfid_read`, and `node_health`. RFID reads automatically produce both a `RfidEvent` and a coarse `ProviderStyleLocationEvent`/`LocationFix` with `isCarrierGrade=false`. That is the intended mock boundary: the reader can be real, while the carrier-style location provider is represented by reader ID, zone, RSSI, optional coordinates, freshness, precision radius, and a fake L3Harris-style tactical LTE envelope until a real provider feed exists. Drone-class camera detections produce `DroneObservation` records. Camera/RFID correlation produces a policy-gated cue for human review.
 
-For the best demo, mock the sensor and provider feeds but keep the network component live: nodes should actually heartbeat, gossip, replicate records, elect a coordinator, and survive node/display/cloud loss. The local LLM should run on the Mac through the same Ollama-compatible API used by the Pi/Jetson target runtime, e.g. point nodes at `LOCAL_LLM_BASE_URL=http://<mac-altiair-lan-ip>:11434`. Modal/OpenAI are optional fallback tools for later experiments, not dependencies for the demo.
+For the best demo, mock the sensor and provider feeds but keep the network component live: nodes should actually heartbeat, gossip, replicate records, elect a coordinator, and survive node/display/cloud loss. The local LLM should run on the Pi/Jetson node that receives the bundle through that node's own Ollama-compatible API, e.g. `LOCAL_LLM_BASE_URL=http://127.0.0.1:11434`. A Mac-hosted LLM is only a temporary bridge while a node runtime is being repaired. Modal/OpenAI are optional fallback tools for later experiments, not dependencies for the demo.
 
 ## Always-On Stream Spine
 

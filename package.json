@@ -22,6 +22,7 @@
     "fusion:smoke": "tsx src/scripts/fusion-smoke.ts",
     "hawkeye:feed": "tsx src/scripts/hawkeye-feed.ts",
     "llm:cask:smoke": "tsx src/scripts/local-llm-cask-smoke.ts",
+    "live:mesh:integration": "tsx src/scripts/live-mesh-integration.ts",
     "mesh:plan": "tsx src/scripts/mesh-plan.ts",
     "mesh:smoke": "tsx src/scripts/mesh-smoke.ts",
     "mission:smoke": "tsx src/scripts/mission-deploy-smoke.ts",

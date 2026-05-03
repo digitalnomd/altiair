@@ -15,6 +15,7 @@ These scripts are the prepared Pi-side entry points for the CASK edge node runti
 | `audio-event-adapter.py` | Captures a USB microphone window and posts an `audio_window` event. |
 | `rfid-event-adapter.py` | Reads serial or keyboard-wedge RFID readers and posts `rfid_read` events. |
 | `install-sensor-adapter-services.sh` | Installs camera/audio/RFID adapters as systemd services on the matching node. |
+| `install-local-llm.sh` | Installs/repairs Ollama on a Pi or Jetson node, pulls the approved local model, warms it, and switches the node env to `LOCAL_LLM_MODE=ollama`. |
 | `install-sensor-adapters-sd.sh` | Writes a one-shot SD-card boot installer for the sensor adapter services. |
 | `replay-mock-scenario.sh` | Replays the deterministic CASK mock sensor scenario into the local node API. |
 | `start-hawkeye-feed.sh` | Starts the Hawkeye-style online/mock visual-track feed into the node API. |
@@ -149,4 +150,20 @@ curl -sS http://127.0.0.1:8080/mission-continuity
 curl -sS http://127.0.0.1:8080/dashboard
 ```
 
-For the local LLM, keep `LOCAL_LLM_MODE=mock` until Ollama or another approved local runtime is installed on that node. Then switch to `LOCAL_LLM_MODE=ollama` and keep `LOCAL_LLM_MODEL` on an approved non-Chinese model. Gemma is the default starter model in these env files.
+For the local LLM, the target demo state is `LOCAL_LLM_MODE=ollama` on each Pi
+and Jetson node, pointed at that node's own `http://127.0.0.1:11434` runtime.
+Mock mode is only for tests or a temporary degraded fallback. Install or repair
+the node-local runtime with:
+
+```bash
+scripts/pi/install-local-llm.sh
+```
+
+Then prove the whole physical integration from a machine on `Altiair-LAN`:
+
+```bash
+npm run live:mesh:integration -- --jetson-url http://192.168.42.20:8080 --require-llm-mode ollama
+```
+
+Keep `LOCAL_LLM_MODEL` on an approved non-Chinese model. Gemma is the default
+starter model in these env files.

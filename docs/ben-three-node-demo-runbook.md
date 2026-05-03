@@ -55,7 +55,7 @@ node-b ... ok
 - Memory-safe durable agent: `npm run agent:smoke`
 - Mission deployment/ontology-shaped CASK records: `POST /mission/deploy`
 - Sensor ingest: `POST /sensor-events`
-- Local LLM insight path: mock by default, Ollama-compatible when configured
+- Local LLM insight path: Ollama-compatible per node; mock mode is test-only fallback
 - Mesh/gateway/coordinator/replication: `/dashboard`, `/coordinator/latest`, `/replication/latest`, `/mission-continuity`
 - Always-on stream spine: `/stream/topics`, `/stream/status`, `/stream/records`
 - Full mocked workflow smoke: `npm run workflow:smoke`
@@ -80,7 +80,7 @@ Start the node API:
 ALTIAIR_NODE_ID=altiair-orin \
 ALTIAIR_API_HOST=0.0.0.0 \
 ALTIAIR_API_PORT=8080 \
-LOCAL_LLM_MODE=mock \
+LOCAL_LLM_MODE=ollama \
 FOUNDRY_MODE=mock \
 npm run node:api -- --node altiair-orin --port 8080
 ```
@@ -118,9 +118,33 @@ Expected:
 
 - `altiair-orin`, `altiair-node-a`, and `altiair-node-b` are reachable.
 - `altiair-hub` is reserved/offline until the Pi 5 joins.
-- `/insights/latest` returns a local LLM insight.
+- `/insights/latest` returns a local LLM insight drafted on the receiving node.
 - `/stream/status` has records on sensor, location, health, cue, insight, coordinator, and Foundry-sync topics after bootstrap/upload.
 - `/coordinator/latest` has exactly one leader for the current term.
+
+## Verify Node-Local LLMs
+
+The target architecture is node-local inference on the two Pi 4Bs, the Jetson,
+and the Pi 5 when it arrives. The Mac may be used as a temporary bridge only
+when a node-local runtime is not ready; it is not the final demo target.
+
+Install or repair Ollama/Gemma on each physical node:
+
+```bash
+cd /opt/altiair
+scripts/pi/install-local-llm.sh
+```
+
+Then run the live integration check from a machine that can reach `Altiair-LAN`:
+
+```bash
+npm run live:mesh:integration -- --jetson-url http://192.168.42.20:8080 --require-llm-mode ollama
+```
+
+That check posts the current CASK scenario into the Jetson, verifies local LLM
+insight generation, verifies coordinator/replication/stream surfaces, then posts
+the latest bundle to `altiair-node-a` and `altiair-node-b` so their own local
+LLM paths and ledgers are exercised too.
 
 ## Install Jetson USB Microphone
 
