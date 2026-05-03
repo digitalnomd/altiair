@@ -13,6 +13,42 @@ This is the handoff state before the Pi 5 is added.
 
 The Pi 5 is intentionally represented as reserved/offline until Ben adds it. The current demo should still show a working three-node mesh with live node health, replicated CASK records, coordinator election, local LLM output, stream records, and queued/mock Foundry sync.
 
+## Last Verified State
+
+Verified after the Jetson was accidentally power-interrupted on May 3, 2026:
+
+- `altiair-orin` is hosting `Altiair-LAN` on `wlP1p1s0`, channel 6, with API health live on `192.168.42.20:8080`.
+- Two Pi 4B stations are associated to the Jetson AP.
+- `altiair-node-a` is reachable at `192.168.42.11:8081`.
+- `altiair-node-b` is reachable at `192.168.42.12:8082`.
+- `altiair-hub` / `192.168.42.10` is intentionally absent until the Pi 5 is added.
+- The Mac operator machine should keep its normal Wi-Fi default route; only the Jetson USB subnet `192.168.55.0/24` should be routed over `Linux for Tegra`.
+
+If Jetson power is interrupted, wait for `Linux for Tegra` to reappear on the Mac, then repair only the local USB route:
+
+```bash
+scripts/jetson/ssh-usb.sh --setup-only
+scripts/jetson/ssh-usb.sh
+```
+
+On the Jetson, restart the LAN/API path and verify the current three-node mesh:
+
+```bash
+sudo systemctl restart altiair-node
+sudo systemctl restart altiair-lan-watchdog.service
+sudo systemctl enable --now altiair-lan-watchdog.timer
+sudo nmcli con up altiair-lan
+scripts/jetson/altiair-lan-healthcheck.sh
+```
+
+Expected current result:
+
+```text
+jetson ... ok
+node-a ... ok
+node-b ... ok
+```
+
 ## What Is Implemented
 
 - Node API: `npm run node:api`
