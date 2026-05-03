@@ -20,6 +20,7 @@
     "mock:replay": "tsx src/scripts/mock-scenario.ts --replay",
     "node:api": "tsx src/scripts/node-api.ts",
     "replication:smoke": "tsx src/scripts/replication-smoke.ts",
+    "security:smoke": "tsx src/scripts/security-smoke.ts",
     "sensor:merge": "tsx src/scripts/sensor-merge.ts",
     "sensor:merge:smoke": "tsx src/scripts/sensor-merge-smoke.ts",
     "tag:smoke": "tsx src/scripts/tag-smoke.ts",

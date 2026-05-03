@@ -72,6 +72,7 @@ The deeper decision brief is here:
 - [DARPA Opportunity Alignment](docs/darpa-opportunity-alignment.md)
 - [Teammate Remote Pi and Frontend Handoff](docs/teammate-remote-pi-frontend-handoff.md)
 - [Mock CASK Demo Data](docs/mock-cask-demo-data.md)
+- [Photo Booth Requirements Capture - 2026-05-02](docs/photo-booth-requirements-2026-05-02.md)
 
 Shared data ideas and LLM context drop:
 
@@ -110,6 +111,7 @@ The repo now includes a runnable TypeScript integration scaffold for the Foundry
 - `src/scripts/mesh-smoke.ts`: gateway failover and congestion smoke simulation.
 - `src/scripts/node-api.ts`: dependency-free prototype node API exposing health, peer, gateway, congestion, live sensor merge, local LLM insight, tag-plan instruction, replication, and ledger endpoints.
 - `src/scripts/mission-deploy-smoke.ts` and `npm run mission:smoke`: validates mission instruction deployment, node lease assignment, and policy blocking.
+- `src/scripts/security-smoke.ts` and `npm run security:smoke`: validates secure-coding gates for banned model families, policy-blocked mission language, and obvious secret literals in tracked files.
 - `src/mock/caskDemoScenario.ts` and `npm run mock:replay`: deterministic camera, microphone, RFID, provider-style location, and node-health mock events for the full CASK demo path.
 - `scripts/pi/`: Pi/Jetson deployment scripts, env templates, sensor-event poster, and local-instruction watcher.
 
@@ -123,6 +125,7 @@ Run locally without Foundry secrets:
 npm install
 npm run build
 npm run smoke:mock
+npm run security:smoke
 ```
 
 To switch from local test mode to real OSDK writeback, create or obtain a Developer Console backend-service application with a generated NPM OSDK package, configure the local `.npmrc`, install the generated package, and export the values described in `.env.example`. Do not commit real Foundry URLs, registry URLs, package tokens, client secrets, private RIDs, or other access details.
@@ -132,6 +135,8 @@ To switch from local test mode to real OSDK writeback, create or obtain a Develo
 The demo is an edge-node mesh for a controlled training environment. Operators use Pi-backed nodes with RFID readers plus camera and microphone inputs. Those nodes share structured observations, use RFID reads to estimate the location of a tagged training subject or tagged asset, and surface a shared operating picture on a Pi-built EagleEye-style display shell, Pi-attached screen, or chest-worn field computer. A phone browser can remain an emergency fallback, but it is not the primary concept.
 
 The real-world location pattern is provider-style RF/LTE telemetry: an external network can report a location estimate for a device or tag. For this implementation, we do not claim carrier-grade granularity. We use live Arduino/RFID reads to generate structurally similar provider-style location events, then mark them with explicit source, precision, confidence, freshness, and `isCarrierGrade=false`.
+
+Photo Booth notes from the team added three concrete requirements: treat tactical LTE/private 5G as an optional future underlay, keep QR-assisted setup on the frontend roadmap, and make encryption/secure coding a visible demo acceptance gate. Those requirements are captured in [Photo Booth Requirements Capture - 2026-05-02](docs/photo-booth-requirements-2026-05-02.md).
 
 The CASK-backed omni-model should fuse the sensor streams into a local, evidence-grounded view:
 

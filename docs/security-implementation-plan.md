@@ -46,7 +46,8 @@ This is the security baseline for the Altiair DDIL edge mesh demo. It is written
 - Return generic errors to callers; write detailed diagnostic context only to local protected logs.
 - Do not log secrets, bearer tokens, private keys, Foundry URLs, OAuth client secrets, raw RFID identifiers, or raw media paths.
 - Add tests for blocked policy states, oversize bundles, stale peer observations, gateway failover, malformed input, and node failure.
-- Run `npm run build`, `npm run smoke:mock`, `npm run mesh:smoke`, and `npm audit --omit=dev` before demos; `smoke:mock` is a test harness, not the final live data path.
+- Run `npm run build`, `npm run smoke:mock`, `npm run mesh:smoke`, `npm run security:smoke`, and `npm audit --omit=dev` before demos; `smoke:mock` is a test harness, not the final live data path.
+- Keep the Photo Booth "secure coding" ask as a shipped gate, not a slide-only claim: model-family blocking, mission policy blocking, no obvious committed secrets, protected API routes, and secure HTTP headers must pass locally before demo.
 
 ## Node Hardening
 
@@ -79,6 +80,7 @@ sudo ufw enable
 - Use WireGuard as the mission overlay with per-device keys and narrow `/32` `AllowedIPs`.
 - Bind the Altiair API to the node overlay address or an explicit host using `ALTIAIR_API_HOST`.
 - Set `ALTIAIR_API_TOKEN` for every demo. The prototype requires this token for all non-health routes when configured.
+- Local node API and UI responses set `no-store`, `nosniff`, no-referrer, frame denial, restrictive permissions policy, and a restrictive content security policy. Keep these defaults unless a route has a documented need to expand them.
 - Prefer mTLS or SPIFFE/SPIRE-style workload identity for a production service; bearer tokens are a demo control, not the final identity layer.
 - Keep Foundry/CASK credentials only on nodes with `foundry_gateway` role.
 - Sign bundles before forwarding in the production agent. Use per-node Ed25519 keys and include node ID, bundle ID, created time, policy state, and content hash in the signed envelope.
@@ -120,3 +122,4 @@ sudo ufw enable
 - RFID/provider-style location events include freshness, precision/confidence, `isCarrierGrade=false` where applicable, and a policy state.
 - Foundry/CASK upload is disabled or queued unless real scopes and secrets are intentionally loaded on a gateway node.
 - No repository file contains private keys, tokens, private Foundry URLs, credentials, or access details.
+- `npm run security:smoke` passes after any change that touches model selection, mission policy, Foundry configuration, API routes, UI serving, or deployment docs.

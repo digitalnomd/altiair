@@ -153,7 +153,10 @@ async function proxyApi(request, response, url) {
     duplex: "half",
   });
 
-  response.writeHead(upstream.status, Object.fromEntries(upstream.headers.entries()));
+  response.writeHead(upstream.status, {
+    ...Object.fromEntries(upstream.headers.entries()),
+    ...securityHeaders("json"),
+  });
   if (upstream.body) {
     const reader = upstream.body.getReader();
     while (true) {
@@ -191,8 +194,7 @@ async function serveStatic(url, response) {
   response.writeHead(200, {
     "content-type": mimeType(resolved),
     "content-length": fileStat.size,
-    "cache-control": "no-store",
-    "x-content-type-options": "nosniff",
+    ...securityHeaders("static"),
   });
   createReadStream(resolved).pipe(response);
 }
@@ -215,10 +217,24 @@ async function fetchTargetJson(pathname) {
 function writeJson(response, statusCode, body) {
   response.writeHead(statusCode, {
     "content-type": "application/json; charset=utf-8",
-    "cache-control": "no-store",
-    "x-content-type-options": "nosniff",
+    ...securityHeaders("json"),
   });
   response.end(`${JSON.stringify(body, null, 2)}\n`);
+}
+
+function securityHeaders(kind) {
+  const contentSecurityPolicy = kind === "static"
+    ? "default-src 'self'; script-src 'self'; style-src 'self'; img-src 'self' data:; connect-src 'self'; object-src 'none'; base-uri 'none'; form-action 'none'; frame-ancestors 'none'"
+    : "default-src 'none'; base-uri 'none'; form-action 'none'; frame-ancestors 'none'";
+  return {
+    "cache-control": "no-store",
+    "x-content-type-options": "nosniff",
+    "referrer-policy": "no-referrer",
+    "x-frame-options": "DENY",
+    "cross-origin-resource-policy": "same-origin",
+    "permissions-policy": "camera=(), microphone=(), geolocation=(), usb=(), serial=()",
+    "content-security-policy": contentSecurityPolicy,
+  };
 }
 
 function mimeType(filePath) {
