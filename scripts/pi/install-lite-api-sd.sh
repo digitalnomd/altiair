@@ -160,7 +160,7 @@ ALTIAIR_API_PORT=$API_PORT
 ALTIAIR_MISSION_ID=mission-live-edge
 ALTIAIR_OPERATOR_AUTHORIZED=false
 LOCAL_LLM_MODE=mock
-LOCAL_LLM_MODEL=gemma3:1b
+LOCAL_LLM_MODEL=gemma4:e2b
 FOUNDRY_MODE=mock
 ENV_EOF
   chmod 600 /etc/altiair/altiair-node.env
