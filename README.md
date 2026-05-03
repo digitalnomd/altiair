@@ -98,6 +98,7 @@ Build a local CASK edge layer that can:
 
 The repo now includes a runnable TypeScript integration scaffold for the Foundry/CASK and local LLM path:
 
+- `agent/`: memory-safe Rust durable node-agent scaffold using `axum`, `tokio`, SQLite, AES-256-GCM encrypted payload storage, Ed25519 record signatures, per-peer acknowledgements, and protected API routes.
 - `src/cask/types.ts`: mission-critical CASK event schema for sensor observations, location fixes, node health, insight drafts, and policy-gated `CounterUasCue` records.
 - `src/cask/missionDeployment.ts`: CASK-shaped mission instruction, policy decision, deployment order, node lease, and timeline model for "mission text in, Pi/Jetson deployment out."
 - `src/cask/ontology.ts`: proposed Foundry-shaped `CASK` ontology object/action/link shape for the full mission data model.
@@ -141,6 +142,8 @@ Run locally without Foundry secrets:
 ```bash
 npm install
 npm run build
+npm run agent:test
+npm run agent:smoke
 npm run smoke:mock
 npm run security:smoke
 npm run stream:smoke
@@ -391,16 +394,18 @@ Owner focus: local connectivity, peer identity, health reporting, durable queue,
 Tasks:
 
 - Assign stable node names: `altiair-node-a`, `altiair-node-b`, `altiair-hub`, and `altiair-orin`.
-- Use Rust `axum` and `tokio` for the node API.
+- Use Rust `axum` and `tokio` for the node API. The first scaffold is in `agent/`.
 - Track peer state: online/offline, last seen, IP address, latency, packet success, queue depth, and current gateway.
 - Use the TypeScript mesh topology/scoring scaffold as the contract for the first Rust implementation.
-- Store bundle metadata in SQLite through `sqlx` or `rusqlite`; store media blobs on disk.
+- Store bundle metadata in SQLite through `rusqlite`; store media blobs on disk.
+- Encrypt queued payloads and sign record envelopes before peer replication.
 - Start the node agent via `systemd` or a simple launch script.
 
 Acceptance criteria:
 
 - Each Pi can list peers and report local health.
 - Each Pi can enqueue and retrieve bundles.
+- Each Pi can report signed/encrypted local ledger records through the Rust agent.
 - Pulling network from one Pi does not prevent the remaining local path from continuing.
 - The operator UI or CLI can show mesh health.
 

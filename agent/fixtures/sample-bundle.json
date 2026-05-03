@@ -1,0 +1,53 @@
+{
+  "id": "bundle-agent-smoke-001",
+  "missionId": "mission-agent-smoke",
+  "sourceNodeId": "altiair-node-b",
+  "createdAt": "2026-05-03T10:00:00.000Z",
+  "sensorEvents": [
+    {
+      "id": "rfid-agent-smoke-001",
+      "kind": "rfid",
+      "sourceNodeId": "altiair-node-b",
+      "observedAt": "2026-05-03T10:00:00.000Z",
+      "receivedAt": "2026-05-03T10:00:00.100Z",
+      "zoneId": "training-zone-alpha",
+      "confidence": 0.8,
+      "policyState": "review_needed",
+      "readerId": "reader-b",
+      "tagId": "training-tag-001",
+      "readCount": 1
+    },
+    {
+      "id": "audio-agent-smoke-001",
+      "kind": "audio",
+      "sourceNodeId": "altiair-orin",
+      "observedAt": "2026-05-03T10:00:01.000Z",
+      "receivedAt": "2026-05-03T10:00:01.150Z",
+      "zoneId": "training-zone-alpha",
+      "confidence": 0.52,
+      "policyState": "review_needed",
+      "microphoneId": "jetson-usb-mic",
+      "vadWindowMs": [0, 2000],
+      "acousticClass": "small_rotor_noise"
+    }
+  ],
+  "locationFixes": [],
+  "droneObservations": [],
+  "controlSourceEstimates": [],
+  "counterUasCues": [
+    {
+      "id": "cue-agent-smoke-001",
+      "droneObservationIds": [],
+      "evidence": [],
+      "confidence": 0.5,
+      "policyGate": "review_needed",
+      "acknowledgementState": "queued",
+      "recommendedNextChecks": ["Confirm with another node before sharing."],
+      "createdAt": "2026-05-03T10:00:02.000Z",
+      "updatedAt": "2026-05-03T10:00:02.000Z"
+    }
+  ],
+  "nodeHealth": [],
+  "filteringDecision": "summarize_first",
+  "priority": 80
+}

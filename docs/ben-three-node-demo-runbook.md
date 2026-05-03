@@ -16,6 +16,7 @@ The Pi 5 is intentionally represented as reserved/offline until Ben adds it. The
 ## What Is Implemented
 
 - Node API: `npm run node:api`
+- Memory-safe durable agent: `npm run agent:smoke`
 - Mission deployment/ontology-shaped CASK records: `POST /mission/deploy`
 - Sensor ingest: `POST /sensor-events`
 - Local LLM insight path: mock by default, Ollama-compatible when configured

@@ -8,6 +8,10 @@
     "node": ">=18"
   },
   "scripts": {
+    "agent:check": "cargo check -p altiair-agent",
+    "agent:run": "cargo run -p altiair-agent",
+    "agent:smoke": "bash scripts/agent-smoke.sh",
+    "agent:test": "cargo test -p altiair-agent",
     "build": "tsc --noEmit",
     "coordinator:smoke": "tsx src/scripts/coordinator-smoke.ts",
     "cask:ontology": "tsx src/scripts/cask-ontology.ts",

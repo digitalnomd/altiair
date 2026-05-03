@@ -46,7 +46,7 @@ This is the security baseline for the Altiair DDIL edge mesh demo. It is written
 - Return generic errors to callers; write detailed diagnostic context only to local protected logs.
 - Do not log secrets, bearer tokens, private keys, Foundry URLs, OAuth client secrets, raw RFID identifiers, or raw media paths.
 - Add tests for blocked policy states, oversize bundles, stale peer observations, gateway failover, malformed input, and node failure.
-- Run `npm run build`, `npm run smoke:mock`, `npm run mesh:smoke`, `npm run security:smoke`, and `npm audit --omit=dev` before demos; `smoke:mock` is a test harness, not the final live data path.
+- Run `npm run build`, `npm run agent:test`, `npm run agent:smoke`, `npm run smoke:mock`, `npm run mesh:smoke`, `npm run security:smoke`, and `npm audit --omit=dev` before demos; `smoke:mock` is a test harness, not the final live data path.
 - Keep the Photo Booth "secure coding" ask as a shipped gate, not a slide-only claim: model-family blocking, mission policy blocking, no obvious committed secrets, protected API routes, and secure HTTP headers must pass locally before demo.
 
 ## Node Hardening
@@ -83,7 +83,7 @@ sudo ufw enable
 - Local node API and UI responses set `no-store`, `nosniff`, no-referrer, frame denial, restrictive permissions policy, and a restrictive content security policy. Keep these defaults unless a route has a documented need to expand them.
 - Prefer mTLS or SPIFFE/SPIRE-style workload identity for a production service; bearer tokens are a demo control, not the final identity layer.
 - Keep Foundry/CASK credentials only on nodes with `foundry_gateway` role.
-- Sign bundles before forwarding in the production agent. Use per-node Ed25519 keys and include node ID, bundle ID, created time, policy state, and content hash in the signed envelope.
+- The Rust agent signs accepted bundle records with Ed25519. Use per-node keys and include node ID, bundle ID, created time, policy state, and content hash in the signed envelope.
 
 ## Data Protection
 
@@ -91,7 +91,7 @@ sudo ufw enable
 - Raw camera/audio should stay local unless policy allows a bounded thumbnail, transcript, or short clip.
 - Store RFID tag IDs as pseudonymous IDs where possible. Keep the tag-to-person or tag-to-asset mapping in Foundry or a protected local file, not in logs.
 - Use content hashes for bundle dedupe and tamper evidence.
-- Encrypt durable queues before any real customer data is used. For the demo, document whether queue encryption is active or pending.
+- The Rust agent encrypts queued payloads with AES-256-GCM. Demo defaults are derived locally so smoke tests can run without secrets; real deployments must set `ALTIAIR_AGENT_SIGNING_KEY` and `ALTIAIR_AGENT_ENCRYPTION_KEY` or their `*_SECRET` variants from local secret storage.
 - Keep policy state attached to every observation, insight, cue, and upload attempt.
 
 ## Foundry / CASK Controls
@@ -123,3 +123,4 @@ sudo ufw enable
 - Foundry/CASK upload is disabled or queued unless real scopes and secrets are intentionally loaded on a gateway node.
 - No repository file contains private keys, tokens, private Foundry URLs, credentials, or access details.
 - `npm run security:smoke` passes after any change that touches model selection, mission policy, Foundry configuration, API routes, UI serving, or deployment docs.
+- `npm run agent:smoke` passes after any change that touches durable queue, signing, encryption, or Rust agent routes.
