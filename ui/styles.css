@@ -790,13 +790,13 @@ svg use {
 
 .control-source-cross {
   fill: none;
-  stroke: var(--blue);
+  stroke: var(--amber);
   stroke-width: 2;
   stroke-linecap: round;
 }
 
 .control-source-label {
-  fill: var(--blue);
+  fill: var(--amber);
   font-size: 11px;
   font-weight: 850;
   text-transform: uppercase;
