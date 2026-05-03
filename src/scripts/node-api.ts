@@ -33,6 +33,15 @@ import { createFoundryUploader, type FoundryUploader } from "../foundry/uploader
 import type { CaskBundle, InsightDraft, NodeHealth, PolicyState, UploadAck } from "../cask/types.js";
 import type { TrainingTagPlan } from "../cask/trainingTag.js";
 import type { NodeDescriptor, PeerObservation, ReplicationReport } from "../mesh/types.js";
+import {
+  buildBundleStreamRecords,
+  buildFoundrySyncStreamRecord,
+  buildStreamStatus,
+  caskStreamTopicDefinitions,
+  filterStreamRecords,
+  toKafkaMessage,
+  type CaskStreamRecord,
+} from "../stream/alwaysOn.js";
 
 interface RuntimeState {
   node: NodeDescriptor;
@@ -49,6 +58,8 @@ interface RuntimeState {
   foundryIntelligenceSnapshots: FoundryIntelligenceSnapshot[];
   foundryUploader: FoundryUploader;
   uploadAcks: UploadAck[];
+  streamRecords: CaskStreamRecord[];
+  streamSequence: number;
   llmMode: string;
   llmModel: string;
   startedAt: number;
@@ -82,6 +93,7 @@ if (!Number.isInteger(port) || port < 1 || port > 65535) {
 const host = argValue("--host") ?? process.env.ALTIAIR_API_HOST ?? "0.0.0.0";
 const apiToken = process.env.ALTIAIR_API_TOKEN;
 const corsOrigin = process.env.ALTIAIR_CORS_ORIGIN;
+const streamRetentionLimit = positiveIntegerEnv("ALTIAIR_STREAM_RETENTION", 2_000);
 
 const state: RuntimeState = {
   node,
@@ -98,6 +110,8 @@ const state: RuntimeState = {
   foundryIntelligenceSnapshots: [],
   foundryUploader: createFoundryUploader(config.foundry),
   uploadAcks: [],
+  streamRecords: [],
+  streamSequence: 1,
   llmMode: config.llm.mode,
   llmModel: config.llm.model,
   startedAt: Date.now(),
@@ -131,6 +145,7 @@ server.listen(port, host, () => {
         dashboard: "/dashboard",
         missionDeploy: "/mission/deploy",
         coordinator: "/coordinator/latest",
+        stream: "/stream/status",
         frontendCors: corsOrigin === undefined ? "disabled" : corsOrigin,
         protectedRoutes: apiToken === undefined ? "disabled" : "bearer",
       },
@@ -365,6 +380,37 @@ async function handleRequest(
     return;
   }
 
+  if (request.method === "GET" && path === "/stream/topics") {
+    writeJson(response, 200, {
+      schemaVersion: "altiair-cask-stream-v1",
+      topics: caskStreamTopicDefinitions,
+      brokerRequiredForDemo: false,
+      kafkaCompatibleEnvelope: true,
+    });
+    return;
+  }
+
+  if (request.method === "GET" && path === "/stream/status") {
+    writeJson(response, 200, buildNodeStreamStatus(state));
+    return;
+  }
+
+  if (request.method === "GET" && path === "/stream/records") {
+    const records = filterStreamRecords(state.streamRecords, {
+      topic: url.searchParams.get("topic") ?? undefined,
+      afterSequence: numberQuery(url, "after_sequence", -1),
+      limit: numberQuery(url, "limit", 100),
+    });
+    const format = url.searchParams.get("format");
+    writeJson(response, 200, {
+      nodeId: state.node.id,
+      stream: buildNodeStreamStatus(state),
+      records,
+      kafkaMessages: format === "kafka" ? records.map(toKafkaMessage) : undefined,
+    });
+    return;
+  }
+
   if (request.method === "GET" && path === "/bundles/pending") {
     writeJson(response, 200, {
       nodeId: state.node.id,
@@ -488,6 +534,7 @@ async function handleRequest(
 
     const ack = await state.foundryUploader.uploadBundle(bundle, insightResult.insight);
     state.uploadAcks.push(ack);
+    appendFoundrySyncStreamRecord(state, bundle, ack);
     writeJson(response, ack.status === "failed" ? 502 : 202, buildCommanderSyncPackage(state, ack));
     return;
   }
@@ -651,6 +698,7 @@ function buildDashboardSnapshot(state: RuntimeState): unknown {
       foundryIntelligence: latestFoundryIntelligence ?? null,
       foundrySync: latestUploadAck(state) ?? null,
       coordinator: latestCoordinator ?? null,
+      stream: buildNodeStreamStatus(state),
       gossipWorld: buildGossipWorldState(
         defaultDdilMeshTopology,
         state.observations,
@@ -946,7 +994,8 @@ async function acceptBundleResponse(
   const products = buildBundleRuntimeProducts(state, bundle);
   state.replicationReports.push(products.replicationReport);
   state.tagPlans.push(products.tagPlan);
-  const insightResult = await draftLocalInsight(state, bundle);
+  const caskContext = buildCaskLlmContextPack(bundle, latestFoundryIntelligenceSnapshot(state));
+  const insightResult = await draftLocalInsight(state, bundle, caskContext);
   const coordinator = buildCoordinatorDirective(
     defaultDdilMeshTopology,
     state.observations,
@@ -967,6 +1016,13 @@ async function acceptBundleResponse(
   state.currentCoordinatorLeaderId = coordinator.election.leaderId ?? state.currentCoordinatorLeaderId;
   state.coordinatorTerm = coordinator.election.term;
   state.coordinatorIndex += 1;
+  const streamAppend = appendBundleStreamRecords(
+    state,
+    bundle,
+    caskContext,
+    insightResult.insight,
+    coordinator,
+  );
 
   writeJson(response, 202, {
     accepted: congestion?.acceptBundle ?? true,
@@ -977,6 +1033,11 @@ async function acceptBundleResponse(
     replication: summarizeReplicationReport(products.replicationReport),
     tagPlan: summarizeTagPlan(products.tagPlan),
     coordinator: summarizeCoordinatorDirective(coordinator),
+    stream: {
+      appendedRecords: streamAppend.records.length,
+      latestSequence: streamAppend.nextSequence - 1,
+      status: buildNodeStreamStatus(state),
+    },
     localInstructions: nodeInstructionView(state.node.id, products.tagPlan),
     localLlm: {
       mode: state.llmMode,
@@ -991,12 +1052,10 @@ async function acceptBundleResponse(
 async function draftLocalInsight(
   state: RuntimeState,
   bundle: CaskBundle,
+  caskContext = buildCaskLlmContextPack(bundle, latestFoundryIntelligenceSnapshot(state)),
 ): Promise<{ insight?: InsightDraft; error?: string }> {
   try {
-    const insight = await state.insightClient.draftInsight(
-      bundle,
-      buildCaskLlmContextPack(bundle, latestFoundryIntelligenceSnapshot(state)),
-    );
+    const insight = await state.insightClient.draftInsight(bundle, caskContext);
     state.insights.push(insight);
     return { insight };
   } catch (error: unknown) {
@@ -1014,6 +1073,66 @@ async function ensureInsightForBundle(
     return { insight: existing };
   }
   return draftLocalInsight(state, bundle);
+}
+
+function appendBundleStreamRecords(
+  state: RuntimeState,
+  bundle: CaskBundle,
+  caskContext: ReturnType<typeof buildCaskLlmContextPack>,
+  insight: InsightDraft | undefined,
+  coordinator: CoordinatorDirective,
+): { records: CaskStreamRecord[]; nextSequence: number } {
+  const append = buildBundleStreamRecords({
+    bundle,
+    context: caskContext,
+    producerNodeId: state.node.id,
+    sequenceStart: state.streamSequence,
+    insight,
+    coordinator,
+  });
+  appendStreamRecords(state, append.records);
+  state.streamSequence = append.nextSequence;
+  return append;
+}
+
+function appendFoundrySyncStreamRecord(
+  state: RuntimeState,
+  bundle: CaskBundle,
+  ack: UploadAck,
+): CaskStreamRecord {
+  const record = buildFoundrySyncStreamRecord({
+    ack,
+    missionId: bundle.missionId,
+    producerNodeId: state.node.id,
+    sourceNodeId: state.currentGatewayId ?? state.node.id,
+    sequence: state.streamSequence,
+  });
+  appendStreamRecords(state, [record]);
+  state.streamSequence += 1;
+  return record;
+}
+
+function appendStreamRecords(state: RuntimeState, records: CaskStreamRecord[]): void {
+  state.streamRecords.push(...records);
+  if (state.streamRecords.length > streamRetentionLimit) {
+    state.streamRecords.splice(0, state.streamRecords.length - streamRetentionLimit);
+  }
+}
+
+function buildNodeStreamStatus(state: RuntimeState): ReturnType<typeof buildStreamStatus> & {
+  retention: { maxRecords: number; retainedFromSequence: number | null };
+  kafkaForwarderReady: boolean;
+  brokerRequiredForDemo: boolean;
+} {
+  return {
+    ...buildStreamStatus(state.streamRecords),
+    retention: {
+      maxRecords: streamRetentionLimit,
+      retainedFromSequence: state.streamRecords[0]?.sequence ?? null,
+    },
+    kafkaForwarderReady: true,
+    brokerRequiredForDemo: false,
+  };
 }
 
 function requireString(value: unknown, field: string): asserts value is string {
@@ -1332,6 +1451,15 @@ function boolQuery(url: URL, name: string, fallback: boolean): boolean {
     return fallback;
   }
   return value === "1" || value.toLowerCase() === "true" || value.toLowerCase() === "yes";
+}
+
+function positiveIntegerEnv(name: string, fallback: number): number {
+  const value = process.env[name];
+  if (value === undefined) {
+    return fallback;
+  }
+  const parsed = Number(value);
+  return Number.isInteger(parsed) && parsed > 0 ? parsed : fallback;
 }
 
 function listQuery(url: URL, name: string): string[] | undefined {

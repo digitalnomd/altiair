@@ -40,6 +40,36 @@ Accepted event kinds are `camera_detection`, `audio_window`, `rfid_read`, and `n
 
 For the best demo, mock the sensor and provider feeds but keep the network component live: nodes should actually heartbeat, gossip, replicate records, elect a coordinator, and survive node/display/cloud loss. The local LLM should run on the Mac through the same Ollama-compatible API used by the Pi/Jetson target runtime, e.g. point nodes at `LOCAL_LLM_BASE_URL=http://<mac-altiair-lan-ip>:11434`. Modal/OpenAI are optional fallback tools for later experiments, not dependencies for the demo.
 
+## Always-On Stream Spine
+
+`src/stream/alwaysOn.ts` turns each accepted CASK bundle into Kafka-shaped records even when no broker is running. This is the integration layer judges should see as "always on": sensor events, location fixes, node health, policy-gated cues, Gemma/local-LLM insight drafts, coordinator directives, and Foundry sync acknowledgements all share one append-only envelope.
+
+Node API surfaces:
+
+```text
+GET /stream/topics
+GET /stream/status
+GET /stream/records?after_sequence=0&limit=100
+GET /stream/records?topic=altiair.cask.location.v1
+GET /stream/records?format=kafka
+```
+
+Brokerless mode is the default demo path. The node keeps a bounded local stream window, defaulting to the latest 2,000 records via `ALTIAIR_STREAM_RETENTION`. If a Kafka broker or Foundry streaming connector is available, forward each record as `{ topic, key, value, headers }` from `toKafkaMessage(record)` or request `GET /stream/records?format=kafka` without changing CASK payloads.
+
+Web-checked implementation fit on 2026-05-03:
+
+- Palantir OSDK docs support treating Foundry as the backend for high-scale ontology queries, Foundry edits, and governance controls: https://www.palantir.com/docs/foundry/ontology-sdk-react-applications/overview/
+- Palantir Streams are structured, low-latency records with hot/cold storage, per-row processing, partitioning, and checkpointing: https://www.palantir.com/docs/foundry/data-integration/streams
+- Palantir's Kafka connector reads Kafka queues into Foundry streams in realtime and preserves key/value message shape: https://www.palantir.com/docs/foundry/available-connectors/kafka
+- Apache Kafka's event model is a topic-organized stream of events with key, value, timestamp, and optional headers: https://kafka.apache.org/intro/
+- Google Gemma docs list local/edge execution paths including Ollama and llama.cpp; keep `gemma3:1b` as the stable Pi/Mac demo default unless the installed runtime has a newer approved Gemma build: https://ai.google.dev/gemma/docs
+
+Run:
+
+```bash
+npm run stream:smoke
+```
+
 `POST /sensor-events` and `POST /bundles` also run the configured local insight client on the receiving node. The response includes the local LLM mode/model, the generated `InsightDraft`, the CASK training tag objective summary, this node's local instruction view, and the latest singleton coordinator summary. `GET /insights/latest`, `GET /tag-plan/latest`, `GET /instructions/latest`, `GET /gossip/world`, and `GET /coordinator/latest` return those latest runtime products.
 
 All four compute nodes are modeled as local-LLM capable: the two Pi 4B sensor nodes, the Pi 5 hub/display/gateway, and the Jetson Orin Nano inference node.

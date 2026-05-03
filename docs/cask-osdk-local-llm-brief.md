@@ -200,6 +200,13 @@ Local LLM control-plane filtering:
 - Allowed decisions: `send_now`, `summarize_first`, `hold`, `drop_duplicate`, and `review_policy`.
 - Run the filter over compact metadata, transcripts, thumbnails, and policy state before forwarding raw media.
 - Enforce schema-constrained JSON; invalid JSON falls back to deterministic Rust rules.
+
+Always-on integration:
+
+- Treat the streaming layer as the hard part: the LLM is useful only because CASK events are continuously normalized, sequenced, replicated, and made available to the elected coordinator.
+- Use Gemma for both edge explanation and coordinator organization through the same CASK context pack.
+- Keep RAG local and compact: retrieve over approved Drive notes, Foundry object summaries, ontology shape, and recent stream records rather than raw camera/audio streams.
+- Kafka is an integration target, not a demo prerequisite. The local stream spine emits Kafka-shaped records that can be forwarded to Kafka/Foundry when a broker or connector is available.
 - Use model output as advisory only. The Rust congestion guard owns final send/hold/drop behavior.
 - Protect the selected gateway with per-peer rate limits, in-flight transfer caps, queue watermarks, retry jitter, and CPU/memory/network saturation checks.
 - Low-priority media must not block urgent evidence, policy cue updates, or acknowledgement receipts.

@@ -253,6 +253,9 @@ Live frontend and teammate tooling should prefer `/dashboard`, but the lower-lev
 | `GET /mission/timeline` | Auditable deployment timeline |
 | `GET /foundry/intelligence` | Pull governed Foundry context when connected; otherwise use cached/mock context |
 | `GET /foundry/sync/latest` | Latest commander-sync acknowledgement and mission/evidence summary |
+| `GET /stream/topics` | Always-on CASK stream topic definitions |
+| `GET /stream/status` | Stream record counts and latest sequence by topic |
+| `GET /stream/records` | Stream records for frontend playback; add `?format=kafka` for broker-shaped messages |
 | `GET /coordinator/latest` | Current singleton coordinator directive for the active Raft-style term |
 | `GET /bundles/pending` | Local queued CASK bundles |
 | `GET /ledger` | Local ledger summary |

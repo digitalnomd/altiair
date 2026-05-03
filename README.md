@@ -107,11 +107,13 @@ The repo now includes a runnable TypeScript integration scaffold for the Foundry
 - `src/scripts/smoke.ts`: end-to-end smoke path that builds a sample Pi bundle, drafts an insight, and queues/uploads it.
 - `src/mesh/*`: four-node Pi/Jetson DDIL topology, gateway scoring, and congestion decisions.
 - `src/mesh/coordinator.ts`: gossip-derived world state plus Raft-style singleton coordinator selection so only one local LLM publishes per-node instructions for a term.
+- `src/stream/alwaysOn.ts`: always-on CASK stream spine that emits Kafka-shaped topic/key/value records without requiring a broker for the demo.
 - `src/scripts/mesh-plan.ts`: per-node environment and WireGuard template generator with no committed secrets.
 - `src/scripts/mesh-smoke.ts`: gateway failover and congestion smoke simulation.
 - `src/scripts/node-api.ts`: dependency-free prototype node API exposing health, peer, gateway, congestion, live sensor merge, local LLM insight, tag-plan instruction, replication, and ledger endpoints.
 - `src/scripts/mission-deploy-smoke.ts` and `npm run mission:smoke`: validates mission instruction deployment, node lease assignment, and policy blocking.
 - `src/scripts/security-smoke.ts` and `npm run security:smoke`: validates secure-coding gates for banned model families, policy-blocked mission language, and obvious secret literals in tracked files.
+- `src/scripts/stream-smoke.ts` and `npm run stream:smoke`: validates the always-on stream envelope across sensor, location, health, cue, insight, coordinator, and Foundry-sync topics.
 - `src/mock/caskDemoScenario.ts` and `npm run mock:replay`: deterministic camera, microphone, RFID, provider-style location, and node-health mock events for the full CASK demo path.
 - `scripts/pi/`: Pi/Jetson deployment scripts, env templates, sensor-event poster, and local-instruction watcher.
 
@@ -121,6 +123,18 @@ Foundry is opportunistic, not required for decentralized operation. Use `GET /fo
 
 For the best hackathon demo, keep the mesh/network layer live and let sensor/provider feeds be structurally mocked if needed: fake L3Harris-style LTE provider records and deterministic camera/audio/RFID fixtures. Use direct Foundry when `.env` and the generated SDK are available; fall back to cached/mock Foundry only when disconnected. Run the small local LLM on the Mac through the Ollama-compatible interface, for example `LOCAL_LLM_BASE_URL=http://<mac-altiair-lan-ip>:11434`, while Pi/Jetson nodes prove heartbeat, gossip, replication, failover, and coordinator election. Do not depend on Modal, OpenAI, or any cloud LLM for the main demo path.
 
+The always-on integration is the novel component. Every accepted CASK bundle now emits Kafka-shaped stream records on local topics:
+
+- `altiair.cask.sensor.v1`
+- `altiair.cask.location.v1`
+- `altiair.cask.health.v1`
+- `altiair.cask.cue.v1`
+- `altiair.cask.insight.v1`
+- `altiair.cask.coordinator.v1`
+- `altiair.cask.foundry-sync.v1`
+
+The demo does not require a running Kafka broker, but the record envelope is broker-ready: topic, key, partition key, sequence, mission id, source node, policy state, CASK context summary, and JSON payload. Use `GET /stream/topics`, `GET /stream/status`, and `GET /stream/records` on the node API to show the live integration spine. Use `GET /stream/records?format=kafka` when a broker forwarder wants Kafka-shaped `{ topic, key, value, headers }` messages. Local demo retention defaults to the latest 2,000 records and can be changed with `ALTIAIR_STREAM_RETENTION`.
+
 Run locally without Foundry secrets:
 
 ```bash
@@ -128,6 +142,7 @@ npm install
 npm run build
 npm run smoke:mock
 npm run security:smoke
+npm run stream:smoke
 ```
 
 Direct Foundry is available when `.env` contains the backend-service credentials and the generated `@cask-edge-service/sdk` package is installed locally:
