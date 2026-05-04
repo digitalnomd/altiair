@@ -21,6 +21,8 @@ When a node fails, the mesh detects the missed heartbeat, re-elects a coordinato
 
 When connectivity is available, the full record: every sensor event, fusion decision, and coordinator term, syncs to Palantir Foundry through the OSDK. Offline, the mesh runs from a local CASK edge layer with the same ontology contracts, queuing everything for reconciliation when a gateway reconnects.
 
+![alt text](image.png)
+
 ---
 
 ## Architecture
@@ -122,8 +124,6 @@ The Pi-hosted display runs locally on the Pi 5 with no cloud dependency. It show
 npm run node:api -- --node altiair-hub --port 8080
 # http://10.77.0.10:8080/dashboard
 ```
-
-![alt text](image.png)
 
 ---
 
