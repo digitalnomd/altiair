@@ -17,9 +17,9 @@ The specific gap: three separate soldiers can observe the same drone from three 
 
 DarkMesh is a decentralized multi-node sensor fusion system that runs entirely on local hardware. Each node in the mesh collects sensor data, filters it locally with a small LLM, and replicates compact signed evidence bundles to every other reachable node. A coordinator LLM is elected across the mesh using a Raft-style protocol, fuses the gossip world state into a single threat assessment, and publishes per-node instructions toward the active mission objective.
 
-When a node fails, the mesh detects the missed heartbeat, re-elects a coordinator from the surviving quorum, and resumes — typically in under a second. Mission state is replicated to every node simultaneously, so no single device is authoritative and no single failure collapses the picture.
+When a node fails, the mesh detects the missed heartbeat, re-elects a coordinator from the surviving quorum, and resumes - typically in under a second. Mission state is replicated to every node simultaneously, so no single device is authoritative and no single failure collapses the picture.
 
-When connectivity is available, the full record — every sensor event, fusion decision, and coordinator term — syncs to Palantir Foundry through the OSDK. Offline, the mesh runs from a local CASK edge layer with the same ontology contracts, queuing everything for reconciliation when a gateway reconnects.
+When connectivity is available, the full record: every sensor event, fusion decision, and coordinator term, syncs to Palantir Foundry through the OSDK. Offline, the mesh runs from a local CASK edge layer with the same ontology contracts, queuing everything for reconciliation when a gateway reconnects.
 
 ---
 
@@ -89,7 +89,7 @@ npm run stream:smoke
 
 ## Palantir Foundry and CASK
 
-Foundry is opportunistic, not a dependency. The mesh operates fully offline; Foundry provides governed mission context on the way in and commander-level visibility on the way out.
+The mesh operates fully offline; Foundry provides governed mission context on the way in and commander-level visibility on the way out.
 
 **CASK at the edge.** The Pi 5 hub runs a local CASK layer using the same ontology contracts and data model as Foundry — no internet required. Mission instructions, sensor observations, location fixes, coordinator directives, insight drafts, node health, and policy-gated `CounterUasCue` records are typed against the CASK schema and persisted in the local durable queue.
 
@@ -122,6 +122,8 @@ The Pi-hosted display runs locally on the Pi 5 with no cloud dependency. It show
 npm run node:api -- --node altiair-hub --port 8080
 # http://10.77.0.10:8080/dashboard
 ```
+
+![alt text](image.png)
 
 ---
 
